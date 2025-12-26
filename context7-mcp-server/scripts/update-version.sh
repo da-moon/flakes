@@ -43,6 +43,10 @@ get_latest_version_from_npm() {
   printf '%s\n' "$latest_json" | sed -n 's/.*"version":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
 }
 
+get_current_system_key() {
+  nix eval --impure --raw --expr builtins.currentSystem
+}
+
 prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
@@ -64,14 +68,24 @@ update_tarball_hash() {
   sed -i.bak -E "s|^([[:space:]]*hash = \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
 }
 
-set_output_hash_placeholder() {
+set_output_hash_placeholder_for_system() {
+  local system_key="$1"
   local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  sed -i.bak -E "s|^([[:space:]]*outputHash = \")[^\"]*(\";)|\\1${placeholder}\\2|" "$flake_file"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${placeholder}\\2|" "$flake_file"
+  if ! grep -Fq "\"${system_key}\" = \"${placeholder}\";" "$flake_file"; then
+    log_error "Failed to set outputHash placeholder for system: $system_key"
+    return 1
+  fi
 }
 
-update_output_hash() {
-  local new_hash="$1"
-  sed -i.bak -E "s|^([[:space:]]*outputHash = \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
+update_output_hash_for_system() {
+  local system_key="$1"
+  local new_hash_value="$2"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash_value}\\2|" "$flake_file"
+  if ! grep -Fq "\"${system_key}\" = \"${new_hash_value}\";" "$flake_file"; then
+    log_error "Failed to update outputHash for system: $system_key"
+    return 1
+  fi
 }
 
 cleanup_backups() {
@@ -96,8 +110,17 @@ verify_build() {
 }
 
 compute_and_update_output_hash() {
-  log_info "Computing outputHash (fixed-output npm deps)..."
-  set_output_hash_placeholder
+  local system_key
+  system_key="$(get_current_system_key)"
+  if [ -z "$system_key" ]; then
+    log_error "Failed to detect current system key"
+    return 1
+  fi
+
+  log_info "Computing outputHash (fixed-output npm deps) for system: $system_key"
+  if ! set_output_hash_placeholder_for_system "$system_key"; then
+    return 1
+  fi
   cleanup_backups
 
   local build_output
@@ -111,8 +134,8 @@ compute_and_update_output_hash() {
     return 1
   fi
 
-  log_info "outputHash: $got_hash"
-  if ! update_output_hash "$got_hash"; then
+  log_info "outputHash ($system_key): $got_hash"
+  if ! update_output_hash_for_system "$system_key" "$got_hash"; then
     log_error "Failed to update outputHash in flake.nix"
     return 1
   fi
@@ -133,7 +156,7 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 Options:
   --version VERSION   Update to a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute tarball hash and outputHash for current version
+  --rehash            Recompute tarball hash and outputHash for current system
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message

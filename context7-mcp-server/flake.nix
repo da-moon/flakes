@@ -20,6 +20,13 @@
         pname = "context7-mcp";
         version = "1.0.33";
 
+        # NOTE: npm optionalDependencies can be platform-specific (for example, esbuild),
+        # so the fixed-output hash from "npm install" is not portable across systems.
+        outputHashBySystem = {
+          "aarch64-linux" = "sha256-6RfpAZzaqavNUC/iTFmUYzZzz6y87feNVXDBSgqxVpY=";
+          "x86_64-linux" = "sha256-4iRmTnqwOd5sqq7k+2SHgu3tv+DYrs/8PobiLOmDXXk=";
+        };
+
         # Fixed-output derivation to fetch npm package with all dependencies
         # This has network access during build
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -36,7 +43,8 @@
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
           # Get this hash by first building with pkgs.lib.fakeHash
-          outputHash = "sha256-4iRmTnqwOd5sqq7k+2SHgu3tv+DYrs/8PobiLOmDXXk=";
+          outputHash = outputHashBySystem.${system}
+            or (throw "Missing outputHashBySystem entry for system: ${system}");
 
           buildPhase = ''
             runHook preBuild
