@@ -137,6 +137,7 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 
 Options:
   --check             Only check for updates (exit 1 if update available)
+  --rehash            Recompute sha256 for current revision
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
@@ -156,6 +157,7 @@ main() {
   ensure_in_package_directory
 
   local check_only=false
+  local rehash=false
   local no_build=false
   local update_lock=false
 
@@ -163,6 +165,10 @@ main() {
     case "$1" in
       --check)
         check_only=true
+        shift
+        ;;
+      --rehash)
+        rehash=true
         shift
         ;;
       --no-build)
@@ -226,18 +232,22 @@ main() {
     version_changed=true
   fi
 
-  if [ "$rev_changed" = false ] && [ "$version_changed" = false ]; then
-    log_info "Already up to date!"
-    exit 0
-  fi
-
   if [ "$check_only" = true ]; then
+    if [ "$rev_changed" = false ] && [ "$version_changed" = false ]; then
+      log_info "Already up to date!"
+      exit 0
+    fi
     if [ "$rev_changed" = true ]; then
       log_info "Update available: $current_rev -> $latest_rev"
     else
       log_info "Update available: version label drift ($current_version -> $latest_version)"
     fi
     exit 1
+  fi
+
+  if [ "$rev_changed" = false ] && [ "$version_changed" = false ] && [ "$rehash" != true ]; then
+    log_info "Already up to date!"
+    exit 0
   fi
 
   local backup
@@ -249,7 +259,7 @@ main() {
   update_flake_rev "$latest_rev"
   cleanup_backups
 
-  if [ "$rev_changed" = true ]; then
+  if [ "$rev_changed" = true ] || [ "$rehash" = true ]; then
     if ! compute_and_update_src_sha256; then
       log_error "Failed to compute sha256; restoring previous flake.nix"
       cp "$backup" "$flake_file"

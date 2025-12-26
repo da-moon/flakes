@@ -101,6 +101,7 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 Options:
   --version VERSION   Update to a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
+  --rehash            Recompute release asset hashes for current version
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
@@ -118,6 +119,7 @@ main() {
 
   local target_version=""
   local check_only=false
+  local rehash=false
   local no_build=false
   local update_lock=false
 
@@ -129,6 +131,10 @@ main() {
         ;;
       --check)
         check_only=true
+        shift
+        ;;
+      --rehash)
+        rehash=true
         shift
         ;;
       --no-build)
@@ -180,14 +186,18 @@ main() {
   log_info "Current version: $current_version"
   log_info "Target version:  $latest_version"
 
-  if [ "$current_version" = "$latest_version" ]; then
-    log_info "Already up to date!"
-    exit 0
-  fi
-
   if [ "$check_only" = true ]; then
+    if [ "$current_version" = "$latest_version" ]; then
+      log_info "Already up to date!"
+      exit 0
+    fi
     log_info "Update available: $current_version -> $latest_version"
     exit 1
+  fi
+
+  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+    log_info "Already up to date!"
+    exit 0
   fi
 
   local url_aarch64 url_x86_64
