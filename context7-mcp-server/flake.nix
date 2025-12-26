@@ -18,7 +18,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "context7-mcp";
-        version = "1.0.31";
+        version = "1.0.33";
 
         # Fixed-output derivation to fetch npm package with all dependencies
         # This has network access during build
@@ -27,7 +27,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/@upstash/context7-mcp/-/context7-mcp-${version}.tgz";
-            hash = "sha256-GW2uWkiIfEjzVuaDYZh4Son8BqXyHLtQgIzqBIek0Bc=";
+            hash = "sha256-gl8VOdBaxYEoJmYKhVozSssN7ofwE3fgTKvw7SbYs0E=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
@@ -36,7 +36,7 @@
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
           # Get this hash by first building with pkgs.lib.fakeHash
-          outputHash = "sha256-t7GuqpXhAr3EIg9onsPRAiH21rGab6Ju8RF/kbUpmV4=";
+          outputHash = "sha256-4iRmTnqwOd5sqq7k+2SHgu3tv+DYrs/8PobiLOmDXXk=";
 
           buildPhase = ''
             runHook preBuild

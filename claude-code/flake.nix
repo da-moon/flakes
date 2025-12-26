@@ -17,7 +17,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
-        version = "2.0.70";
+        version = "2.0.71";
 
         # Main Claude Code package - manual extraction approach for ARM64 Android compatibility
         claude-code = pkgs.stdenv.mkDerivation rec {
@@ -26,7 +26,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-            sha256 = "sha256-cN1ytilb6o6IUFA3H7llyonuhgslLHx+39lx7VTJ8VE=";
+            sha256 = "sha256-+O1K1dNX6g+fPD+Tb4u2LDzPiGZvmV2OpP7fNZP8FAk=";
           };
 
           nativeBuildInputs = with pkgs; [
@@ -167,9 +167,9 @@
           ];
 
           shellHook = ''
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "----------------------------------------------------"
             echo "  Claude Code Development Shell (nix-on-droid)"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "----------------------------------------------------"
             echo ""
             echo "Environment:"
             echo "  Node.js:  $(node --version)"
@@ -187,7 +187,7 @@
             echo ""
             echo "Set up API key before using:"
             echo "  export ANTHROPIC_API_KEY='your-key-here'"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "----------------------------------------------------"
           '';
         };
 
@@ -212,4 +212,3 @@
 # NOTE: Minimal way to install it
 # nix registry add personal/claude-code github:da-moon/termux-config?dir=config/nixpkgs/claude-code
 # nix profile install personal/claude-code#claude-cod
-
