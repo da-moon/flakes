@@ -18,7 +18,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "firecrawl-mcp";
-        version = "3.6.2";
+        version = "3.7.4";
 
         # Fixed-output derivation to fetch npm package with all dependencies
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -26,7 +26,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-${version}.tgz";
-            hash = "sha256-IYnmyPgQsp32NtViLO8yvtWOjGj7RM+FiXx9QpaCv7Q=";
+            hash = "sha256-BwfY6vyMaD+Dsq8JtXvG3FPCoVCaFH/c1Y5v/FHos8w=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert pkgs.yarn ];
@@ -37,7 +37,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-Npb+2AshOv7s3B7LNDSoI8tkgeSyp1sls6AusQ94Ep8=";
+          outputHash = "sha256-G4CVBZAu4MaDQSSbDMp/AzvntrvPWO7/v+nCDOfObnw=";
 
           buildPhase = ''
             runHook preBuild

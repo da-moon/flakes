@@ -12,14 +12,14 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "purgecss";
-        version = "7.0.2";
+        version = "8.0.0";
 
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-x+fTfIqh+Bv3BpZXW8mu3MaIzEDNMpzawdBLdU1PPXs=";
+            hash = "sha256-YU1mDinFNKLTr5qtnjQz61xz49XOFo7aqHv0MNBYtVg=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
@@ -27,7 +27,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-zw03lD054YbKJ2lmo+166stm1LqwKMJQUPOTxBJI9CQ=";
+          outputHash = "sha256-s+jbbDZBgWwL6ixlEZSxKriEZXHmyvrr2YCBUHgQ/UU=";
 
           buildPhase = ''
             runHook preBuild

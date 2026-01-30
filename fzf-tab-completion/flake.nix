@@ -19,13 +19,13 @@
 
         fzf-tab-completion = pkgs.stdenv.mkDerivation rec {
           pname = "fzf-tab-completion";
-          version = "unstable-2024-01-25";
+          version = "unstable-2026-01-05";
 
           src = pkgs.fetchFromGitHub {
             owner = "lincheney";
             repo = "fzf-tab-completion";
-            rev = "4850357beac6f8e37b66bd78ccf90008ea3de40b";
-            sha256 = "sha256-pgcrRRbZaLoChVPeOvw4jjdDCokUK1ew0Wfy42bXfQo=";
+            rev = "487cc1ea8ac98cadec8e7ca8418b5996763ed6d9";
+            sha256 = "sha256-PAIxzw2yS1HMv/M1zfVgRcg3UUSL+CCDZK73y/SoamY=";
           };
 
           dontBuild = true;
