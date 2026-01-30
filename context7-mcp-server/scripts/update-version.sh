@@ -149,6 +149,55 @@ show_changes() {
   fi
 }
 
+build_commit_message() {
+  local previous_version="$1"
+  local new_version="$2"
+  local rehash="${3:-false}"
+
+  local scope
+  scope="$(basename "$pkg_dir")"
+
+  if [ "$previous_version" != "$new_version" ]; then
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  printf 'chore(%s): update version\n' "$scope"
+}
+
+maybe_git_commit() {
+  local commit_message="$1"
+  shift
+  local -a paths=("$@")
+
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
+    return 0
+  fi
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  git -C "$pkg_dir" add -- "${paths[@]}"
+
+  if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+  log_info "Committed: $commit_message"
+}
+
 print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
@@ -290,6 +339,13 @@ main() {
   fi
 
   show_changes
+
+  local -a commit_paths=("flake.nix")
+  if [ -f "$pkg_dir/flake.lock" ]; then
+    commit_paths+=("flake.lock")
+  fi
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
+
   log_info "Successfully updated $PACKAGE_ATTR from $current_version to $latest_version"
 }
 
