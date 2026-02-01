@@ -14,6 +14,14 @@
         pname = "csso-cli";
         version = "4.0.2";
 
+        # NOTE: npm optionalDependencies can be platform-specific,
+        # so the fixed-output hash from "npm install" is not portable across systems.
+        # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
+        outputHashBySystem = {
+          "aarch64-linux" = pkgs.lib.fakeHash;
+          "x86_64-linux" = "sha256-/hpU7FKz/td9NqlEINs1eeFTR9Mb6FHklhzauK8RLmo=";
+        };
+
         # Fixed-output derivation to fetch npm package with prod dependencies
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
@@ -28,7 +36,8 @@
           dontPatchShebangs = true;
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-/hpU7FKz/td9NqlEINs1eeFTR9Mb6FHklhzauK8RLmo=";
+          outputHash = outputHashBySystem.${system}
+            or (throw "Missing outputHashBySystem entry for system: ${system}");
 
           buildPhase = ''
             runHook preBuild

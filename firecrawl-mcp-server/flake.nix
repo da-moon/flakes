@@ -20,6 +20,13 @@
         pname = "firecrawl-mcp";
         version = "3.7.4";
 
+        # NOTE: npm optionalDependencies can be platform-specific,
+        # so the fixed-output hash from "yarn install" is not portable across systems.
+        outputHashBySystem = {
+          "aarch64-linux" = "sha256-lDVNaYVQt8/truJFHDj6cbKAH1FhUhfzPXtbK4gcCJQ=";
+          "x86_64-linux" = "sha256-G4CVBZAu4MaDQSSbDMp/AzvntrvPWO7/v+nCDOfObnw=";
+        };
+
         # Fixed-output derivation to fetch npm package with all dependencies
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
@@ -37,7 +44,8 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-G4CVBZAu4MaDQSSbDMp/AzvntrvPWO7/v+nCDOfObnw=";
+          outputHash = outputHashBySystem.${system}
+            or (throw "Missing outputHashBySystem entry for system: ${system}");
 
           buildPhase = ''
             runHook preBuild

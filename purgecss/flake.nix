@@ -14,6 +14,14 @@
         pname = "purgecss";
         version = "8.0.0";
 
+        # NOTE: npm optionalDependencies can be platform-specific,
+        # so the fixed-output hash from "npm install" is not portable across systems.
+        # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
+        outputHashBySystem = {
+          "aarch64-linux" = pkgs.lib.fakeHash;
+          "x86_64-linux" = "sha256-s+jbbDZBgWwL6ixlEZSxKriEZXHmyvrr2YCBUHgQ/UU=";
+        };
+
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
 
@@ -27,7 +35,8 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-s+jbbDZBgWwL6ixlEZSxKriEZXHmyvrr2YCBUHgQ/UU=";
+          outputHash = outputHashBySystem.${system}
+            or (throw "Missing outputHashBySystem entry for system: ${system}");
 
           buildPhase = ''
             runHook preBuild
