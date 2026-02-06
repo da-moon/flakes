@@ -24,7 +24,7 @@
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build
         outputHashBySystem = {
           "aarch64-linux" = "sha256-Os/YYFqDk4NLp9cZNQ7TwOx0WAj/S4Qp4udOwFInnBU=";
-          "x86_64-linux" = "sha256-Te8GB5s3J1R3c38TV1pE5ksQG4e9nGIYXoh8LdV8V4k=";
+          "x86_64-linux" = "sha256-ZDOnpSEgaAAW6Tu36XURTUSXEIq4phrQekbtJAuHp6s=";
         };
 
         # Fixed-output derivation that runs pnpm install with network access
