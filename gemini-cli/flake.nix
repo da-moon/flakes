@@ -20,14 +20,16 @@
         pname = "gemini-cli";
         version = "0.27.2";
 
-        # Platform-specific output hashes for npm install
+        # Platform-specific output hashes for pnpm install
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build
         outputHashBySystem = {
-          "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-frtRH9OlJeDdFNst7JDmg7T7O18tJND0pr+Z+761xTM=";
+          "aarch64-linux" = "sha256-Os/YYFqDk4NLp9cZNQ7TwOx0WAj/S4Qp4udOwFInnBU=";
+          "x86_64-linux" = pkgs.lib.fakeHash;
         };
 
-        # Fixed-output derivation that runs npm install with network access
+        # Fixed-output derivation that runs pnpm install with network access
+        # Uses pnpm instead of npm because npm crashes with "double free or corruption"
+        # on aarch64-linux (Android/nix-on-droid)
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
 
@@ -36,7 +38,7 @@
             sha256 = "sha256-kjtNQIZWiozasRrEAq2WJMgiQ25aFUcmzpbUpu5EzHI=";
           };
 
-          nativeBuildInputs = [ nodejs pkgs.cacert ];
+          nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
           dontPatchShebangs = true;
 
           outputHashAlgo = "sha256";
@@ -47,10 +49,21 @@
           buildPhase = ''
             runHook preBuild
             export HOME=$TMPDIR
-            export npm_config_cache=$TMPDIR/.npm
+
             tar -xzf $src
             cd package
-            npm install --production --ignore-scripts
+
+            # Remove devDependencies to avoid pnpm resolving file:../test-utils references
+            ${nodejs}/bin/node -e "
+              const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
+              delete p.devDependencies;
+              require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));
+            "
+
+            # Use pnpm with --shamefully-hoist for flat node_modules layout
+            # (required for ESM module resolution compatibility)
+            pnpm install --prod --ignore-scripts --shamefully-hoist
+
             runHook postBuild
           '';
 
