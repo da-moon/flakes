@@ -47,6 +47,10 @@ get_current_system_key() {
   nix eval --impure --raw --expr builtins.currentSystem
 }
 
+has_fake_hash() {
+  grep -v '^[[:space:]]*#' "$flake_file" | grep -q 'fakeHash'
+}
+
 prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
@@ -292,8 +296,13 @@ main() {
   fi
 
   if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
-    log_info "Already up to date!"
-    exit 0
+    if has_fake_hash; then
+      log_info "Detected fakeHash for current system; proceeding with rehash..."
+      rehash=true
+    else
+      log_info "Already up to date!"
+      exit 0
+    fi
   fi
 
   local tarball_url
