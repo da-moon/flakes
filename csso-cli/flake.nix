@@ -19,7 +19,7 @@
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-/hpU7FKz/td9NqlEINs1eeFTR9Mb6FHklhzauK8RLmo=";
+          "x86_64-linux" = "sha256-gD0nKC3ijBsiv/MK6nE29XetfFmBbmXi7AEUzXL+2V8=";
         };
 
         # Fixed-output derivation to fetch npm package with prod dependencies
