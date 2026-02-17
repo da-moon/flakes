@@ -15,6 +15,8 @@ readonly REPO_OWNER="block"
 readonly REPO_NAME="goose"
 readonly PACKAGE_ATTR="goose-cli"
 
+BUILD_SYSTEM=""
+
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
@@ -40,6 +42,28 @@ get_latest_release_tag() {
   local release_json
   release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
   printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+}
+
+run_nix_build() {
+  local build_args=(nix build ".#${PACKAGE_ATTR}")
+
+  if [ -n "$BUILD_SYSTEM" ]; then
+    build_args+=(--system "$BUILD_SYSTEM")
+  fi
+
+  build_args+=(--no-link --print-out-paths)
+
+  if [ "$1" = with_cd ]; then
+    shift
+    (cd "$pkg_dir" && "${build_args[@]}" "$@")
+    return
+  fi
+
+  (cd "$pkg_dir" && "${build_args[@]}" "$@")
+}
+
+extract_nix_store_path() {
+  printf '%s\n' "$1" | awk '/^\/nix\/store\// { last=$1 } END { if (last != "") print last }'
 }
 
 tag_to_version() {
@@ -89,12 +113,37 @@ update_flake_lock() {
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --print-out-paths)"
-  if [ -z "$out_path" ] || [ ! -x "$out_path/bin/goose" ]; then
-    log_error "Build succeeded but expected binary not found at: $out_path/bin/goose"
+  local build_output
+  local old_lc_all="$LC_ALL"
+  LC_ALL=C
+  if ! build_output="$(run_nix_build with_cd 2>&1)"; then
+    log_error "Nix build failed for package verification"
+    printf '%s\n' "$build_output" | sed -n '1,200p'
+    LC_ALL="$old_lc_all"
     return 1
   fi
-  "$out_path/bin/goose" --help >/dev/null 2>&1 || true
+  LC_ALL="$old_lc_all"
+
+  out_path="$(extract_nix_store_path "$build_output")"
+  if [ -z "$out_path" ] || [ ! -x "$out_path/bin/goose" ]; then
+    log_error "Build succeeded but expected binary not found at: $out_path/bin/goose"
+    log_warn "Build output:"
+    printf '%s\n' "$build_output" | sed -n '1,120p'
+    if [ -n "$out_path" ] && [ -e "$out_path" ]; then
+      log_warn "Listing output path:"
+      (ls -la "$out_path" | sed 's/^/[out] /') || true
+      if [ -d "$out_path/bin" ]; then
+        log_warn "Listing bin/:"
+        (ls -la "$out_path/bin" | sed 's/^/[bin] /') || true
+      fi
+    elif [ -n "$out_path" ]; then
+      log_warn "Output path does not exist: $out_path"
+    fi
+    return 1
+  fi
+  if ! "$out_path/bin/goose" --help >/dev/null 2>&1; then
+    log_warn "goose binary exists but --help returned non-zero; continuing as this may be acceptable in offline checks"
+  fi
   log_info "Build successful!"
 }
 
@@ -104,7 +153,7 @@ compute_and_update_src_sha256() {
   cleanup_backups
 
   local build_output
-  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link 2>&1 || true)"
+  build_output="$(run_nix_build with_cd 2>&1 || true)"
   local got_hash
   got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
 
@@ -128,7 +177,7 @@ compute_and_update_cargo_hash() {
   cleanup_backups
 
   local build_output
-  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link 2>&1 || true)"
+  build_output="$(run_nix_build with_cd 2>&1 || true)"
   local got_hash
   got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
 
@@ -211,6 +260,7 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute src sha256 and cargoHash for current version
   --no-build          Skip build verification
+  --system SYSTEM     Optional nix build system (for hash/update/verify)
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 
@@ -248,6 +298,15 @@ main() {
       --no-build)
         no_build=true
         shift
+        ;;
+      --system)
+        BUILD_SYSTEM="${2:-}"
+        if [ -z "$BUILD_SYSTEM" ]; then
+          log_error "Missing argument for --system"
+          print_usage
+          exit 2
+        fi
+        shift 2
         ;;
       --update-lock)
         update_lock=true
