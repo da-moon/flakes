@@ -18,13 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "firecrawl-mcp";
-        version = "3.7.4";
+        version = "3.9.0";
 
         # NOTE: npm optionalDependencies can be platform-specific,
         # so the fixed-output hash from "yarn install" is not portable across systems.
         outputHashBySystem = {
           "aarch64-linux" = "sha256-lDVNaYVQt8/truJFHDj6cbKAH1FhUhfzPXtbK4gcCJQ=";
-          "x86_64-linux" = "sha256-G4CVBZAu4MaDQSSbDMp/AzvntrvPWO7/v+nCDOfObnw=";
+          "x86_64-linux" = "sha256-dfj7cWaxiW0NJLX6QIt4zms2us8OaX3WUL54tKJNtBE=";
         };
 
         # Fixed-output derivation to fetch npm package with all dependencies
@@ -33,7 +33,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-${version}.tgz";
-            hash = "sha256-BwfY6vyMaD+Dsq8JtXvG3FPCoVCaFH/c1Y5v/FHos8w=";
+            hash = "sha256-PAdUl5Dq/YKmgEXNNKJYQSPRikH7oYosHRv4PwsgoTM=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert pkgs.yarn ];
