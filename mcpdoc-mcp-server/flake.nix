@@ -15,6 +15,11 @@
         pname = "mcpdoc";
         version = "0.0.10";
 
+        sourceHashBySystem = {
+          "aarch64-linux" = "sha256-f+jj7R28CIY3imxwBNbLHmt5Vz7RvhU3Tx4aH8BfMKk=";
+          "x86_64-linux" = "sha256-f+jj7R28CIY3imxwBNbLHmt5Vz7RvhU3Tx4aH8BfMKk=";
+        };
+
         mcpdoc = pkgs.python3Packages.buildPythonApplication {
           inherit pname version;
 
@@ -24,7 +29,7 @@
 
           src = pkgs.fetchPypi {
             inherit pname version;
-            hash = "sha256-f+jj7R28CIY3imxwBNbLHmt5Vz7RvhU3Tx4aH8BfMKk=";
+            hash = sourceHashBySystem.${system} or (throw "Missing sourceHashBySystem entry for system: ${system}");
           };
 
           propagatedBuildInputs = with pkgs.python3Packages; [
