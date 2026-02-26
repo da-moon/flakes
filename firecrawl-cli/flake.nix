@@ -25,7 +25,7 @@
         # Start from fakeHash and rehash per-system after build.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-aWpRd6XzkFIQAozkdMtsod4cCzDxAc2++KXMx3RGJgc=";
+          "x86_64-linux" = "sha256-ldRYGDtbWB1XVPuHzerDWMIYJ/0/Zy53J0MGJRIZboQ=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
