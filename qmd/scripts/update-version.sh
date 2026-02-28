@@ -13,9 +13,6 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="tobi"
 readonly REPO_NAME="qmd"
-readonly NPM_REGISTRY_BASE="https://registry.npmjs.org"
-readonly NPM_SCOPE="tobilu"
-readonly NPM_NAME="qmd"
 readonly PACKAGE_ATTR="qmd"
 readonly BIN_NAME="qmd"
 
@@ -59,7 +56,7 @@ get_current_system_key() {
 
 get_source_url() {
   local version="$1"
-  printf '%s/%%40%s%%2F%s/-/%s-%s.tgz' "$NPM_REGISTRY_BASE" "$NPM_SCOPE" "$NPM_NAME" "$version"
+  printf 'https://github.com/%s/%s/archive/refs/tags/v%s.tar.gz' "$REPO_OWNER" "$REPO_NAME" "$version"
 }
 
 prefetch_sha256_sri() {

@@ -13,21 +13,26 @@
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "qmd";
         version = "1.0.7";
-        nodejs = pkgs.nodejs_22;
+
+        sqliteWithExtensions = pkgs.sqlite.overrideAttrs (old: {
+          configureFlags = (old.configureFlags or [ ]) ++ [
+            "--enable-load-extension"
+          ];
+        });
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-wA9razNIb66uzAt+tAzhSPK2bXcCNSekVB/e/fxVJek=";
-          "x86_64-linux" = "sha256-wA9razNIb66uzAt+tAzhSPK2bXcCNSekVB/e/fxVJek=";
+          "aarch64-linux" = "sha256-a+lF9917f1kl2wTrrQ38Jz55kUOlIkqg1jy5uuLwIao=";
+          "x86_64-linux" = "sha256-a+lF9917f1kl2wTrrQ38Jz55kUOlIkqg1jy5uuLwIao=";
         };
 
-        # Optional dependencies in qmd may vary by platform.
+        # Optional dependencies and install artifacts may vary by architecture.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-Hh0O8lncr3iatxBgwZ9dCkhQzTUtsXX6whcA92u7+kA=";
+          "x86_64-linux" = "sha256-5el0o8mkrf2L8uce9v96CprrAb/JC8WG3NBPoNyJjlI=";
         };
 
         source = pkgs.fetchurl {
-          url = "https://registry.npmjs.org/%40tobilu%2fqmd/-/qmd-${version}.tgz";
+          url = "https://github.com/tobi/qmd/archive/refs/tags/v${version}.tar.gz";
           hash = sourceHashBySystem.${system} or (throw "Missing source hash for system ${system}");
         };
 
@@ -35,7 +40,7 @@
           name = "${pname}-${version}-npm-deps";
 
           src = source;
-          nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
+          nativeBuildInputs = [ pkgs.bun pkgs.python3 pkgs.cacert ];
           dontPatchShebangs = true;
 
           outputHashAlgo = "sha256";
@@ -45,11 +50,13 @@
 
           buildPhase = ''
             export HOME=$TMPDIR
-            export npm_config_cache=$TMPDIR/.npm
+            export BUN_INSTALL=$TMPDIR/.bun
+            export BUN_INSTALL_GLOBAL_DIR=$TMPDIR/.bun-global
+            export BUN_INSTALL_CACHE_DIR=$TMPDIR/.bun-cache
 
             tar -xzf $src
-            cd package
-            pnpm install --prod --ignore-scripts --shamefully-hoist
+            cd qmd-${version}
+            bun install --frozen-lockfile --ignore-scripts
           '';
 
           installPhase = ''
@@ -73,10 +80,10 @@
 
             cp -r $src/* $out/lib/${pname}/
 
-            makeWrapper ${nodejs}/bin/node $out/bin/qmd \
-              --add-flags "$out/lib/${pname}/dist/qmd.js" \
-              --set NODE_PATH "$out/lib/${pname}/node_modules" \
-              --set NODE_ENV "production"
+            makeWrapper ${pkgs.bun}/bin/bun $out/bin/qmd \
+              --add-flags "$out/lib/${pname}/src/qmd.ts" \
+              --set DYLD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib" \
+              --set LD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib"
           '';
 
           meta = with pkgs.lib; {
