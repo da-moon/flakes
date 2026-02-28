@@ -82,6 +82,8 @@
 
             makeWrapper ${pkgs.bun}/bin/bun $out/bin/qmd \
               --add-flags "$out/lib/${pname}/src/qmd.ts" \
+              --set-default NODE_LLAMA_CPP_BUILD_DIR "/tmp/node-llama-cpp" \
+              --run "mkdir -p /tmp/node-llama-cpp" \
               --set DYLD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib" \
               --set LD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib"
           '';
