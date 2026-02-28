@@ -264,6 +264,8 @@ main() {
   fi
 
   local new_version="${target_version:-$latest_version}"
+  log_info "Current version: $current_version"
+  log_info "Target version:  $new_version"
 
   local needs_update=false
   if [ "$current_version" != "$new_version" ]; then
