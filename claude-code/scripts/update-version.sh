@@ -16,6 +16,7 @@ readonly PACKAGE_NAME="@anthropic-ai/claude-code"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
@@ -156,6 +157,7 @@ EOF
 main() {
   ensure_required_tools_installed
   ensure_in_package_directory
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
   local target_version=""
   local check_only=false
