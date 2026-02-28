@@ -13,60 +13,70 @@
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "qmd";
         version = "1.0.7";
+        nodejs = pkgs.nodejs_22;
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-a+lF9917f1kl2wTrrQ38Jz55kUOlIkqg1jy5uuLwIao=";
-          "x86_64-linux" = "sha256-a+lF9917f1kl2wTrrQ38Jz55kUOlIkqg1jy5uuLwIao=";
+          "aarch64-linux" = "sha256-wA9razNIb66uzAt+tAzhSPK2bXcCNSekVB/e/fxVJek=";
+          "x86_64-linux" = "sha256-wA9razNIb66uzAt+tAzhSPK2bXcCNSekVB/e/fxVJek=";
         };
 
-        # SQLite with loadable extension support for sqlite-vec
-        sqliteWithExtensions = pkgs.sqlite.overrideAttrs (old: {
-          configureFlags = (old.configureFlags or [ ]) ++ [
-            "--enable-load-extension"
-          ];
-        });
+        # Optional dependencies in qmd may vary by platform.
+        outputHashBySystem = {
+          "aarch64-linux" = pkgs.lib.fakeHash;
+          "x86_64-linux" = "sha256-Hh0O8lncr3iatxBgwZ9dCkhQzTUtsXX6whcA92u7+kA=";
+        };
 
-        source = let
-          source_archive = pkgs.fetchurl {
-            url = "https://github.com/tobi/qmd/archive/refs/tags/v${version}.tar.gz";
-            hash = sourceHashBySystem.${system} or (throw "Missing source hash for system ${system}");
-          };
-        in
-          pkgs.runCommand "${pname}-source-${version}" { } ''
-            tar -xzf ${source_archive}
-            cp -r "${pname}-${version}/." "$out/"
+        source = pkgs.fetchurl {
+          url = "https://registry.npmjs.org/%40tobilu%2fqmd/-/qmd-${version}.tgz";
+          hash = sourceHashBySystem.${system} or (throw "Missing source hash for system ${system}");
+        };
+
+        npmDeps = pkgs.stdenv.mkDerivation {
+          name = "${pname}-${version}-npm-deps";
+
+          src = source;
+          nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
+          dontPatchShebangs = true;
+
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
+          outputHash = outputHashBySystem.${system}
+            or (throw "Missing outputHashBySystem entry for system ${system}");
+
+          buildPhase = ''
+            export HOME=$TMPDIR
+            export npm_config_cache=$TMPDIR/.npm
+
+            tar -xzf $src
+            cd package
+            pnpm install --prod --ignore-scripts --shamefully-hoist
           '';
+
+          installPhase = ''
+            mkdir -p $out
+            cp -r . $out/
+          '';
+        };
 
         qmd = pkgs.stdenv.mkDerivation {
           inherit pname version;
 
-          src = source;
+          src = npmDeps;
 
-          nativeBuildInputs = [
-            pkgs.bun
-            pkgs.makeWrapper
-            pkgs.python3
-          ];
-
-          buildInputs = [ pkgs.sqlite sqliteWithExtensions ];
-
-          buildPhase = ''
-            export HOME=$(mktemp -d)
-            bun install --frozen-lockfile
-          '';
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          dontBuild = true;
+          dontConfigure = true;
 
           installPhase = ''
-            mkdir -p $out/lib/qmd
+            mkdir -p $out/lib/${pname}
             mkdir -p $out/bin
 
-            cp -r node_modules $out/lib/qmd/
-            cp -r src $out/lib/qmd/
-            cp package.json $out/lib/qmd/
+            cp -r $src/* $out/lib/${pname}/
 
-            makeWrapper ${pkgs.bun}/bin/bun $out/bin/qmd \
-              --add-flags "$out/lib/qmd/src/qmd.ts" \
-              --set DYLD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib" \
-              --set LD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib"
+            makeWrapper ${nodejs}/bin/node $out/bin/qmd \
+              --add-flags "$out/lib/${pname}/dist/qmd.js" \
+              --set NODE_PATH "$out/lib/${pname}/node_modules" \
+              --set NODE_ENV "production"
           '';
 
           meta = with pkgs.lib; {
@@ -80,6 +90,7 @@
             mainProgram = "qmd";
           };
         };
+
       in
       {
         packages = {

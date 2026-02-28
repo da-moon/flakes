@@ -13,6 +13,9 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="tobi"
 readonly REPO_NAME="qmd"
+readonly NPM_REGISTRY_BASE="https://registry.npmjs.org"
+readonly NPM_SCOPE="tobilu"
+readonly NPM_NAME="qmd"
 readonly PACKAGE_ATTR="qmd"
 readonly BIN_NAME="qmd"
 
@@ -41,7 +44,7 @@ get_current_version() {
 get_latest_release_tag() {
   local release_json
   release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
-  printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^\"]*\)".*/\1/p' | head -n1
 }
 
 tag_to_version() {
@@ -52,6 +55,11 @@ tag_to_version() {
 
 get_current_system_key() {
   nix eval --impure --raw --expr builtins.currentSystem
+}
+
+get_source_url() {
+  local version="$1"
+  printf '%s/%%40%s%%2F%s/-/%s-%s.tgz' "$NPM_REGISTRY_BASE" "$NPM_SCOPE" "$NPM_NAME" "$version"
 }
 
 prefetch_sha256_sri() {
@@ -77,12 +85,45 @@ get_source_hash_for_system() {
   awk -v target="$target_system" '
     /sourceHashBySystem[[:space:]]*= {/ { in_map = 1; next }
     in_map && /};/ { in_map = 0 }
-    in_map && $0 ~ "\"" target "\"" { if (match($0, /\"[^\"]+\"[[:space:]]*= \"([^\"]+)\";/, a) > 0) print a[1] }
+    in_map && $0 ~ "\"" target "\"" { if (match($0, /"[^"]+"[[:space:]]*= "([^"]+)";/, a) > 0) print a[1] }
   ' "$flake_file"
+}
+
+get_output_hash_for_system() {
+  local target_system="$1"
+  awk -v target="$target_system" '
+    /outputHashBySystem[[:space:]]*= {/ { in_map = 1; next }
+    in_map && /};/ { in_map = 0 }
+    in_map && $0 ~ "\"" target "\"" { if (match($0, /"[^"]+"[[:space:]]*= "([^"]+)";/, a) > 0) print a[1] }
+  ' "$flake_file"
+}
+
+set_output_hash_placeholder_for_system() {
+  local system_key="$1"
+  local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  sed -i.bak -E "/\"outputHashBySystem\"[[:space:]]*= {/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;|\\1\"${placeholder}\";|" "$flake_file"
+  if ! grep -Fq "\"${system_key}\" = \"${placeholder}\";" "$flake_file"; then
+    log_error "Failed to set outputHash placeholder for system: $system_key"
+    return 1
+  fi
+}
+
+update_output_hash() {
+  local system_key="$1"
+  local new_hash="$2"
+  sed -i.bak -E "/\"outputHashBySystem\"[[:space:]]*= {/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*= \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
+  if ! grep -Fq "\"${system_key}\" = \"${new_hash}\";" "$flake_file"; then
+    log_error "Failed to update outputHash for system: $system_key"
+    return 1
+  fi
 }
 
 cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
+}
+
+extract_got_hash_from_build() {
+  sed -n 's/.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | head -n1
 }
 
 verify_build() {
@@ -95,6 +136,39 @@ verify_build() {
   fi
   "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
   log_info "Build successful!"
+}
+
+compute_and_update_output_hash() {
+  local system_key
+  system_key="$(get_current_system_key)"
+  if [ -z "$system_key" ]; then
+    log_error "Failed to detect current system key"
+    return 1
+  fi
+
+  log_info "Computing outputHash (fixed-output npm deps) for system: $system_key"
+  if ! set_output_hash_placeholder_for_system "$system_key"; then
+    return 1
+  fi
+  cleanup_backups
+
+  local build_output
+  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link 2>&1 || true)"
+  local got_hash
+  got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
+
+  if [ -z "$got_hash" ]; then
+    log_error "Failed to parse outputHash from nix build output"
+    printf '%s\n' "$build_output" | sed -n '1,120p' >&2 || true
+    return 1
+  fi
+
+  log_info "outputHash ($system_key): $got_hash"
+  if ! update_output_hash "$system_key" "$got_hash"; then
+    log_error "Failed to update outputHash in flake.nix"
+    return 1
+  fi
+  cleanup_backups
 }
 
 build_commit_message() {
@@ -153,7 +227,7 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 Options:
   --version VERSION   Update to a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute source hash for current version
+  --rehash            Recompute source hash and outputHash for current architecture
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
@@ -251,7 +325,7 @@ main() {
   fi
 
   local source_url
-  source_url="https://github.com/$REPO_OWNER/$REPO_NAME/archive/refs/tags/${source_tag}.tar.gz"
+  source_url="$(get_source_url "$latest_version")"
 
   local source_hash
   source_hash="$(prefetch_sha256_sri "$source_url")"
@@ -273,6 +347,9 @@ main() {
   if [ -z "$(get_source_hash_for_system "$current_system_key")" ]; then
     log_warn "No sourceHashBySystem entry for ${current_system_key}"
   fi
+  if [ -z "$(get_output_hash_for_system "$current_system_key")" ]; then
+    log_warn "No outputHashBySystem entry for ${current_system_key}"
+  fi
 
   local backup
   backup="$(mktemp -t flake.nix.backup.XXXXXX)"
@@ -282,6 +359,16 @@ main() {
   update_flake_version "$latest_version"
   update_source_hash "aarch64-linux" "$source_hash"
   update_source_hash "x86_64-linux" "$source_hash"
+  if [ "$no_build" != true ]; then
+    if ! compute_and_update_output_hash; then
+      log_error "Failed to update outputHash; restoring previous flake.nix"
+      cp "$backup" "$flake_file"
+      rm -f "$backup"
+      exit 1
+    fi
+  else
+    log_warn "Skipping outputHash update because --no-build was requested"
+  fi
   cleanup_backups
 
   if [ "$no_build" != true ]; then
