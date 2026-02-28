@@ -275,17 +275,46 @@ main() {
       log_warn "Update available: $current_version -> $new_version"
       exit 1
     fi
-    log_info "No update needed. Current version is $current_version"
+    log_info "Already up to date!"
     exit 0
   fi
 
   if [ "$needs_update" = false ] && [ "$rehash" != true ]; then
+    local current_system_key=""
+    local current_system_hash=""
+    local package_url=""
+    local drift_hash=""
+
+    current_system_key="$(get_current_system_key)"
+    if [ -z "$current_system_key" ]; then
+      log_error "Failed to detect current system key"
+      exit 2
+    fi
+
     if has_fake_hash; then
       log_info "Detected placeholder source hash for current system; proceeding with rehash..."
       rehash=true
     else
-      log_warn "No update requested. Version is already $current_version"
-      exit 0
+      current_system_hash="$(get_source_hash_for_system "$current_system_key" | head -n1)"
+      if [ -z "$current_system_hash" ]; then
+        log_error "Could not detect source hash for system ${current_system_key}"
+        exit 2
+      fi
+
+      package_url="$(get_package_url "$new_version")"
+      drift_hash="$(prefetch_sha256_sri "$package_url")"
+      if [ -z "$drift_hash" ]; then
+        log_error "Failed to compute source hash for $new_version"
+        exit 1
+      fi
+
+      if [ "$current_system_hash" != "$drift_hash" ]; then
+        log_info "Detected source hash drift for $current_system_key; proceeding with rehash..."
+        rehash=true
+      else
+        log_info "Already up to date!"
+        exit 0
+      fi
     fi
   fi
 
@@ -300,9 +329,15 @@ main() {
 
   local package_url
   local new_hash
-  package_url="$(get_package_url "$new_version")"
-  new_hash="$(prefetch_sha256_sri "$package_url")"
+  if [ -z "${package_url:-}" ]; then
+    package_url="$(get_package_url "$new_version")"
+  fi
 
+  if [ -z "${drift_hash:-}" ]; then
+    drift_hash="$(prefetch_sha256_sri "$package_url")"
+  fi
+
+  new_hash="$drift_hash"
   if [ -z "$new_hash" ]; then
     log_error "Failed to compute source hash for $new_version"
     exit 1
