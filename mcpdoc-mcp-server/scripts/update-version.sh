@@ -56,6 +56,39 @@ get_source_hash_for_system() {
   ' "$flake_file"
 }
 
+get_current_system_key() {
+  nix eval --impure --raw --expr builtins.currentSystem
+}
+
+has_fake_hash() {
+  local current_system_key
+  local source_hash_line
+
+  current_system_key="$(get_current_system_key)"
+  if [ -z "$current_system_key" ]; then
+    log_error "Failed to detect current system key"
+    return 1
+  fi
+
+  source_hash_line="$(awk -v target="$current_system_key" '
+    /sourceHashBySystem[[:space:]]*=/ { in_map = 1; next }
+    in_map && /};/ { in_map = 0 }
+    in_map && $0 ~ ("\"" target "\"") { print $0 }
+  ' "$flake_file" | grep -v '^[[:space:]]*#' | head -n1)"
+
+  if [ -z "$source_hash_line" ]; then
+    return 1
+  fi
+
+  if printf '%s\n' "$source_hash_line" | grep -q 'fakeHash'; then
+    return 0
+  fi
+  if printf '%s\n' "$source_hash_line" | grep -q 'sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='; then
+    return 0
+  fi
+  return 1
+}
+
 get_package_url() {
   local version="$1"
   printf 'https://files.pythonhosted.org/packages/source/m/%s/%s-%s.tar.gz' \
@@ -246,9 +279,14 @@ main() {
     exit 0
   fi
 
-  if [ "$needs_update" = false ] && [ "$rehash" = false ]; then
-    log_warn "No update requested. Version is already $current_version"
-    exit 0
+  if [ "$needs_update" = false ] && [ "$rehash" != true ]; then
+    if has_fake_hash; then
+      log_info "Detected placeholder source hash for current system; proceeding with rehash..."
+      rehash=true
+    else
+      log_warn "No update requested. Version is already $current_version"
+      exit 0
+    fi
   fi
 
   local current_aarch_hash

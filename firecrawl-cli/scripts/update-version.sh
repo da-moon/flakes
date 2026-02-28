@@ -49,7 +49,32 @@ get_current_system_key() {
 }
 
 has_fake_hash() {
-  grep -v '^[[:space:]]*#' "$flake_file" | grep -q 'fakeHash'
+  local current_system_key
+  local output_hash_line
+
+  current_system_key="$(get_current_system_key)"
+  if [ -z "$current_system_key" ]; then
+    log_error "Failed to detect current system key"
+    return 1
+  fi
+
+  output_hash_line="$(awk -v target="$current_system_key" '
+    /outputHashBySystem[[:space:]]*=[[:space:]]*\\{/ { in_map = 1; next }
+    in_map && /};/ { in_map = 0 }
+    in_map && $0 ~ ("\"" target "\"") { print $0 }
+  ' "$flake_file" | grep -v '^[[:space:]]*#' | head -n1)"
+
+  if [ -z "$output_hash_line" ]; then
+    return 1
+  fi
+
+  if printf '%s\n' "$output_hash_line" | grep -q 'fakeHash'; then
+    return 0
+  fi
+  if printf '%s\n' "$output_hash_line" | grep -q 'sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='; then
+    return 0
+  fi
+  return 1
 }
 
 prefetch_sha256_sri() {
@@ -361,4 +386,3 @@ main() {
 }
 
 main "$@"
-
