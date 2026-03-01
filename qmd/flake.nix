@@ -27,7 +27,7 @@
 
         # Optional dependencies and install artifacts may vary by architecture.
         outputHashBySystem = {
-          "aarch64-linux" = pkgs.lib.fakeHash;
+          "aarch64-linux" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
           "x86_64-linux" = "sha256-5el0o8mkrf2L8uce9v96CprrAb/JC8WG3NBPoNyJjlI=";
         };
 
