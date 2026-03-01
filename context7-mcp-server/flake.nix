@@ -23,7 +23,7 @@
         # NOTE: npm optionalDependencies can be platform-specific (for example, esbuild),
         # so the fixed-output hash from "npm install" is not portable across systems.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-MLw4PgV2ywVNgsHcEXuYtNq29RGf2uWDVAePBb6iPs0=";
+          "aarch64-linux" = "sha256-A/Kj+M8UXo3VPJCItjXppH3EgD2YZKkJF5Toe0n2rYM=";
           "x86_64-linux" = "sha256-vlgqku2S+S97r6Pg5MCBW2vT3QpqBja+AwnjrvOeWxA=";
         };
 
@@ -38,6 +38,7 @@
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
+          dontPatchShebangs = true;
 
           # FOD settings - allows network access, output is content-addressed
           outputHashAlgo = "sha256";
