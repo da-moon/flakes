@@ -74,7 +74,7 @@ update_flake_version() {
 update_source_hash() {
   local system_key="$1"
   local new_hash="$2"
-  sed -i.bak -E "/\"sourceHashBySystem\"[[:space:]]*= {/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*= \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
+  sed -i.bak -E "/sourceHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
 }
 
 get_source_hash_for_system() {
@@ -98,7 +98,7 @@ get_output_hash_for_system() {
 set_output_hash_placeholder_for_system() {
   local system_key="$1"
   local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  sed -i.bak -E "/\"outputHashBySystem\"[[:space:]]*= {/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;|\\1\"${placeholder}\";|" "$flake_file"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s#^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;#\\1\"${placeholder}\";#" "$flake_file"
   if ! grep -Fq "\"${system_key}\" = \"${placeholder}\";" "$flake_file"; then
     log_error "Failed to set outputHash placeholder for system: $system_key"
     return 1
@@ -108,7 +108,7 @@ set_output_hash_placeholder_for_system() {
 update_output_hash() {
   local system_key="$1"
   local new_hash="$2"
-  sed -i.bak -E "/\"outputHashBySystem\"[[:space:]]*= {/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*= \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
   if ! grep -Fq "\"${system_key}\" = \"${new_hash}\";" "$flake_file"; then
     log_error "Failed to update outputHash for system: $system_key"
     return 1

@@ -40,7 +40,7 @@
             owner = "block";
             repo = "goose";
             rev = "v${version}";
-            sha256 = "sha256-2qsRLeBXAJzaOEVarU5LGQp9iooPsYq/+vrMx5Mr2Gw=";
+            sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
           };
 
           cargoHash = "sha256-XHjOne43aCu6CkLaAF12TOcmP4TxSACu8Juxio3Td4k=";
