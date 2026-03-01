@@ -80,12 +80,22 @@
 
             cp -r $src/* $out/lib/${pname}/
 
+            # Symlink localBuilds to a writable location so node-llama-cpp
+            # doesn't try to mkdir inside the read-only /nix/store
+            chmod u+w $out/lib/${pname}/node_modules/node-llama-cpp/llama
+            ln -sf /tmp/node-llama-cpp/localBuilds \
+              $out/lib/${pname}/node_modules/node-llama-cpp/llama/localBuilds
+
             makeWrapper ${pkgs.bun}/bin/bun $out/bin/qmd \
               --add-flags "$out/lib/${pname}/src/qmd.ts" \
               --set-default NODE_LLAMA_CPP_BUILD_DIR "/tmp/node-llama-cpp" \
-              --run "mkdir -p /tmp/node-llama-cpp" \
+              --set NODE_LLAMA_CPP_SKIP_DOWNLOAD "true" \
+              --run "mkdir -p /tmp/node-llama-cpp/localBuilds" \
               --set DYLD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib" \
-              --set LD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib"
+              --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath [
+                sqliteWithExtensions
+                pkgs.stdenv.cc.cc.lib
+              ]}"
           '';
 
           meta = with pkgs.lib; {
