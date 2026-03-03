@@ -389,6 +389,11 @@
               ];
             };
 
+            # ── Environment variables ──────────────────────────────────────────
+            home.sessionVariables = {
+              EDITOR = "hx";
+            };
+
             # ── Shell setup ───────────────────────────────────────────────────
             programs.bash.enable = true;  # Required for shell aliases
 
@@ -449,6 +454,9 @@
               pkgsUnstable.ripgrep
               pkgsUnstable.eza
               pkgsUnstable.fd
+              pkgsUnstable.diffutils
+              pkgsUnstable.difftastic
+              pkgsUnstable.delta
 
               # some core useful packages and libs
               pkgsUnstable.nixfmt
