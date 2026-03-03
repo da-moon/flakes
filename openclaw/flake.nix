@@ -3,13 +3,14 @@
   # GENERIC OPENCLAW HOME-MANAGER FLAKE
   # ============================================================================
   # This flake sets up OpenClaw (AI assistant gateway) with:
-  #   - OpenAI GPT-5.2 as the primary LLM
-  #   - Fallback providers: MiniMax M2.5, Moonshot Kimi K2.5, Z.AI GLM-5
+  #   - Moonshot Kimi K2.5 as the primary LLM
+  #   - Fallback providers: OpenAI GPT-5.2, MiniMax M2.5, Z.AI GLM-5
   #   - Telegram bot integration
   #   - Browser automation (headless Chromium + extension relay)
   #   - Web search (Perplexity Sonar Reasoning Pro)
   #   - Speech-to-text (OpenAI Whisper)
   #   - QMD memory backend for local semantic search (BM25 + vector + rerank)
+  #   - Workspace directory scaffolding via systemd-tmpfiles (memory/cron/)
   #
   # SECURITY: All API keys live in ~/.secrets/ files (never in this flake)
   # ============================================================================
@@ -53,7 +54,8 @@
 
       # ── CONFIGURATION ─────────────────────────────────────────────────────────
       # Primary model for the agent (provider/model-id)
-      primaryModel = "openai/gpt-5.2";
+      primaryModel = "moonshot/kimi-k2.5";
+      fallbackModels = [ "openai/gpt-5.2" "minimax/MiniMax-M2.5" "zai/glm-5" ];
 
       # Browser CDP port for the headless claw-chrome systemd service
       # 18792 is reserved for the extension relay (gateway port + 3)
@@ -99,6 +101,34 @@
             home.homeDirectory = "/home/${username}";
             home.stateVersion = "24.11";
             programs.home-manager.enable = true;
+
+            # ── Workspace directory scaffolding ──────────────────────────────
+            # The openclaw agent's edit tool cannot create parent directories.
+            # Use systemd-tmpfiles to ensure workspace subdirectories exist
+            # before the agent needs them.
+            #
+            # Safety: the "d" type with "-" (no Age) only creates directories
+            # if missing — it NEVER deletes or cleans existing content.
+            # See tmpfiles.d(5), Type "d".
+            home.file.".config/user-tmpfiles.d/openclaw-workspace.conf".text = let
+              home = "/home/${username}";
+            in ''
+              # OpenClaw workspace subdirectories (created if missing, never cleaned)
+              # Format: Type Path Mode User Group Age Argument
+              d ${home}/.openclaw/workspace/memory       0755 - - - -
+              d ${home}/.openclaw/workspace/memory/cron   0755 - - - -
+            '';
+
+            # Ensure workspace dirs are created at login via systemd-tmpfiles.
+            systemd.user.services.openclaw-tmpfiles-setup = {
+              Unit.Description = "Create OpenClaw workspace directories";
+              Service = {
+                Type = "oneshot";
+                ExecStart = "${pkgs.systemd}/bin/systemd-tmpfiles --user --create";
+                RemainAfterExit = true;
+              };
+              Install.WantedBy = [ "default.target" ];
+            };
 
             # ── Chromium browser ──────────────────────────────────────────────
             # Pre-installs the OpenClaw Browser Relay extension for
@@ -258,11 +288,11 @@
                 };
 
                 # ── Agent model ──────────────────────────────────────────────
-                # Primary: OpenAI GPT-5.2 (API key from OPENAI_API_KEY)
-                # Fallback: MiniMax M2.5, Kimi K2.5, GLM-5
+                # Primary: Moonshot Kimi K2.5 (API key from MOONSHOT_API_KEY)
+                # Fallback: GPT-5.2, MiniMax M2.5, GLM-5
                 agents.defaults.model = {
                   primary = primaryModel;
-                  fallbacks = [ "minimax/MiniMax-M2.5" "moonshot/kimi-k2.5" "zai/glm-5" ];
+                  fallbacks = fallbackModels;
                 };
 
                 # ── Session compaction ─────────────────────────────────────
@@ -503,6 +533,7 @@
 #      npx playwright install chromium
 #
 # 8. Start services:
+#    systemctl --user start openclaw-tmpfiles-setup.service   # create workspace dirs
 #    systemctl --user enable --now claw-chrome.service
 #    systemctl --user restart openclaw-gateway
 #
