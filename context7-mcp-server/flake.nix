@@ -23,7 +23,7 @@
         # NOTE: npm optionalDependencies can be platform-specific (for example, esbuild),
         # so the fixed-output hash from "npm install" is not portable across systems.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-A/Kj+M8UXo3VPJCItjXppH3EgD2YZKkJF5Toe0n2rYM=";
+          "aarch64-linux" = "sha256-PN2MhwR2VT3d/EPHNiznItxkdL9+uDPRgggbwV9mEc8=";
           "x86_64-linux" = "sha256-II7jqIRXpeMCbJf7A9MN+7MNRgHN2lDN0F8Ur06g6g4=";
         };
 
