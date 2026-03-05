@@ -59,7 +59,7 @@ update_flake_version() {
 update_source_hash() {
   local system_key="$1"
   local new_hash="$2"
-  sed -i.bak -E "/\"sourceHashBySystem\"[[:space:]]*= {/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*= \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
+  sed -i.bak -E "s|^([[:space:]]*)\"${system_key}\"[[:space:]]*= \"[^\"]*\";|\1\"${system_key}\" = \"${new_hash}\";|" "$flake_file"
 }
 
 cleanup_backups() {
@@ -210,26 +210,27 @@ main() {
   if [ -n "$target_version" ]; then
     latest_version="$target_version"
   fi
+  local latest_version_no_v="${latest_version#v}"
 
   log_info "Current version: $current_version"
-  log_info "Target version:  $latest_version"
+  log_info "Target version:  $latest_version_no_v"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_version" = "$latest_version" ]; then
+    if [ "$current_version" = "$latest_version_no_v" ]; then
       log_info "Already up to date!"
       exit 0
     fi
-    log_info "Update available: $current_version -> $latest_version"
+    log_info "Update available: $current_version -> $latest_version_no_v"
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+  if [ "$current_version" = "$latest_version_no_v" ] && [ "$rehash" != true ]; then
     log_info "Already up to date!"
     exit 0
   fi
 
   local source_url
-  source_url="https://github.com/$REPO_OWNER/$REPO_NAME/archive/refs/tags/v${latest_version}.tar.gz"
+  source_url="https://github.com/$REPO_OWNER/$REPO_NAME/archive/refs/tags/${latest_version_no_v}.tar.gz"
 
   local source_hash
   source_hash="$(prefetch_sha256_sri "$source_url")"
@@ -245,7 +246,7 @@ main() {
   cp "$flake_file" "$backup"
 
   cleanup_backups
-  update_flake_version "$latest_version"
+  update_flake_version "$latest_version_no_v"
   update_source_hash "aarch64-linux" "$source_hash"
   update_source_hash "x86_64-linux" "$source_hash"
   cleanup_backups
@@ -270,9 +271,9 @@ main() {
   if [ -f "$pkg_dir/flake.lock" ]; then
     commit_paths+=("flake.lock")
   fi
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version_no_v" "$rehash")" "${commit_paths[@]}"
 
-  log_info "Successfully updated ${PACKAGE_ATTR} from $current_version to $latest_version"
+  log_info "Successfully updated ${PACKAGE_ATTR} from $current_version to $latest_version_no_v"
 }
 
 main "$@"
