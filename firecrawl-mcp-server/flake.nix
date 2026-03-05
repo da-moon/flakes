@@ -23,7 +23,7 @@
         # NOTE: npm optionalDependencies can be platform-specific,
         # so the fixed-output hash from "yarn install" is not portable across systems.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-SYAhUTVxb9U4et+OigjiYayJDEbKO5meu3/uCEfcdUY=";
+          "aarch64-linux" = "sha256-leCt3/09uYbgiKBcsRbD76RDhk9mTPso9Y/95rupc2U=";
           "x86_64-linux" = "sha256-QND1tuWjq0rTvNDLrGsY2z8lk0ed3QuuJ8rw0Rnb26U=";
         };
 
