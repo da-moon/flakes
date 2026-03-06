@@ -17,7 +17,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
-        version = "2.1.69";
+        version = "2.1.70";
 
         # Main Claude Code package - manual extraction approach for ARM64 Android compatibility
         claude-code = pkgs.stdenv.mkDerivation rec {
@@ -26,7 +26,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-            sha256 = "sha256-RbQCHPNBdLrMT0DSIAZyRIovSkDf8JBPJbpbIVD5EK0=";
+            sha256 = "sha256-YGPF83dBBfYlAZftP9wLpPZPx2y8Q9jSmX12gvB5Z9I=";
           };
 
           nativeBuildInputs = with pkgs; [
