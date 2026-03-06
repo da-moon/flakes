@@ -115,15 +115,23 @@ verify_build() {
   log_info "Verifying build..."
   local out_path
   local build_output
-  local old_lc_all="$LC_ALL"
+  local old_lc_all="${LC_ALL-}"
   LC_ALL=C
   if ! build_output="$(run_nix_build with_cd 2>&1)"; then
     log_error "Nix build failed for package verification"
     printf '%s\n' "$build_output" | sed -n '1,200p'
-    LC_ALL="$old_lc_all"
+    if [ -z "${old_lc_all+x}" ]; then
+      unset LC_ALL
+    else
+      LC_ALL="$old_lc_all"
+    fi
     return 1
   fi
-  LC_ALL="$old_lc_all"
+  if [ -z "${old_lc_all+x}" ]; then
+    unset LC_ALL
+  else
+    LC_ALL="$old_lc_all"
+  fi
 
   out_path="$(extract_nix_store_path "$build_output")"
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/goose" ]; then
