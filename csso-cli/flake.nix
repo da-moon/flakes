@@ -18,7 +18,7 @@
         # so the fixed-output hash from "npm install" is not portable across systems.
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-DfrT28ByiTOpy87wN+lrZHa2+jg3DbLvX73dpYtX4Uc=";
+          "aarch64-linux" = "sha256-SUaA5Z0lcNYXfNTATVkfL9r54iDeYmvFw4vvM4axKNQ=";
           "x86_64-linux" = "sha256-gD0nKC3ijBsiv/MK6nE29XetfFmBbmXi7AEUzXL+2V8=";
         };
 
