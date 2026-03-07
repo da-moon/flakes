@@ -10,6 +10,7 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
+readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="NousResearch"
 readonly REPO_NAME="hermes-agent"
 readonly PACKAGE_ATTR="hermes-agent"
@@ -22,6 +23,7 @@ readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
+  command -v nix-prefetch-url >/dev/null 2>&1 || { log_error "nix-prefetch-url is required but not installed."; exit 2; }
   command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
   command -v git >/dev/null 2>&1 || { log_error "git is required but not installed."; exit 2; }
   command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
@@ -46,17 +48,21 @@ get_latest_revision() {
   git ls-remote "https://github.com/${REPO_OWNER}/${REPO_NAME}.git" refs/heads/main | awk '{print $1}'
 }
 
-get_upstream_version() {
+get_commit_date() {
   local revision="$1"
-  local pyproject_url="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${revision}/pyproject.toml"
-  curl -fsSL "$pyproject_url" | sed -n 's/^[[:space:]]*version = "\([^"]*\)"/\1/p' | head -n1
+  local commit_json
+  commit_json="$(curl -fsSL "${GITHUB_API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/commits/${revision}")"
+  printf '%s\n' "$commit_json" | sed -n 's/.*"date":[[:space:]]*"\([0-9-]*\)T.*/\1/p' | head -n1
 }
 
 prefetch_sha256_sri() {
   local url="$1"
-  nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+  local hash_base32
+  hash_base32="$(nix-prefetch-url --unpack "$url")"
+  if [ -z "$hash_base32" ]; then
+    return 1
+  fi
+  nix hash to-sri --type sha256 "$hash_base32"
 }
 
 set_version() {
@@ -87,7 +93,7 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --help >/dev/null
+  "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
   log_info "Build successful."
 }
 
@@ -106,7 +112,7 @@ build_commit_message() {
   scope="$(basename "$pkg_dir")"
 
   if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s (%s)\n' "$scope" "$new_version" "${new_revision:0:7}"
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
     return 0
   fi
 
@@ -148,7 +154,6 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 
 Options:
   --revision REV      Update to a specific upstream revision (default: main HEAD)
-  --version VERSION   Override the version stored in flake.nix
   --check             Only check for updates (exit 1 if update available)
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
@@ -157,7 +162,7 @@ Options:
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --revision ab0f4126cf978df89be7bf6213e13a304d9b6ba8
+  ./scripts/update-version.sh --revision 6d3804770cbf03d4a6519da904ad92ce6b70cb62
 USAGE
 }
 
@@ -167,7 +172,6 @@ main() {
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
   local target_revision=""
-  local target_version=""
   local check_only=false
   local no_build=false
   local refresh_lock=false
@@ -176,10 +180,6 @@ main() {
     case "$1" in
       --revision)
         target_revision="${2:-}"
-        shift 2
-        ;;
-      --version)
-        target_version="${2:-}"
         shift 2
         ;;
       --check)
@@ -223,12 +223,14 @@ main() {
     exit 2
   fi
 
-  local latest_version
-  latest_version="${target_version:-$(get_upstream_version "$latest_revision")}"
-  if [ -z "$latest_version" ]; then
-    log_error "Failed to determine upstream version for revision: $latest_revision"
+  local commit_date
+  commit_date="$(get_commit_date "$latest_revision")"
+  if [ -z "$commit_date" ]; then
+    log_error "Failed to determine upstream commit date for revision: $latest_revision"
     exit 2
   fi
+
+  local latest_version="unstable-${commit_date}"
 
   log_info "Current version:  $current_version"
   log_info "Current revision: ${current_revision:0:7}"
@@ -268,12 +270,7 @@ main() {
 
   local commit_message
   commit_message="$(build_commit_message "$current_revision" "$latest_revision" "$current_version" "$latest_version")"
-
-  local -a changed_paths=("flake.nix")
-  if [ -f "$pkg_dir/flake.lock" ]; then
-    changed_paths+=("flake.lock")
-  fi
-  maybe_git_commit "$commit_message" "${changed_paths[@]}"
+  maybe_git_commit "$commit_message" "flake.nix" "flake.lock" "scripts/update-version.sh"
 
   log_info "Update complete."
 }

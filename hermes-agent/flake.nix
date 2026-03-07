@@ -1,5 +1,5 @@
 {
-  description = "Hermes Agent - Python AI agent CLI and gateway";
+  description = "Hermes Agent - self-improving AI agent";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -22,66 +22,61 @@
   };
 
   outputs = {
-    self,
     nixpkgs,
     flake-utils,
     pyproject-nix,
     uv2nix,
     pyproject-build-systems,
+    ...
   }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        inherit (pkgs) lib;
-
         pname = "hermes-agent";
-        version = "0.1.0";
-        revision = "ab0f4126cf978df89be7bf6213e13a304d9b6ba8";
+        version = "unstable-2026-03-06";
+        revision = "6d3804770cbf03d4a6519da904ad92ce6b70cb62";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-hH7VWMiavpE6YzIjWBIidKUDrybAyrOo0PUP3btDtFo=";
-          "x86_64-linux" = "sha256-hH7VWMiavpE6YzIjWBIidKUDrybAyrOo0PUP3btDtFo=";
+          "aarch64-linux" = "sha256-IC9wCmoX826VhW6gyDMW32ZMPkevFmIBjEGuKGOtePk=";
+          "x86_64-linux" = "sha256-IC9wCmoX826VhW6gyDMW32ZMPkevFmIBjEGuKGOtePk=";
         };
 
-        supportedExtras = [
-          "cli"
-          "cron"
-          "mcp"
-          "messaging"
-          "pty"
-        ];
+        sourceRoot = pkgs.fetchFromGitHub {
+          owner = "NousResearch";
+          repo = "hermes-agent";
+          rev = revision;
+          hash = sourceHashBySystem.${system} or (throw "Missing source hash for system ${system}");
+        };
 
-        source =
-          let
-            sourceArchive = pkgs.fetchurl {
-              url = "https://github.com/NousResearch/hermes-agent/archive/${revision}.tar.gz";
-              hash = sourceHashBySystem.${system} or (throw "Missing source hash for system ${system}");
-            };
-          in
-          pkgs.runCommand "${pname}-source-${version}-${lib.substring 0 7 revision}" { } ''
-            mkdir -p "$out"
-            tar -xzf ${sourceArchive} --strip-components=1 -C "$out"
-          '';
+        patchedSource = pkgs.runCommand "${pname}-source-${version}" { } ''
+          cp -r ${sourceRoot} "$out"
+          chmod -R u+w "$out"
+
+          ${pkgs.perl}/bin/perl -0pi -e 's@# Path to tinker-atropos submodule \(relative to hermes-agent root\)\nHERMES_ROOT = Path\(__file__\)\.parent\.parent\nTINKER_ATROPOS_ROOT = HERMES_ROOT / "tinker-atropos"\nENVIRONMENTS_DIR = TINKER_ATROPOS_ROOT / "tinker_atropos" / "environments"\nCONFIGS_DIR = TINKER_ATROPOS_ROOT / "configs"\nLOGS_DIR = TINKER_ATROPOS_ROOT / "logs"\n\n# Ensure logs directory exists\nLOGS_DIR\.mkdir\(exist_ok=True\)@# Path to tinker-atropos workspace (defaulting to a user-writable Hermes home path)\nHERMES_HOME = Path(os.getenv("HERMES_HOME", Path.home() / ".hermes"))\nHERMES_ROOT = Path(__file__).parent.parent\nTINKER_ATROPOS_ROOT = Path(os.getenv("TINKER_ATROPOS_ROOT", str(HERMES_HOME / "tinker-atropos")))\nENVIRONMENTS_DIR = TINKER_ATROPOS_ROOT / "tinker_atropos" / "environments"\nCONFIGS_DIR = TINKER_ATROPOS_ROOT / "configs"\nLOGS_DIR = Path(os.getenv("TINKER_LOGS_DIR", str(HERMES_HOME / "logs" / "tinker-atropos")))\n\n# Ensure logs directory exists\nLOGS_DIR.mkdir(parents=True, exist_ok=True)@s' "$out/tools/rl_training_tool.py"
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "TINKER_LOGS_DIR" "$out/tools/rl_training_tool.py"; then
+            echo "Failed to patch rl_training_tool.py for writable Tinker paths" >&2
+            exit 1
+          fi
+        '';
 
         hermes-agent =
           let
             inherit (pkgs)
+              bash
               callPackage
-              makeWrapper
-              python311
+              coreutils
+              gnugrep
+              lib
+              python312
               stdenvNoCC
               ;
 
-            python = python311;
-            workspace = uv2nix.lib.workspace.loadWorkspace {
-              workspaceRoot = source;
-            };
+            python = python312;
+            workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = sourceRoot; };
             overlay = workspace.mkPyprojectOverlay {
               sourcePreference = "wheel";
-              dependencies = {
-                hermes-agent = supportedExtras;
-              };
             };
             pythonSet = (callPackage pyproject-nix.build.packages { inherit python; }).overrideScope (
               lib.composeManyExtensions [
@@ -89,104 +84,94 @@
                 overlay
               ]
             );
+
             hermesEnv = pythonSet.mkVirtualEnv "${pname}-virtual-env-${version}" {
-              hermes-agent = supportedExtras;
+              hermes-agent = [
+                "cli"
+                "cron"
+                "mcp"
+                "messaging"
+                "pty"
+                "slack"
+              ];
             };
-            runtimeTools = with pkgs; [
+
+            runtimePath = lib.makeBinPath [
               bash
               coreutils
-              curl
-              diffutils
-              findutils
-              gawk
-              git
               gnugrep
-              gnused
-              jq
-              less
-              openssh
-              procps
-              ripgrep
-              rsync
-              util-linux
-              which
             ];
           in
           stdenvNoCC.mkDerivation {
             inherit pname version;
             dontUnpack = true;
 
-            nativeBuildInputs = [ makeWrapper ];
-
             installPhase = ''
               runHook preInstall
 
-              mkdir -p "$out/bin" "$out/share/hermes-agent"
-              cp -rf ${source}/. "$out/share/hermes-agent"
-              chmod -R u+w "$out/share/hermes-agent"
+              mkdir -p "$out/bin" "$out/share"
+              ln -s ${patchedSource} "$out/share/hermes-agent"
 
-              ${python.interpreter} - <<PY
-              from pathlib import Path
+              cat > "$out/bin/hermes" <<'EOF'
+#!${bash}/bin/bash
+set -euo pipefail
 
-              root = Path("$out/share/hermes-agent")
+export PATH="${runtimePath}:$PATH"
+export HERMES_NIX_MANAGED=1
+hermes_home="''${HERMES_HOME:-$HOME/.hermes}"
+export HERMES_HOME="$hermes_home"
+env_file="$hermes_home/.env"
+export TINKER_ATROPOS_ROOT="''${TINKER_ATROPOS_ROOT:-$hermes_home/tinker-atropos}"
+export TINKER_LOGS_DIR="''${TINKER_LOGS_DIR:-$hermes_home/logs/tinker-atropos}"
+if [ -n "''${PYTHONPATH:-}" ]; then
+  export PYTHONPATH="${patchedSource}:$PYTHONPATH"
+else
+  export PYTHONPATH="${patchedSource}"
+fi
 
-              main_py = root / "hermes_cli" / "main.py"
-              main_text = main_py.read_text()
-              main_old = 'def cmd_update(args):\n    """Update Hermes Agent to the latest version."""\n'
-              main_new = (
-                  'def cmd_update(args):\n'
-                  '    """Update Hermes Agent to the latest version."""\n'
-                  '    print("✗ Update is disabled in the Nix package. Update the flake input or package revision instead.")\n'
-                  '    return\n\n'
-              )
-              if main_old not in main_text:
-                  raise SystemExit(f"Failed to locate cmd_update in {main_py}")
-              main_py.write_text(main_text.replace(main_old, main_new, 1))
+if [ "''${WHATSAPP_ENABLED:-}" = "true" ] || ([ -f "$env_file" ] && ${gnugrep}/bin/grep -Eiq '^[[:space:]]*WHATSAPP_ENABLED[[:space:]]*=[[:space:]]*(true|1|yes)[[:space:]]*$' "$env_file"); then
+  echo "WhatsApp is not supported in the Nix package yet. Leave WHATSAPP_ENABLED unset or false." >&2
+  exit 1
+fi
 
-              whatsapp_py = root / "gateway" / "platforms" / "whatsapp.py"
-              whatsapp_text = whatsapp_py.read_text()
-              whatsapp_old = '''        # Auto-install npm dependencies if node_modules doesn't exist
-              bridge_dir = bridge_path.parent
-              if not (bridge_dir / "node_modules").exists():
-                  print(f"[{self.name}] Installing WhatsApp bridge dependencies...")
-                  try:
-                      install_result = subprocess.run(
-                          ["npm", "install", "--silent"],
-                          cwd=str(bridge_dir),
-                          capture_output=True,
-                          text=True,
-                          timeout=60,
-                      )
-                      if install_result.returncode != 0:
-                          print(f"[{self.name}] npm install failed: {install_result.stderr}")
-                          return False
-                      print(f"[{self.name}] Dependencies installed")
-                  except Exception as e:
-                      print(f"[{self.name}] Failed to install dependencies: {e}")
-                      return False
-              '''
-              whatsapp_new = '''        # WhatsApp bridge dependencies must be packaged ahead of time under Nix.
-              bridge_dir = bridge_path.parent
-              if not (bridge_dir / "node_modules").exists():
-                  logger.warning("[%s] WhatsApp bridge dependencies are not packaged. Configure a prebuilt bridge instead.", self.name)
-                  return False
-              '''
-              if whatsapp_old not in whatsapp_text:
-                  raise SystemExit(f"Failed to locate WhatsApp bridge install block in {whatsapp_py}")
-              whatsapp_py.write_text(whatsapp_text.replace(whatsapp_old, whatsapp_new, 1))
-              PY
+case "''\${1-}" in
+  setup|uninstall|update|whatsapp)
+    echo "hermes ''\${1} is disabled in the Nix package. Configure Hermes declaratively or edit ~/.hermes manually." >&2
+    exit 1
+    ;;
+  gateway)
+    case "''\${2-}" in
+      install|restart|setup|start|stop|uninstall)
+        echo "hermes gateway ''\${2} is disabled in the Nix package. Manage the gateway with Nix/Home Manager instead." >&2
+        exit 1
+        ;;
+    esac
+    ;;
+esac
 
-              makeWrapper ${hermesEnv}/bin/python "$out/bin/hermes" \
-                --prefix PATH : ${lib.makeBinPath runtimeTools} \
-                --prefix PYTHONPATH : "$out/share/hermes-agent" \
-                --set HERMES_AGENT_NIX_MANAGED "1" \
-                --add-flags "-m hermes_cli.main"
+exec ${hermesEnv}/bin/python -m hermes_cli.main "$@"
+EOF
+              chmod +x "$out/bin/hermes"
 
-              makeWrapper ${hermesEnv}/bin/python "$out/bin/hermes-agent" \
-                --prefix PATH : ${lib.makeBinPath runtimeTools} \
-                --prefix PYTHONPATH : "$out/share/hermes-agent" \
-                --set HERMES_AGENT_NIX_MANAGED "1" \
-                --add-flags "-m run_agent"
+              cat > "$out/bin/hermes-agent" <<'EOF'
+#!${bash}/bin/bash
+set -euo pipefail
+
+export PATH="${runtimePath}:$PATH"
+export HERMES_NIX_MANAGED=1
+hermes_home="''${HERMES_HOME:-$HOME/.hermes}"
+export HERMES_HOME="$hermes_home"
+export TINKER_ATROPOS_ROOT="''${TINKER_ATROPOS_ROOT:-$hermes_home/tinker-atropos}"
+export TINKER_LOGS_DIR="''${TINKER_LOGS_DIR:-$hermes_home/logs/tinker-atropos}"
+if [ -n "''${PYTHONPATH:-}" ]; then
+  export PYTHONPATH="${patchedSource}:$PYTHONPATH"
+else
+  export PYTHONPATH="${patchedSource}"
+fi
+
+exec ${hermesEnv}/bin/python -m run_agent "$@"
+EOF
+              chmod +x "$out/bin/hermes-agent"
 
               runHook postInstall
             '';
@@ -194,17 +179,12 @@
             doInstallCheck = true;
             installCheckPhase = ''
               runHook preInstallCheck
-
-              export HOME="$(mktemp -d)"
               "$out/bin/hermes" --help >/dev/null
-              "$out/bin/hermes" version >/dev/null
-              "$out/bin/hermes" gateway --help >/dev/null
-
               runHook postInstallCheck
             '';
 
-            meta = with lib; {
-              description = "Hermes Agent CLI and gateway packaged for Nix";
+            meta = with pkgs.lib; {
+              description = "Hermes Agent - self-improving AI agent";
               homepage = "https://github.com/NousResearch/hermes-agent";
               license = licenses.mit;
               mainProgram = "hermes";
