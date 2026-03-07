@@ -34,25 +34,28 @@
 
         goose-cli = pkgs.rustPlatform.buildRustPackage rec {
           pname = "goose-cli";
-          version = "1.27.1";
+          version = "1.27.2";
 
           src = pkgs.fetchFromGitHub {
             owner = "block";
             repo = "goose";
             rev = "v${version}";
-            sha256 = "sha256-N6w1AbU74rmKXhvZX5VJhmkL26utm+Mmg5wUUQ+s8R0=";
+            sha256 = "sha256-Og0mlt9coM8eOXM9GCQBz41nP42GO+J3J+xSW7YE6cw=";
           };
 
-          cargoHash = "sha256-KlVil7m6vJleUiFVmUy7L5+XgaocEINXfJHe2D9AFJE=";
+          cargoHash = "sha256-o8iR/b31PBz3BpqpG3BNiX4qjhkOREAiqQ6V7u4JljU=";
 
           # Build only the goose-cli crate
           buildAndTestSubdir = "crates/goose-cli";
 
           env = {
             RUSTY_V8_ARCHIVE = "${rustyV8Archive}";
+            LIBCLANG_PATH = "${pkgs.lib.getLib pkgs.llvmPackages.libclang}/lib";
           };
 
           nativeBuildInputs = with pkgs; [
+            rustPlatform.bindgenHook
+            cmake
             pkg-config
             python3
             curl
@@ -60,8 +63,12 @@
 
           buildInputs = with pkgs; [
             openssl
+          ]
+          ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+            dbus
             xorg.libxcb
-          ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+          ]
+          ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
             pkgs.darwin.apple_sdk.frameworks.Security
             pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
