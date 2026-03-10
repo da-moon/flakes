@@ -55,10 +55,58 @@
 
           ${pkgs.perl}/bin/perl -0pi -e 's@# Path to tinker-atropos submodule \(relative to hermes-agent root\)\nHERMES_ROOT = Path\(__file__\)\.parent\.parent\nTINKER_ATROPOS_ROOT = HERMES_ROOT / "tinker-atropos"\nENVIRONMENTS_DIR = TINKER_ATROPOS_ROOT / "tinker_atropos" / "environments"\nCONFIGS_DIR = TINKER_ATROPOS_ROOT / "configs"\nLOGS_DIR = TINKER_ATROPOS_ROOT / "logs"\n\n# Ensure logs directory exists\nLOGS_DIR\.mkdir\(exist_ok=True\)@# Path to tinker-atropos workspace (defaulting to a user-writable Hermes home path)\nHERMES_HOME = Path(os.getenv("HERMES_HOME", Path.home() / ".hermes"))\nHERMES_ROOT = Path(__file__).parent.parent\nTINKER_ATROPOS_ROOT = Path(os.getenv("TINKER_ATROPOS_ROOT", str(HERMES_HOME / "tinker-atropos")))\nENVIRONMENTS_DIR = TINKER_ATROPOS_ROOT / "tinker_atropos" / "environments"\nCONFIGS_DIR = TINKER_ATROPOS_ROOT / "configs"\nLOGS_DIR = Path(os.getenv("TINKER_LOGS_DIR", str(HERMES_HOME / "logs" / "tinker-atropos")))\n\n# Ensure logs directory exists\nLOGS_DIR.mkdir(parents=True, exist_ok=True)@s' "$out/tools/rl_training_tool.py"
 
+          PATCHED_ROOT="$out" ${pkgs.python3}/bin/python - <<'PY'
+from os import environ
+from pathlib import Path
+import re
+
+root = Path(environ["PATCHED_ROOT"])
+
+doctor_path = root / "hermes_cli" / "doctor.py"
+doctor_new = """    # Node.js + agent-browser (for browser automation tools)
+    agent_browser_on_path = shutil.which("agent-browser")
+    local_agent_browser = PROJECT_ROOT / "node_modules" / "agent-browser"
+    hermes_nix_managed = os.getenv("HERMES_NIX_MANAGED") == "1"
+
+    if agent_browser_on_path:
+        detail = "(browser automation via PATH)"
+        if hermes_nix_managed:
+            detail = "(browser automation via Nix PATH)"
+        check_ok("agent-browser", detail)
+    elif local_agent_browser.exists():
+        if shutil.which("node"):
+            check_ok("Node.js")
+        else:
+            check_warn("Node.js not found", "(local repo agent-browser still needs Node.js)")
+        check_ok("agent-browser (Node.js)", "(browser automation)")
+    elif shutil.which("node"):
+        check_ok("Node.js")
+        check_warn("agent-browser not installed", "(run: npm install)")
+    else:
+        check_warn("agent-browser not found", "(optional, install agent-browser or enable the Nix browser integration)")
+"""
+doctor_text = doctor_path.read_text()
+doctor_pattern = re.compile(
+    r'    # Node\.js \+ agent-browser \(for browser automation tools\)\n.*?(?=    # npm audit for all Node\.js packages)',
+    re.S,
+)
+doctor_match = doctor_pattern.search(doctor_text)
+if not doctor_match:
+    raise SystemExit("Failed to locate browser diagnostics block in hermes_cli/doctor.py")
+doctor_path.write_text(doctor_text[:doctor_match.start()] + doctor_new + doctor_text[doctor_match.end():])
+
+PY
+
           if ! ${pkgs.gnugrep}/bin/grep -q "TINKER_LOGS_DIR" "$out/tools/rl_training_tool.py"; then
             echo "Failed to patch rl_training_tool.py for writable Tinker paths" >&2
             exit 1
           fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "browser automation via Nix PATH" "$out/hermes_cli/doctor.py"; then
+            echo "Failed to patch hermes_cli/doctor.py for PATH-based browser diagnostics" >&2
+            exit 1
+          fi
+
         '';
 
         hermes-agent =
@@ -180,6 +228,30 @@ EOF
             installCheckPhase = ''
               runHook preInstallCheck
               "$out/bin/hermes" --help >/dev/null
+
+              tmp_home="$TMPDIR/hermes-home"
+              mkdir -p "$tmp_home/.hermes" "$TMPDIR/bin"
+              cat > "$TMPDIR/bin/agent-browser" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+              chmod +x "$TMPDIR/bin/agent-browser"
+
+              doctor_output="$(HOME="$tmp_home" PATH="$TMPDIR/bin:$PATH" "$out/bin/hermes" doctor 2>&1 || true)"
+              printf '%s\n' "$doctor_output" | ${gnugrep}/bin/grep -q "browser automation via Nix PATH"
+
+              if printf '%s\n' "$doctor_output" | ${gnugrep}/bin/grep -q "run: npm install"; then
+                echo "doctor still suggested npm install under Nix-managed browser tooling" >&2
+                printf '%s\n' "$doctor_output" >&2
+                exit 1
+              fi
+
+              if printf '%s\n' "$doctor_output" | ${gnugrep}/bin/grep -q "Node.js not found"; then
+                echo "doctor still warned about missing Node.js with PATH-provided agent-browser" >&2
+                printf '%s\n' "$doctor_output" >&2
+                exit 1
+              fi
+
               runHook postInstallCheck
             '';
 
