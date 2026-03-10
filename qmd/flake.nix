@@ -12,7 +12,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "qmd";
-        version = "1.0.7";
+        version = "1.1.6";
 
         sqliteWithExtensions = pkgs.sqlite.overrideAttrs (old: {
           configureFlags = (old.configureFlags or [ ]) ++ [
@@ -21,14 +21,14 @@
         });
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-a+lF9917f1kl2wTrrQ38Jz55kUOlIkqg1jy5uuLwIao=";
-          "x86_64-linux" = "sha256-a+lF9917f1kl2wTrrQ38Jz55kUOlIkqg1jy5uuLwIao=";
+          "aarch64-linux" = "sha256-yMCsDCt/+tOvJYjzJJj3pnQs2eKvzYluqz7P/2nDDmE=";
+          "x86_64-linux" = "sha256-yMCsDCt/+tOvJYjzJJj3pnQs2eKvzYluqz7P/2nDDmE=";
         };
 
         # Optional dependencies and install artifacts may vary by architecture.
         outputHashBySystem = {
           "aarch64-linux" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          "x86_64-linux" = "sha256-5el0o8mkrf2L8uce9v96CprrAb/JC8WG3NBPoNyJjlI=";
+          "x86_64-linux" = "sha256-vZOSLiWLbM5O4BhSvkVcbc1cSIhMzUmnrtECtgJ84us=";
         };
 
         source = pkgs.fetchurl {
