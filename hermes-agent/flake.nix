@@ -187,6 +187,18 @@ case "''\${1-}" in
     echo "hermes ''\${1} is disabled in the Nix package. Configure Hermes declaratively or edit ~/.hermes manually." >&2
     exit 1
     ;;
+  model|tools)
+    echo "hermes ''\${1} is disabled in the Nix package. Set providers, models, and toolsets declaratively through Nix." >&2
+    exit 1
+    ;;
+  config)
+    case "''\${2-}" in
+      edit|migrate|set)
+        echo "hermes config ''\${2} is disabled in the Nix package. Update the generated Nix configuration instead." >&2
+        exit 1
+        ;;
+    esac
+    ;;
   gateway)
     case "''\${2-}" in
       install|restart|setup|start|stop|uninstall)
@@ -228,6 +240,15 @@ EOF
             installCheckPhase = ''
               runHook preInstallCheck
               "$out/bin/hermes" --help >/dev/null
+
+              blocked_config_output="$("$out/bin/hermes" config set model anthropic/claude-opus-4.6 2>&1 || true)"
+              printf '%s\n' "$blocked_config_output" | ${gnugrep}/bin/grep -q "disabled in the Nix package"
+
+              blocked_model_output="$("$out/bin/hermes" model 2>&1 || true)"
+              printf '%s\n' "$blocked_model_output" | ${gnugrep}/bin/grep -q "Set providers, models, and toolsets declaratively through Nix"
+
+              blocked_tools_output="$("$out/bin/hermes" tools 2>&1 || true)"
+              printf '%s\n' "$blocked_tools_output" | ${gnugrep}/bin/grep -q "Set providers, models, and toolsets declaratively through Nix"
 
               tmp_home="$TMPDIR/hermes-home"
               mkdir -p "$tmp_home/.hermes" "$TMPDIR/bin"
