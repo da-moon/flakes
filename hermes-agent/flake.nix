@@ -106,9 +106,21 @@ sethome_new = """    async def _handle_set_home_command(self, event: MessageEven
         env_key = f"{platform_name.upper()}_HOME_CHANNEL"
 
         if os.getenv("HERMES_NIX_MANAGED") == "1":
+            from gateway.config import HomeChannel, PlatformConfig
+
+            if source.platform and source.platform not in self.config.platforms:
+                self.config.platforms[source.platform] = PlatformConfig(enabled=True)
+            if source.platform:
+                self.config.platforms[source.platform].home_channel = HomeChannel(
+                    platform=source.platform,
+                    chat_id=str(chat_id),
+                    name=chat_name,
+                )
+            os.environ[env_key] = str(chat_id)
+
             return (
-                f"Home channel persistence is managed declaratively in Nix.\\n"
-                f"Set {env_key}={chat_id} through your Hermes env/envFile configuration and re-run Home Manager."
+                f"Home channel set to **{chat_name}** (ID: {chat_id}) for this Hermes process only.\\n"
+                f"To persist it under Nix, set {env_key}={chat_id} through your Hermes env/envFile configuration and re-run Home Manager."
             )
 
         # Save to config.yaml
@@ -154,7 +166,7 @@ PY
             exit 1
           fi
 
-          if ! ${pkgs.gnugrep}/bin/grep -q "Home channel persistence is managed declaratively in Nix" "$out/gateway/run.py"; then
+          if ! ${pkgs.gnugrep}/bin/grep -q "for this Hermes process only" "$out/gateway/run.py"; then
             echo "Failed to patch gateway/run.py for Nix-managed /sethome behavior" >&2
             exit 1
           fi
@@ -302,24 +314,29 @@ EOF
               blocked_tools_output="$("$out/bin/hermes" tools 2>&1 || true)"
               printf '%s\n' "$blocked_tools_output" | ${gnugrep}/bin/grep -q "Set providers, models, and toolsets declaratively through Nix"
 
-              sethome_output="$(HOME="$TMPDIR/sethome-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+sethome_output="$(HOME="$TMPDIR/sethome-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
 import asyncio
 from types import SimpleNamespace
 from gateway.run import GatewayRunner
+from gateway.config import Platform
 
+self_obj = SimpleNamespace(config=SimpleNamespace(platforms={}))
 event = SimpleNamespace(
     source=SimpleNamespace(
-        platform=SimpleNamespace(value="telegram"),
+        platform=Platform.TELEGRAM,
         chat_id="123456789",
         chat_name="Nix Home",
     )
 )
 
-print(asyncio.run(GatewayRunner._handle_set_home_command(None, event)))
+result = asyncio.run(GatewayRunner._handle_set_home_command(self_obj, event))
+print(result)
+print(self_obj.config.platforms[Platform.TELEGRAM].home_channel.chat_id)
 PY
 )"
-              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "Home channel persistence is managed declaratively in Nix"
+              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "for this Hermes process only"
               printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "TELEGRAM_HOME_CHANNEL=123456789"
+              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "^123456789$"
 
               tmp_home="$TMPDIR/hermes-home"
               mkdir -p "$tmp_home/.hermes" "$TMPDIR/bin"
