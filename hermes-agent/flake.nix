@@ -95,6 +95,53 @@ if not doctor_match:
     raise SystemExit("Failed to locate browser diagnostics block in hermes_cli/doctor.py")
 doctor_path.write_text(doctor_text[:doctor_match.start()] + doctor_new + doctor_text[doctor_match.end():])
 
+gateway_run_path = root / "gateway" / "run.py"
+sethome_new = """    async def _handle_set_home_command(self, event: MessageEvent) -> str:
+        \"\"\"Handle /sethome command -- set the current chat as the platform's home channel.\"\"\"
+        source = event.source
+        platform_name = source.platform.value if source.platform else "unknown"
+        chat_id = source.chat_id
+        chat_name = source.chat_name or chat_id
+
+        env_key = f"{platform_name.upper()}_HOME_CHANNEL"
+
+        if os.getenv("HERMES_NIX_MANAGED") == "1":
+            return (
+                f"Home channel persistence is managed declaratively in Nix.\\n"
+                f"Set {env_key}={chat_id} through your Hermes env/envFile configuration and re-run Home Manager."
+            )
+
+        # Save to config.yaml
+        try:
+            import yaml
+            config_path = _hermes_home / 'config.yaml'
+            user_config = {}
+            if config_path.exists():
+                with open(config_path) as f:
+                    user_config = yaml.safe_load(f) or {}
+            user_config[env_key] = chat_id
+            with open(config_path, 'w') as f:
+                yaml.dump(user_config, f, default_flow_style=False)
+            # Also set in the current environment so it takes effect immediately
+            os.environ[env_key] = str(chat_id)
+        except Exception as e:
+            return f"Failed to save home channel: {e}"
+
+        return (
+            f"✅ Home channel set to **{chat_name}** (ID: {chat_id}).\\n"
+            f"Cron jobs and cross-platform messages will be delivered here."
+        )
+"""
+gateway_run_text = gateway_run_path.read_text()
+sethome_pattern = re.compile(
+    r'    async def _handle_set_home_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_compress_command)',
+    re.S,
+)
+sethome_match = sethome_pattern.search(gateway_run_text)
+if not sethome_match:
+    raise SystemExit("Failed to locate _handle_set_home_command in gateway/run.py")
+gateway_run_path.write_text(gateway_run_text[:sethome_match.start()] + sethome_new + gateway_run_text[sethome_match.end():])
+
 PY
 
           if ! ${pkgs.gnugrep}/bin/grep -q "TINKER_LOGS_DIR" "$out/tools/rl_training_tool.py"; then
@@ -104,6 +151,11 @@ PY
 
           if ! ${pkgs.gnugrep}/bin/grep -q "browser automation via Nix PATH" "$out/hermes_cli/doctor.py"; then
             echo "Failed to patch hermes_cli/doctor.py for PATH-based browser diagnostics" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "Home channel persistence is managed declaratively in Nix" "$out/gateway/run.py"; then
+            echo "Failed to patch gateway/run.py for Nix-managed /sethome behavior" >&2
             exit 1
           fi
 
@@ -249,6 +301,25 @@ EOF
 
               blocked_tools_output="$("$out/bin/hermes" tools 2>&1 || true)"
               printf '%s\n' "$blocked_tools_output" | ${gnugrep}/bin/grep -q "Set providers, models, and toolsets declaratively through Nix"
+
+              sethome_output="$(HOME="$TMPDIR/sethome-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+import asyncio
+from types import SimpleNamespace
+from gateway.run import GatewayRunner
+
+event = SimpleNamespace(
+    source=SimpleNamespace(
+        platform=SimpleNamespace(value="telegram"),
+        chat_id="123456789",
+        chat_name="Nix Home",
+    )
+)
+
+print(asyncio.run(GatewayRunner._handle_set_home_command(None, event)))
+PY
+)"
+              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "Home channel persistence is managed declaratively in Nix"
+              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "TELEGRAM_HOME_CHANNEL=123456789"
 
               tmp_home="$TMPDIR/hermes-home"
               mkdir -p "$tmp_home/.hermes" "$TMPDIR/bin"
