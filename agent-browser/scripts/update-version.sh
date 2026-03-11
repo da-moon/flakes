@@ -41,7 +41,10 @@ get_current_version() {
 get_latest_version_from_npm() {
   local latest_json
   latest_json="$(curl -fsSL "$NPM_REGISTRY_URL/$NPM_PACKAGE/latest")"
-  printf '%s\n' "$latest_json" | sed -n 's/.*"version":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  printf '%s\n' "$latest_json" \
+    | grep -o '"version":[[:space:]]*"[^"]*"' \
+    | head -n1 \
+    | sed -E 's/^"version":[[:space:]]*"([^"]*)"$/\1/'
 }
 
 get_current_system_key() {
@@ -101,7 +104,7 @@ update_tarball_hash() {
 set_output_hash_placeholder_for_system() {
   local system_key="$1"
   local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\{/,/\};/ s~^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${placeholder}\\2|" "$flake_file"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\{/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${placeholder}\\2|" "$flake_file"
   if ! grep -Fq "\"${system_key}\" = \"${placeholder}\";" "$flake_file"; then
     log_error "Failed to set outputHash placeholder for system: $system_key"
     return 1
@@ -233,7 +236,9 @@ print_usage() {
 Usage: ./scripts/update-version.sh [OPTIONS]
 
 Options:
+  --version VERSION   Update to a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
+  --rehash            Recompute tarball hash and outputHash for current version
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
@@ -241,6 +246,7 @@ Options:
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
+  ./scripts/update-version.sh --version 0.0.28
 USAGE
 }
 
@@ -249,14 +255,24 @@ main() {
   ensure_in_package_directory
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
+  local target_version=""
   local check_only=false
+  local rehash=false
   local no_build=false
   local refresh_lock=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --version)
+        target_version="${2:-}"
+        shift 2
+        ;;
       --check)
         check_only=true
+        shift
+        ;;
+      --rehash)
+        rehash=true
         shift
         ;;
       --no-build)
@@ -293,14 +309,16 @@ main() {
     exit 2
   fi
 
+  if [ -n "$target_version" ]; then
+    latest_version="$target_version"
+  fi
+
+  log_info "Current version: $current_version"
+  log_info "Target version:  $latest_version"
+
   local needs_rehash=false
   if has_fake_hash; then
     needs_rehash=true
-  fi
-
-  if [ "$current_version" = "$latest_version" ] && [ "$needs_rehash" = false ]; then
-    log_info "Already up to date (${current_version})"
-    exit 0
   fi
 
   if [ "$check_only" = true ]; then
@@ -315,36 +333,64 @@ main() {
     exit 0
   fi
 
-  if [ "$current_version" != "$latest_version" ]; then
-    log_info "Updating version: ${current_version} -> ${latest_version}"
-    update_flake_version "$latest_version"
-
-    local tarball_hash
-    tarball_hash="$(prefetch_sha256_sri "${NPM_REGISTRY_URL}/${NPM_PACKAGE}/-/${TARBALL_NAME}-${latest_version}.tgz")"
-    if [ -z "$tarball_hash" ]; then
-      log_error "Failed to prefetch npm tarball hash"
-      exit 1
+  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+    if [ "$needs_rehash" = true ]; then
+      log_info "Detected fakeHash for current system; proceeding with rehash..."
+      rehash=true
+    else
+      log_info "Already up to date (${current_version})"
+      exit 0
     fi
-    log_info "Tarball hash: $tarball_hash"
-    update_tarball_hash "$tarball_hash"
-    cleanup_backups
   fi
 
-  compute_and_update_output_hash
+  local tarball_hash
+  tarball_hash="$(prefetch_sha256_sri "${NPM_REGISTRY_URL}/${NPM_PACKAGE}/-/${TARBALL_NAME}-${latest_version}.tgz")"
+  if [ -z "$tarball_hash" ]; then
+    log_error "Failed to prefetch npm tarball hash"
+    exit 1
+  fi
+  log_info "Tarball hash: $tarball_hash"
+
+  local backup
+  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
+  cp "$flake_file" "$backup"
+
+  cleanup_backups
+  update_flake_version "$latest_version"
+  update_tarball_hash "$tarball_hash"
+  cleanup_backups
+
+  if ! compute_and_update_output_hash; then
+    log_error "Failed to compute outputHash; restoring previous flake.nix"
+    cp "$backup" "$flake_file"
+    rm -f "$backup"
+    exit 1
+  fi
+
+  if [ "$no_build" = false ]; then
+    if ! verify_build; then
+      log_error "Build verification failed; restoring previous flake.nix"
+      cp "$backup" "$flake_file"
+      rm -f "$backup"
+      exit 1
+    fi
+  fi
+
+  rm -f "$backup"
 
   if [ "$refresh_lock" = true ]; then
     update_flake_lock
   fi
 
-  if [ "$no_build" = false ]; then
-    verify_build
-  fi
-
   show_changes
 
-  local commit_message
-  commit_message="$(build_commit_message "$current_version" "$latest_version" "$needs_rehash")"
-  maybe_git_commit "$commit_message" flake.nix flake.lock
+  local -a commit_paths=("flake.nix")
+  if [ -f "$pkg_dir/flake.lock" ]; then
+    commit_paths+=("flake.lock")
+  fi
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
+
+  log_info "Successfully updated $PACKAGE_ATTR from $current_version to $latest_version"
 }
 
 main "$@"

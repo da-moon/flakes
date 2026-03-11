@@ -85,6 +85,13 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
+show_changes() {
+  if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_info "Changes made:"
+    git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+  fi
+}
+
 verify_build() {
   log_info "Verifying build..."
   local out_path
@@ -107,6 +114,7 @@ build_commit_message() {
   local new_revision="$2"
   local previous_version="$3"
   local new_version="$4"
+  local rehash="${5:-false}"
 
   local scope
   scope="$(basename "$pkg_dir")"
@@ -118,6 +126,11 @@ build_commit_message() {
 
   if [ "$previous_revision" != "$new_revision" ]; then
     printf 'chore(%s): update source to %s\n' "$scope" "${new_revision:0:7}"
+    return 0
+  fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
     return 0
   fi
 
@@ -155,6 +168,7 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 Options:
   --revision REV      Update to a specific upstream revision (default: main HEAD)
   --check             Only check for updates (exit 1 if update available)
+  --rehash            Recompute source hash for current revision
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
@@ -163,6 +177,7 @@ Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
   ./scripts/update-version.sh --revision 6d3804770cbf03d4a6519da904ad92ce6b70cb62
+  ./scripts/update-version.sh --rehash
 USAGE
 }
 
@@ -173,6 +188,7 @@ main() {
 
   local target_revision=""
   local check_only=false
+  local rehash=false
   local no_build=false
   local refresh_lock=false
 
@@ -184,6 +200,10 @@ main() {
         ;;
       --check)
         check_only=true
+        shift
+        ;;
+      --rehash)
+        rehash=true
         shift
         ;;
       --no-build)
@@ -246,6 +266,11 @@ main() {
     exit 1
   fi
 
+  if [ "$current_revision" = "$latest_revision" ] && [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+    log_info "Already up to date."
+    exit 0
+  fi
+
   local archive_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/${latest_revision}.tar.gz"
   log_info "Prefetching source hash..."
   local source_hash
@@ -255,22 +280,39 @@ main() {
     exit 1
   fi
 
+  local backup
+  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
+  cp "$flake_file" "$backup"
+
   set_version "$latest_version"
   set_revision "$latest_revision"
   set_source_hash_map "$source_hash"
   cleanup_backups
 
+  if [ "$no_build" = false ]; then
+    if ! verify_build; then
+      log_error "Build verification failed; restoring previous flake.nix"
+      cp "$backup" "$flake_file"
+      rm -f "$backup"
+      exit 1
+    fi
+  fi
+
+  rm -f "$backup"
+
   if [ "$refresh_lock" = true ]; then
     update_flake_lock
   fi
 
-  if [ "$no_build" = false ]; then
-    verify_build
-  fi
+  show_changes
 
   local commit_message
-  commit_message="$(build_commit_message "$current_revision" "$latest_revision" "$current_version" "$latest_version")"
-  maybe_git_commit "$commit_message" "flake.nix" "flake.lock" "scripts/update-version.sh"
+  commit_message="$(build_commit_message "$current_revision" "$latest_revision" "$current_version" "$latest_version" "$rehash")"
+  local -a commit_paths=("flake.nix")
+  if [ -f "$pkg_dir/flake.lock" ]; then
+    commit_paths+=("flake.lock")
+  fi
+  maybe_git_commit "$commit_message" "${commit_paths[@]}"
 
   log_info "Update complete."
 }
