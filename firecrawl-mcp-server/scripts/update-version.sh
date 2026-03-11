@@ -41,7 +41,10 @@ get_current_version() {
 get_latest_version_from_npm() {
   local latest_json
   latest_json="$(curl -fsSL "$NPM_REGISTRY_URL/$NPM_PACKAGE/latest")"
-  printf '%s\n' "$latest_json" | sed -n 's/.*"version":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  printf '%s\n' "$latest_json" \
+    | grep -o '"version":[[:space:]]*"[^"]*"' \
+    | head -n1 \
+    | sed -E 's/^"version":[[:space:]]*"([^"]*)"$/\1/'
 }
 
 prefetch_sha256_sri() {

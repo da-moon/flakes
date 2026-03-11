@@ -34,12 +34,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "hermes-agent";
-        version = "unstable-2026-03-10";
-        revision = "8eefbef91cd715cfe410bba8c13cfab4eb3040df";
+        version = "unstable-2026-03-11";
+        revision = "ac53bf1d712c73b6d4253b5a3bdb176eb13d76ca";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-IDXGmhcUMwuA878cUppQufHOcum5efp6u3eXucUBPh4=";
-          "x86_64-linux" = "sha256-IDXGmhcUMwuA878cUppQufHOcum5efp6u3eXucUBPh4=";
+          "aarch64-linux" = "sha256-yMgyPY1KmbymRHy1fkq/orrsLiXbbkKTLUUvh7DfC4g=";
+          "x86_64-linux" = "sha256-yMgyPY1KmbymRHy1fkq/orrsLiXbbkKTLUUvh7DfC4g=";
         };
 
         sourceRoot = pkgs.fetchFromGitHub {
@@ -95,6 +95,324 @@ if not doctor_match:
     raise SystemExit("Failed to locate browser diagnostics block in hermes_cli/doctor.py")
 doctor_path.write_text(doctor_text[:doctor_match.start()] + doctor_new + doctor_text[doctor_match.end():])
 
+gateway_run_path = root / "gateway" / "run.py"
+model_new = """    async def _handle_model_command(self, event: MessageEvent) -> str:
+        \"\"\"Handle /model command - show or change the current model.\"\"\"
+        import yaml
+
+        args = event.get_command_args().strip()
+        config_path = _hermes_home / 'config.yaml'
+
+        # Resolve current model the same way the agent init does:
+        # env vars first, then config.yaml always overrides.
+        current = os.getenv("HERMES_MODEL") or os.getenv("LLM_MODEL") or "anthropic/claude-opus-4.6"
+        try:
+            if config_path.exists():
+                with open(config_path) as f:
+                    cfg = yaml.safe_load(f) or {}
+                model_cfg = cfg.get("model", {})
+                if isinstance(model_cfg, str):
+                    current = model_cfg
+                elif isinstance(model_cfg, dict):
+                    current = model_cfg.get("default", current)
+        except Exception:
+            pass
+
+        if not args:
+            return f"🤖 **Current model:** `{current}`\\n\\nTo change: `/model provider/model-name`"
+
+        if "/" not in args:
+            return (
+                f"🤖 Invalid model format: `{args}`\\n\\n"
+                f"Use `provider/model-name` format, e.g.:\\n"
+                f"• `anthropic/claude-sonnet-4`\\n"
+                f"• `google/gemini-2.5-pro`\\n"
+                f"• `openai/gpt-4o`"
+            )
+
+        if os.getenv("HERMES_NIX_MANAGED") == "1":
+            os.environ["HERMES_MODEL"] = args
+            return (
+                f"🤖 Model set to `{args}` for this Hermes process only.\\n"
+                "To persist it under Nix, set programs.hermes-agent.settings.model.default and re-run Home Manager."
+            )
+
+        # Write to config.yaml (source of truth), same pattern as CLI save_config_value.
+        try:
+            user_config = {}
+            if config_path.exists():
+                with open(config_path) as f:
+                    user_config = yaml.safe_load(f) or {}
+            if "model" not in user_config or not isinstance(user_config["model"], dict):
+                user_config["model"] = {}
+            user_config["model"]["default"] = args
+            with open(config_path, 'w') as f:
+                yaml.dump(user_config, f, default_flow_style=False, sort_keys=False)
+        except Exception as e:
+            return f"⚠️ Failed to save model change: {e}"
+
+        os.environ["HERMES_MODEL"] = args
+        return f"🤖 Model changed to `{args}`\\n_(takes effect on next message)_"
+"""
+personality_new = """    async def _handle_personality_command(self, event: MessageEvent) -> str:
+        \"\"\"Handle /personality command - list or set a personality.\"\"\"
+        import yaml
+
+        args = event.get_command_args().strip().lower()
+        config_path = _hermes_home / 'config.yaml'
+
+        try:
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    config = yaml.safe_load(f) or {}
+                personalities = config.get("agent", {}).get("personalities", {})
+            else:
+                config = {}
+                personalities = {}
+        except Exception:
+            config = {}
+            personalities = {}
+
+        if not personalities:
+            return "No personalities configured in `~/.hermes/config.yaml`"
+
+        if not args:
+            lines = ["🎭 **Available Personalities**\\n"]
+            for name, prompt in personalities.items():
+                preview = prompt[:50] + "..." if len(prompt) > 50 else prompt
+                lines.append(f"• `{name}` — {preview}")
+            lines.append(f"\\nUsage: `/personality <name>`")
+            return "\\n".join(lines)
+
+        if args in personalities:
+            new_prompt = personalities[args]
+
+            if os.getenv("HERMES_NIX_MANAGED") == "1":
+                self._ephemeral_system_prompt = new_prompt
+                return (
+                    f"🎭 Personality set to **{args}** for this Hermes process only.\\n"
+                    "To persist it under Nix, set settings.agent.system_prompt or manage a SOUL.md file declaratively."
+                )
+
+            # Write to config.yaml, same pattern as CLI save_config_value.
+            try:
+                if "agent" not in config or not isinstance(config.get("agent"), dict):
+                    config["agent"] = {}
+                config["agent"]["system_prompt"] = new_prompt
+                with open(config_path, 'w') as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+            except Exception as e:
+                return f"⚠️ Failed to save personality change: {e}"
+
+            self._ephemeral_system_prompt = new_prompt
+            return f"🎭 Personality set to **{args}**\\n_(takes effect on next message)_"
+
+        available = ", ".join(f"`{n}`" for n in personalities.keys())
+        return f"Unknown personality: `{args}`\\n\\nAvailable: {available}"
+"""
+sethome_new = """    async def _handle_set_home_command(self, event: MessageEvent) -> str:
+        \"\"\"Handle /sethome command -- set the current chat as the platform's home channel.\"\"\"
+        source = event.source
+        platform_name = source.platform.value if source.platform else "unknown"
+        chat_id = source.chat_id
+        chat_name = source.chat_name or chat_id
+
+        env_key = f"{platform_name.upper()}_HOME_CHANNEL"
+
+        if os.getenv("HERMES_NIX_MANAGED") == "1":
+            from gateway.config import HomeChannel, PlatformConfig
+
+            if source.platform and source.platform not in self.config.platforms:
+                self.config.platforms[source.platform] = PlatformConfig(enabled=True)
+            if source.platform:
+                self.config.platforms[source.platform].home_channel = HomeChannel(
+                    platform=source.platform,
+                    chat_id=str(chat_id),
+                    name=chat_name,
+                )
+            os.environ[env_key] = str(chat_id)
+
+            return (
+                f"Home channel set to **{chat_name}** (ID: {chat_id}) for this Hermes process only.\\n"
+                f"To persist it under Nix, set {env_key}={chat_id} through your Hermes env/envFile configuration and re-run Home Manager."
+            )
+
+        # Save to config.yaml
+        try:
+            import yaml
+            config_path = _hermes_home / 'config.yaml'
+            user_config = {}
+            if config_path.exists():
+                with open(config_path) as f:
+                    user_config = yaml.safe_load(f) or {}
+            user_config[env_key] = chat_id
+            with open(config_path, 'w') as f:
+                yaml.dump(user_config, f, default_flow_style=False)
+            # Also set in the current environment so it takes effect immediately
+            os.environ[env_key] = str(chat_id)
+        except Exception as e:
+            return f"Failed to save home channel: {e}"
+
+        return (
+            f"✅ Home channel set to **{chat_name}** (ID: {chat_id}).\\n"
+            f"Cron jobs and cross-platform messages will be delivered here."
+        )
+"""
+update_new = """    async def _handle_update_command(self, event: MessageEvent) -> str:
+        \"\"\"Handle /update command — update Hermes Agent to the latest version.\"\"\"
+        if os.getenv("HERMES_NIX_MANAGED") == "1":
+            return "✗ `/update` is disabled in the Nix package. Update the pinned flake input and re-run Home Manager."
+
+        import json
+        import shutil
+        import subprocess
+        from datetime import datetime
+
+        project_root = Path(__file__).parent.parent.resolve()
+        git_dir = project_root / '.git'
+
+        if not git_dir.exists():
+            return "✗ Not a git repository — cannot update."
+
+        hermes_bin = shutil.which("hermes")
+        if not hermes_bin:
+            return "✗ `hermes` command not found on PATH."
+
+        pending_path = _hermes_home / ".update_pending.json"
+        output_path = _hermes_home / ".update_output.txt"
+        pending = {
+            "platform": event.source.platform.value,
+            "chat_id": event.source.chat_id,
+            "user_id": event.source.user_id,
+            "timestamp": datetime.now().isoformat(),
+        }
+        pending_path.write_text(json.dumps(pending))
+
+        update_cmd = f"{hermes_bin} update > {output_path} 2>&1"
+        try:
+            systemd_run = shutil.which("systemd-run")
+            if systemd_run:
+                subprocess.Popen(
+                    [systemd_run, "--user", "--scope",
+                     "--unit=hermes-update", "--",
+                     "bash", "-c", update_cmd],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+            else:
+                subprocess.Popen(
+                    ["bash", "-c", f"nohup {update_cmd} &"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+        except Exception as e:
+            pending_path.unlink(missing_ok=True)
+            return f"✗ Failed to start update: {e}"
+
+        return "⚕ Starting Hermes update… I'll notify you when it's done."
+"""
+gateway_run_text = gateway_run_path.read_text()
+model_pattern = re.compile(
+    r'    async def _handle_model_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_personality_command)',
+    re.S,
+)
+model_match = model_pattern.search(gateway_run_text)
+if not model_match:
+    raise SystemExit("Failed to locate _handle_model_command in gateway/run.py")
+gateway_run_text = gateway_run_text[:model_match.start()] + model_new + gateway_run_text[model_match.end():]
+
+personality_pattern = re.compile(
+    r'    async def _handle_personality_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_retry_command)',
+    re.S,
+)
+personality_match = personality_pattern.search(gateway_run_text)
+if not personality_match:
+    raise SystemExit("Failed to locate _handle_personality_command in gateway/run.py")
+gateway_run_text = gateway_run_text[:personality_match.start()] + personality_new + gateway_run_text[personality_match.end():]
+
+sethome_pattern = re.compile(
+    r'    async def _handle_set_home_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_compress_command)',
+    re.S,
+)
+sethome_match = sethome_pattern.search(gateway_run_text)
+if not sethome_match:
+    raise SystemExit("Failed to locate _handle_set_home_command in gateway/run.py")
+gateway_run_text = gateway_run_text[:sethome_match.start()] + sethome_new + gateway_run_text[sethome_match.end():]
+
+update_pattern = re.compile(
+    r'    async def _handle_update_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _send_update_notification)',
+    re.S,
+)
+update_match = update_pattern.search(gateway_run_text)
+if not update_match:
+    raise SystemExit("Failed to locate _handle_update_command in gateway/run.py")
+gateway_run_path.write_text(gateway_run_text[:update_match.start()] + update_new + gateway_run_text[update_match.end():])
+
+cli_path = root / "cli.py"
+cli_text = cli_path.read_text()
+save_config_guard = """def save_config_value(key_path: str, value: any) -> bool:
+    \"\"\"
+    Save a value to the active config file at the specified key path.
+    
+    Respects the same lookup order as load_cli_config():
+    1. ~/.hermes/config.yaml (user config - preferred, used if it exists)
+    2. ./cli-config.yaml (project config - fallback)
+    
+    Args:
+        key_path: Dot-separated path like "agent.system_prompt"
+        value: Value to save
+    
+    Returns:
+        True if successful, False otherwise
+    \"\"\"
+    if os.getenv("HERMES_NIX_MANAGED") == "1" and key_path in {"agent.system_prompt", "model.default"}:
+        return False
+
+    # Use the same precedence as load_cli_config: user config first, then project config
+    user_config_path = Path.home() / '.hermes' / 'config.yaml'
+    project_config_path = Path(__file__).parent / 'cli-config.yaml'
+    config_path = user_config_path if user_config_path.exists() else project_config_path
+    
+    try:
+        # Ensure parent directory exists (for ~/.hermes/config.yaml on first use)
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Load existing config
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f) or {}
+        else:
+            config = {}
+        
+        # Navigate to the key and set value
+        keys = key_path.split('.')
+        current = config
+        for key in keys[:-1]:
+            if key not in current or not isinstance(current[key], dict):
+                current[key] = {}
+            current = current[key]
+        current[keys[-1]] = value
+        
+        # Save back
+        with open(config_path, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+        
+        return True
+    except Exception as e:
+        logger.error("Failed to save config: %s", e)
+        return False
+"""
+save_config_pattern = re.compile(
+    r'def save_config_value\(key_path: str, value: any\) -> bool:\n.*?(?=\n# ============================================================================\n# HermesCLI Class)',
+    re.S,
+)
+save_config_match = save_config_pattern.search(cli_text)
+if not save_config_match:
+    raise SystemExit("Failed to locate save_config_value in cli.py")
+cli_path.write_text(cli_text[:save_config_match.start()] + save_config_guard + cli_text[save_config_match.end():])
+
 PY
 
           if ! ${pkgs.gnugrep}/bin/grep -q "TINKER_LOGS_DIR" "$out/tools/rl_training_tool.py"; then
@@ -104,6 +422,31 @@ PY
 
           if ! ${pkgs.gnugrep}/bin/grep -q "browser automation via Nix PATH" "$out/hermes_cli/doctor.py"; then
             echo "Failed to patch hermes_cli/doctor.py for PATH-based browser diagnostics" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "for this Hermes process only" "$out/gateway/run.py"; then
+            echo "Failed to patch gateway/run.py for Nix-managed /sethome behavior" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "for this Hermes process only" "$out/gateway/run.py" || ! ${pkgs.gnugrep}/bin/grep -q "programs.hermes-agent.settings.model.default" "$out/gateway/run.py"; then
+            echo "Failed to patch gateway/run.py for Nix-managed /model behavior" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "settings.agent.system_prompt" "$out/gateway/run.py" || ! ${pkgs.gnugrep}/bin/grep -q "SOUL.md file declaratively" "$out/gateway/run.py"; then
+            echo "Failed to patch gateway/run.py for Nix-managed /personality behavior" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "/update" "$out/gateway/run.py" || ! ${pkgs.gnugrep}/bin/grep -q "disabled in the Nix package" "$out/gateway/run.py"; then
+            echo "Failed to patch gateway/run.py for Nix-managed /update behavior" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q 'key_path in {"agent.system_prompt", "model.default"}' "$out/cli.py"; then
+            echo "Failed to patch cli.py for Nix-managed slash-command config guards" >&2
             exit 1
           fi
 
@@ -187,6 +530,22 @@ case "''\${1-}" in
     echo "hermes ''\${1} is disabled in the Nix package. Configure Hermes declaratively or edit ~/.hermes manually." >&2
     exit 1
     ;;
+  login|logout)
+    echo "hermes ''\${1} is disabled in the Nix package. OAuth-backed provider auth is not part of the supported Nix workflow yet." >&2
+    exit 1
+    ;;
+  model|tools)
+    echo "hermes ''\${1} is disabled in the Nix package. Set providers, models, and toolsets declaratively through Nix." >&2
+    exit 1
+    ;;
+  config)
+    case "''\${2-}" in
+      edit|migrate|set)
+        echo "hermes config ''\${2} is disabled in the Nix package. Update the generated Nix configuration instead." >&2
+        exit 1
+        ;;
+    esac
+    ;;
   gateway)
     case "''\${2-}" in
       install|restart|setup|start|stop|uninstall)
@@ -228,6 +587,142 @@ EOF
             installCheckPhase = ''
               runHook preInstallCheck
               "$out/bin/hermes" --help >/dev/null
+
+              blocked_config_output="$("$out/bin/hermes" config set model anthropic/claude-opus-4.6 2>&1 || true)"
+              printf '%s\n' "$blocked_config_output" | ${gnugrep}/bin/grep -q "disabled in the Nix package"
+
+              blocked_model_output="$("$out/bin/hermes" model 2>&1 || true)"
+              printf '%s\n' "$blocked_model_output" | ${gnugrep}/bin/grep -q "Set providers, models, and toolsets declaratively through Nix"
+
+              blocked_tools_output="$("$out/bin/hermes" tools 2>&1 || true)"
+              printf '%s\n' "$blocked_tools_output" | ${gnugrep}/bin/grep -q "Set providers, models, and toolsets declaratively through Nix"
+
+              blocked_login_output="$("$out/bin/hermes" login --provider nous 2>&1 || true)"
+              printf '%s\n' "$blocked_login_output" | ${gnugrep}/bin/grep -q "OAuth-backed provider auth is not part of the supported Nix workflow yet"
+
+              blocked_logout_output="$("$out/bin/hermes" logout --provider nous 2>&1 || true)"
+              printf '%s\n' "$blocked_logout_output" | ${gnugrep}/bin/grep -q "OAuth-backed provider auth is not part of the supported Nix workflow yet"
+
+sethome_output="$(HOME="$TMPDIR/sethome-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+import asyncio
+from types import SimpleNamespace
+from gateway.run import GatewayRunner
+from gateway.config import Platform
+
+self_obj = SimpleNamespace(config=SimpleNamespace(platforms={}))
+event = SimpleNamespace(
+    source=SimpleNamespace(
+        platform=Platform.TELEGRAM,
+        chat_id="123456789",
+        chat_name="Nix Home",
+    )
+)
+
+result = asyncio.run(GatewayRunner._handle_set_home_command(self_obj, event))
+print(result)
+print(self_obj.config.platforms[Platform.TELEGRAM].home_channel.chat_id)
+PY
+)"
+              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "for this Hermes process only"
+              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "TELEGRAM_HOME_CHANNEL=123456789"
+              printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "^123456789$"
+
+model_output="$(HOME="$TMPDIR/model-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+import asyncio
+from pathlib import Path
+from types import SimpleNamespace
+from gateway.run import GatewayRunner
+
+home = Path.home() / ".hermes"
+home.mkdir(parents=True, exist_ok=True)
+
+class Event:
+    def get_command_args(self):
+        return "anthropic/claude-sonnet-4"
+
+result = asyncio.run(GatewayRunner._handle_model_command(SimpleNamespace(), Event()))
+config_path = home / "config.yaml"
+print(result)
+print(config_path.exists())
+PY
+)"
+              printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "for this Hermes process only"
+              printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "settings.model.default"
+              printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "^False$"
+
+personality_output="$(HOME="$TMPDIR/personality-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+import asyncio
+from pathlib import Path
+from types import SimpleNamespace
+import yaml
+from gateway.run import GatewayRunner
+
+home = Path.home() / ".hermes"
+home.mkdir(parents=True, exist_ok=True)
+config_path = home / "config.yaml"
+config_path.write_text(yaml.safe_dump({
+    "agent": {
+        "personalities": {
+            "technical": "You are technical."
+        }
+    }
+}, sort_keys=False))
+
+class Event:
+    def get_command_args(self):
+        return "technical"
+
+self_obj = SimpleNamespace(_ephemeral_system_prompt="")
+result = asyncio.run(GatewayRunner._handle_personality_command(self_obj, Event()))
+config = yaml.safe_load(config_path.read_text()) or {}
+print(result)
+print(self_obj._ephemeral_system_prompt)
+print("system_prompt" in (config.get("agent") or {}))
+PY
+)"
+              printf '%s\n' "$personality_output" | ${gnugrep}/bin/grep -q "for this Hermes process only"
+              printf '%s\n' "$personality_output" | ${gnugrep}/bin/grep -q "settings.agent.system_prompt"
+              printf '%s\n' "$personality_output" | ${gnugrep}/bin/grep -q "^You are technical\.$"
+              printf '%s\n' "$personality_output" | ${gnugrep}/bin/grep -q "^False$"
+
+update_output="$(HOME="$TMPDIR/update-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+import asyncio
+from types import SimpleNamespace
+from gateway.run import GatewayRunner
+from gateway.config import Platform
+
+event = SimpleNamespace(
+    source=SimpleNamespace(
+        platform=Platform.TELEGRAM,
+        chat_id="123",
+        user_id="456",
+    )
+)
+
+print(asyncio.run(GatewayRunner._handle_update_command(SimpleNamespace(), event)))
+PY
+)"
+              printf '%s\n' "$update_output" | ${gnugrep}/bin/grep -q "/update"
+              printf '%s\n' "$update_output" | ${gnugrep}/bin/grep -q "disabled in the Nix package"
+
+cli_guard_output="$(HOME="$TMPDIR/cli-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+from pathlib import Path
+import yaml
+from cli import save_config_value
+
+home = Path.home() / ".hermes"
+home.mkdir(parents=True, exist_ok=True)
+config_path = home / "config.yaml"
+config_path.write_text(yaml.safe_dump({"model": {"default": "before"}}, sort_keys=False))
+
+result = save_config_value("model.default", "after")
+config = yaml.safe_load(config_path.read_text()) or {}
+print(result)
+print(config["model"]["default"])
+PY
+)"
+              printf '%s\n' "$cli_guard_output" | ${gnugrep}/bin/grep -q "^False$"
+              printf '%s\n' "$cli_guard_output" | ${gnugrep}/bin/grep -q "^before$"
 
               tmp_home="$TMPDIR/hermes-home"
               mkdir -p "$tmp_home/.hermes" "$TMPDIR/bin"

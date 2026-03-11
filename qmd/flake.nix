@@ -12,7 +12,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "qmd";
-        version = "1.1.6";
+        version = "2.0.0";
 
         sqliteWithExtensions = pkgs.sqlite.overrideAttrs (old: {
           configureFlags = (old.configureFlags or [ ]) ++ [
@@ -21,14 +21,14 @@
         });
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-yMCsDCt/+tOvJYjzJJj3pnQs2eKvzYluqz7P/2nDDmE=";
-          "x86_64-linux" = "sha256-yMCsDCt/+tOvJYjzJJj3pnQs2eKvzYluqz7P/2nDDmE=";
+          "aarch64-linux" = "sha256-VpcOP0F8E+IDoc1M/XG+CIvLwRsKJxdYpY/k3SiC1Zo=";
+          "x86_64-linux" = "sha256-VpcOP0F8E+IDoc1M/XG+CIvLwRsKJxdYpY/k3SiC1Zo=";
         };
 
         # Optional dependencies and install artifacts may vary by architecture.
         outputHashBySystem = {
           "aarch64-linux" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          "x86_64-linux" = "sha256-vZOSLiWLbM5O4BhSvkVcbc1cSIhMzUmnrtECtgJ84us=";
+          "x86_64-linux" = "sha256-VOm6EY6Mx9a4HQQSjh0EIdZTZZ57Ujj6rOIZ/r6ZXOc=";
         };
 
         source = pkgs.fetchurl {
@@ -56,7 +56,7 @@
 
             tar -xzf $src
             cd qmd-${version}
-            bun install --frozen-lockfile --ignore-scripts
+            bun install --ignore-scripts
           '';
 
           installPhase = ''
