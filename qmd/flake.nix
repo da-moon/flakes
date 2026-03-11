@@ -27,7 +27,7 @@
 
         # Optional dependencies and install artifacts may vary by architecture.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          "aarch64-linux" = "sha256-Hs6xKyBWYbGHdbAcnTzMxDokNf0DJjMo3yemcv7v+fI=";
           "x86_64-linux" = "sha256-VOm6EY6Mx9a4HQQSjh0EIdZTZZ57Ujj6rOIZ/r6ZXOc=";
         };
 
@@ -56,7 +56,7 @@
 
             tar -xzf $src
             cd qmd-${version}
-            bun install --ignore-scripts
+            bun install --ignore-scripts --backend=copyfile
           '';
 
           installPhase = ''
