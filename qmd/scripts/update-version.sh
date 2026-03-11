@@ -356,15 +356,11 @@ main() {
   update_flake_version "$latest_version"
   update_source_hash "aarch64-linux" "$source_hash"
   update_source_hash "x86_64-linux" "$source_hash"
-  if [ "$no_build" != true ]; then
-    if ! compute_and_update_output_hash; then
-      log_error "Failed to update outputHash; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
-      rm -f "$backup"
-      exit 1
-    fi
-  else
-    log_warn "Skipping outputHash update because --no-build was requested"
+  if ! compute_and_update_output_hash; then
+    log_error "Failed to compute outputHash; restoring previous flake.nix"
+    cp "$backup" "$flake_file"
+    rm -f "$backup"
+    exit 1
   fi
   cleanup_backups
 
