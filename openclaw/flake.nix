@@ -13,7 +13,7 @@
   #   - Web search (Perplexity Sonar Reasoning Pro)
   #   - Speech-to-text (OpenAI Whisper)
   #   - Configurable memory backend (voyage, qmd, openai, ollama, local, builtin)
-  #   - Tailscale integration (commented out — running at the Windows host level)
+  #   - Tailscale integration (toggle via tailscaleMode: "off" | "serve" | "funnel")
   #   - Workspace directory scaffolding via systemd-tmpfiles (memory/cron/)
   #   - Syncthing file sync for workspace sharing across devices
   #   - Optional dev toolchains (Rust, Go, Terraform — toggle flags)
@@ -83,10 +83,9 @@
       extensionRelayPort = 18792;
 
       # Tailscale integration mode for the OpenClaw gateway.
-      # Commented out in favor of running Tailscale at the Windows host level.
       # "serve"  = tailnet-only HTTPS (tailscale serve), allows Tailscale identity auth
       # "funnel" = public HTTPS (tailscale funnel), requires OPENCLAW_GATEWAY_PASSWORD
-      # "off"    = no tailscale, local-only
+      # "off"    = no tailscale, local-only (default — Tailscale runs at the Windows host level)
       tailscaleMode = "off";  # "serve" | "funnel" | "off"
       isTailscale = tailscaleMode != "off";
 
@@ -109,18 +108,16 @@
           # Loads all API keys from ~/.secrets/openclaw-env
           # Create this file with: MOONSHOT_API_KEY=sk-...
           ({ lib, ... }: let
-            # Tailscale helpers — commented out (running at the Windows host level)
-            # tailscaleSocket = "/home/${username}/.local/share/tailscale/tailscaled.sock";
-            # tailscaleWrappedGw = pkgs.writeShellScriptBin "tailscale" ''
-            #   exec ${pkgs.tailscale}/bin/tailscale --socket="${tailscaleSocket}" "$@"
-            # '';
+            tailscaleSocket = "/home/${username}/.local/share/tailscale/tailscaled.sock";
+            tailscaleWrappedGw = pkgs.writeShellScriptBin "tailscale" ''
+              exec ${pkgs.tailscale}/bin/tailscale --socket="${tailscaleSocket}" "$@"
+            '';
           in {
             systemd.user.services.openclaw-gateway = {
-              # Tailscale unit deps — commented out (running at the Windows host level)
-              # Unit = lib.mkIf isTailscale {
-              #   After = lib.mkForce [ "tailscale-auth.service" ];
-              #   Wants = [ "tailscale-auth.service" ];
-              # };
+              Unit = lib.mkIf isTailscale {
+                After = lib.mkForce [ "tailscale-auth.service" ];
+                Wants = [ "tailscale-auth.service" ];
+              };
               Install.WantedBy = [ "default.target" ];
               Service = {
                 # Load API keys from env file (keeps secrets out of flake)
@@ -132,10 +129,9 @@
                       inputs.qmd.packages.${system}.qmd
                       pkgs.sqlite
                     ]) ++
-                    # Tailscale PATH — commented out (running at the Windows host level)
-                    # (pkgs.lib.optionals isTailscale [
-                    #   tailscaleWrappedGw
-                    # ]) ++
+                    (pkgs.lib.optionals isTailscale [
+                      tailscaleWrappedGw
+                    ]) ++
                     [
                       pkgs.coreutils
                       pkgs.bash
@@ -175,11 +171,10 @@
 
             # ── User systemd services ────────────────────────────────────────
             systemd.user.services = let
-              # Tailscale helpers — commented out (running at the Windows host level)
-              # tailscaleSocket = "/home/${username}/.local/share/tailscale/tailscaled.sock";
-              # tailscaleWrapped = pkgs.writeShellScriptBin "tailscale" ''
-              #   exec ${pkgs.tailscale}/bin/tailscale --socket="${tailscaleSocket}" "$@"
-              # '';
+              tailscaleSocket = "/home/${username}/.local/share/tailscale/tailscaled.sock";
+              tailscaleWrapped = pkgs.writeShellScriptBin "tailscale" ''
+                exec ${pkgs.tailscale}/bin/tailscale --socket="${tailscaleSocket}" "$@"
+              '';
 
               # Playwright Chromium helpers for claw-chrome service
               playwrightChromiumLibs = pkgs.lib.makeLibraryPath [
@@ -271,71 +266,70 @@
                 Install.WantedBy = [ "default.target" ];
               };
             })
-            # ── Tailscale services — commented out (running at the Windows host level) ──
-            # // (pkgs.lib.optionalAttrs isTailscale {
-            #   # ── Tailscale daemon (userspace networking) ─────────────────
-            #   # Runs tailscaled without TUN device (suitable for WSL2 user services).
-            #   # Trade-off: no subnet routing or exit node, but serve/funnel work fine.
-            #   # Status: tailscale --socket=~/.local/share/tailscale/tailscaled.sock status
-            #   tailscaled = {
-            #     Unit = {
-            #       Description = "Tailscale daemon (userspace networking)";
-            #       After = [ "network.target" ];
-            #     };
-            #     Service = {
-            #       ExecStart = "${pkgs.tailscale}/bin/tailscaled --tun=userspace-networking --statedir=/home/${username}/.local/share/tailscale --socket=${tailscaleSocket}";
-            #       Restart = "on-failure";
-            #       RestartSec = "5s";
-            #     };
-            #     Install.WantedBy = [ "default.target" ];
-            #   };
-            #
-            #   # ── Tailscale authentication ────────────────────────────────
-            #   # Authenticates with auth key on first boot (idempotent).
-            #   # Auth key file: ~/.secrets/tailscale-authkey (can delete after first login)
-            #   # Logs: tail -f ~/.openclaw/logs/tailscale-auth.log
-            #   tailscale-auth = {
-            #     Unit = {
-            #       Description = "Authenticate Tailscale device";
-            #       After = [ "tailscaled.service" ];
-            #       Requires = [ "tailscaled.service" ];
-            #     };
-            #     Service = {
-            #       Type = "oneshot";
-            #       RemainAfterExit = true;
-            #       ExecStart = let
-            #         script = pkgs.writeShellScript "tailscale-auth" ''
-            #           set -euo pipefail
-            #           TS="${tailscaleWrapped}/bin/tailscale"
-            #
-            #           # Wait for tailscaled ready (up to 30s)
-            #           for i in $(seq 1 30); do
-            #             if "$TS" status >/dev/null 2>&1; then break; fi
-            #             sleep 1
-            #           done
-            #
-            #           # Skip if already authenticated
-            #           if "$TS" status 2>&1 | head -1 | grep -qv "Logged out"; then
-            #             echo "Already authenticated with Tailscale"
-            #             exit 0
-            #           fi
-            #
-            #           # Authenticate with auth key if available
-            #           AUTHKEY_FILE="/home/${username}/.secrets/tailscale-authkey"
-            #           if [ -f "$AUTHKEY_FILE" ]; then
-            #             "$TS" up --authkey="$(cat "$AUTHKEY_FILE")"
-            #             echo "Authenticated with Tailscale via auth key"
-            #           else
-            #             echo "No auth key at $AUTHKEY_FILE — run: tailscale --socket=${tailscaleSocket} up"
-            #           fi
-            #         '';
-            #       in "${script}";
-            #       StandardOutput = "append:/home/${username}/.openclaw/logs/tailscale-auth.log";
-            #       StandardError = "append:/home/${username}/.openclaw/logs/tailscale-auth.log";
-            #     };
-            #     Install.WantedBy = [ "default.target" ];
-            #   };
-            # })
+            // (pkgs.lib.optionalAttrs isTailscale {
+              # ── Tailscale daemon (userspace networking) ─────────────────
+              # Runs tailscaled without TUN device (suitable for WSL2 user services).
+              # Trade-off: no subnet routing or exit node, but serve/funnel work fine.
+              # Status: tailscale --socket=~/.local/share/tailscale/tailscaled.sock status
+              tailscaled = {
+                Unit = {
+                  Description = "Tailscale daemon (userspace networking)";
+                  After = [ "network.target" ];
+                };
+                Service = {
+                  ExecStart = "${pkgs.tailscale}/bin/tailscaled --tun=userspace-networking --statedir=/home/${username}/.local/share/tailscale --socket=${tailscaleSocket}";
+                  Restart = "on-failure";
+                  RestartSec = "5s";
+                };
+                Install.WantedBy = [ "default.target" ];
+              };
+
+              # ── Tailscale authentication ────────────────────────────────
+              # Authenticates with auth key on first boot (idempotent).
+              # Auth key file: ~/.secrets/tailscale-authkey (can delete after first login)
+              # Logs: tail -f ~/.openclaw/logs/tailscale-auth.log
+              tailscale-auth = {
+                Unit = {
+                  Description = "Authenticate Tailscale device";
+                  After = [ "tailscaled.service" ];
+                  Requires = [ "tailscaled.service" ];
+                };
+                Service = {
+                  Type = "oneshot";
+                  RemainAfterExit = true;
+                  ExecStart = let
+                    script = pkgs.writeShellScript "tailscale-auth" ''
+                      set -euo pipefail
+                      TS="${tailscaleWrapped}/bin/tailscale"
+
+                      # Wait for tailscaled ready (up to 30s)
+                      for i in $(seq 1 30); do
+                        if "$TS" status >/dev/null 2>&1; then break; fi
+                        sleep 1
+                      done
+
+                      # Skip if already authenticated
+                      if "$TS" status 2>&1 | head -1 | grep -qv "Logged out"; then
+                        echo "Already authenticated with Tailscale"
+                        exit 0
+                      fi
+
+                      # Authenticate with auth key if available
+                      AUTHKEY_FILE="/home/${username}/.secrets/tailscale-authkey"
+                      if [ -f "$AUTHKEY_FILE" ]; then
+                        "$TS" up --authkey="$(cat "$AUTHKEY_FILE")"
+                        echo "Authenticated with Tailscale via auth key"
+                      else
+                        echo "No auth key at $AUTHKEY_FILE — run: tailscale --socket=${tailscaleSocket} up"
+                      fi
+                    '';
+                  in "${script}";
+                  StandardOutput = "append:/home/${username}/.openclaw/logs/tailscale-auth.log";
+                  StandardError = "append:/home/${username}/.openclaw/logs/tailscale-auth.log";
+                };
+                Install.WantedBy = [ "default.target" ];
+              };
+            })
             // (pkgs.lib.optionalAttrs (syncthingIntroducerId != "") {
               # ── Syncthing post-start configuration ────────────────────
               # Adds cloud VPS as introducer + shares workspace folder.
@@ -414,6 +408,12 @@
 
             # ── Shell setup ───────────────────────────────────────────────────
             programs.bash.enable = true;  # Required for shell aliases
+            programs.bash.shellAliases = {
+              # Launch visible Chromium (default profile has OpenClaw Browser Relay extension)
+              claw-browser = "chromium --no-sandbox --no-first-run --noerrdialogs about:blank";
+              # Inspect pages running in the headless claw-chrome systemd service
+              claw-inspect = "chromium --no-sandbox --no-first-run --noerrdialogs 'chrome://inspect/#devices'";
+            };
 
             # ── Zoxide (smarter cd) ─────────────────────────────────────────
             programs.zoxide = {
@@ -449,6 +449,22 @@
               enableBashIntegration = true;
             };
 
+            # ── Git ───────────────────────────────────────────────────────
+            # NOTE: We use home.file instead of programs.git to avoid
+            # triggering the nix-openclaw module's autoExcludeTools
+            # (which requires pkgs.openclaw overlay).
+            home.file.".config/git/config".text = ''
+              [diff]
+                tool = difftastic
+                external = ${pkgsUnstable.difftastic}/bin/difft
+              [difftool]
+                prompt = false
+              [difftool "difftastic"]
+                cmd = ${pkgsUnstable.difftastic}/bin/difft "$LOCAL" "$REMOTE"
+              [pager]
+                difftool = true
+            '';
+
             # ── Syncthing (file sync) ──────────────────────────────────────
             # Shares ~/.openclaw/workspace with other devices.
             # Introducer device configured via syncthing-configure service.
@@ -464,6 +480,7 @@
               # Core Packages
               pkgs.which
               pkgs.unzip
+              pkgs.less
               
               
               # Editor and CLI tools (from unstable)
@@ -491,16 +508,15 @@
               inputs.beads.packages.${system}.beads
               pkgsUnstable.dolt
 
-              # Tailscale — commented out (running at the Windows host level)
-              # pkgs.tailscale
-
               # Browser and fonts (required for GUI apps in WSL2)
               pkgs.chromium
               pkgs.liberation_ttf
               pkgs.dejavu_fonts
               pkgs.noto-fonts
 
-            ] ++ (pkgs.lib.optionals enableRust [
+            ] ++ (pkgs.lib.optionals isTailscale [
+              pkgs.tailscale
+            ]) ++ (pkgs.lib.optionals enableRust [
               # Rust toolchain
               pkgsUnstable.cargo
               pkgsUnstable.rustc
@@ -530,21 +546,20 @@
                 # Auth token/password read from env vars (OPENCLAW_GATEWAY_TOKEN,
                 # OPENCLAW_GATEWAY_PASSWORD) — never baked into config JSON.
                 gateway = {
-                  mode = "local";
-                  auth = { mode = "token"; };
-                  # Tailscale gateway config — commented out (running at the Windows host level)
-                  # auth = { mode = "token"; }
-                  #   // (pkgs.lib.optionalAttrs (tailscaleMode == "serve") {
-                  #     allowTailscale = true;
-                  #   })
-                  #   // (pkgs.lib.optionalAttrs (tailscaleMode == "funnel") {
-                  #     mode = "password";
-                  #   });
-                  # tailscale = {
-                  #   mode = tailscaleMode;
-                  #   resetOnExit = true;
-                  # };
-                };
+                  mode = if isTailscale then tailscaleMode else "local";
+                  auth = { mode = "token"; }
+                    // (pkgs.lib.optionalAttrs (tailscaleMode == "serve") {
+                      allowTailscale = true;
+                    })
+                    // (pkgs.lib.optionalAttrs (tailscaleMode == "funnel") {
+                      mode = "password";
+                    });
+                } // (pkgs.lib.optionalAttrs isTailscale {
+                  tailscale = {
+                    mode = tailscaleMode;
+                    resetOnExit = true;
+                  };
+                });
 
                 # ── Telegram bot ────────────────────────────────────────────
                 # 1. Create bot via @BotFather, get token
@@ -808,7 +823,7 @@
 #      PLAYWRIGHT_BROWSERS_PATH=...    (set to ~/.openclaw/playwright-browsers)
 #
 # 4. (Optional) ~/.secrets/tailscale-authkey
-#    NOTE: Unused while Tailscale runs at the Windows host level.
+#    Required when tailscaleMode is "serve" or "funnel".
 #    Tailscale auth key for automatic device login (one-time use).
 #    Generate: https://login.tailscale.com/admin/settings/keys → "Generate auth key"
 #    Write:    echo -n 'tskey-auth-...' > ~/.secrets/tailscale-authkey
@@ -858,9 +873,9 @@
 #     Web UI:       http://127.0.0.1:8384
 #     Config logs:  tail -f ~/.openclaw/logs/syncthing-configure.log
 #
-# 12. Tailscale — DISABLED (running at the Windows host level instead):
-#     The tailscaled and tailscale-auth services are commented out.
-#     To re-enable, set tailscaleMode = "serve" or "funnel" at the top of this flake.
+# 12. Tailscale — Controlled by tailscaleMode flag ("off" by default):
+#     Set tailscaleMode = "serve" or "funnel" at the top of this flake to enable.
+#     When "off", no Tailscale services or packages are included.
 #     Check status: systemctl --user status tailscaled tailscale-auth
 #     Tailscale:    tailscale --socket=~/.local/share/tailscale/tailscaled.sock status
 #     Auth logs:    tail -f ~/.openclaw/logs/tailscale-auth.log
