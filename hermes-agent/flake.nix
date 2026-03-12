@@ -35,11 +35,11 @@
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "hermes-agent";
         version = "unstable-2026-03-11";
-        revision = "683c8b24d41f9a40793d28d38b457f31d73dc508";
+        revision = "ac53bf1d712c73b6d4253b5a3bdb176eb13d76ca";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-k74W3HNb+YPmOHojUJFAIfT6yqxlKmxnrg84jR2kbHQ=";
-          "x86_64-linux" = "sha256-k74W3HNb+YPmOHojUJFAIfT6yqxlKmxnrg84jR2kbHQ=";
+          "aarch64-linux" = "sha256-yMgyPY1KmbymRHy1fkq/orrsLiXbbkKTLUUvh7DfC4g=";
+          "x86_64-linux" = "sha256-yMgyPY1KmbymRHy1fkq/orrsLiXbbkKTLUUvh7DfC4g=";
         };
 
         sourceRoot = pkgs.fetchFromGitHub {
@@ -371,7 +371,7 @@ save_config_guard = """def save_config_value(key_path: str, value: any) -> bool:
         return False
 
     # Use the same precedence as load_cli_config: user config first, then project config
-    user_config_path = Path.home() / '.hermes' / 'config.yaml'
+    user_config_path = _hermes_home / 'config.yaml'
     project_config_path = Path(__file__).parent / 'cli-config.yaml'
     config_path = user_config_path if user_config_path.exists() else project_config_path
     
@@ -413,6 +413,298 @@ if not save_config_match:
     raise SystemExit("Failed to locate save_config_value in cli.py")
 cli_path.write_text(cli_text[:save_config_match.start()] + save_config_guard + cli_text[save_config_match.end():])
 
+paths_helper_path = root / "hermes_paths.py"
+paths_helper_path.write_text(
+    """import os
+from pathlib import Path
+
+
+def get_hermes_home() -> Path:
+    return Path(os.getenv("HERMES_HOME", Path.home() / ".hermes"))
+"""
+)
+
+def ensure_helper_import(text: str) -> str:
+    if "get_hermes_home()" not in text:
+        return text
+    if "def get_hermes_home" in text:
+        return text
+    if re.search(r"from hermes_cli\.config import [^\n]*\bget_hermes_home\b", text):
+        return text
+    if "from hermes_paths import get_hermes_home" in text:
+        return text
+    if "from pathlib import Path\n" in text:
+        return text.replace(
+            "from pathlib import Path\n",
+            "from pathlib import Path\n\nfrom hermes_paths import get_hermes_home\n",
+            1,
+        )
+    return "from hermes_paths import get_hermes_home\n" + text
+
+
+def patch_text(path_str: str, replacements: list[tuple[str, str]]) -> None:
+    path = root / path_str
+    text = path.read_text()
+    original = text
+    for old, new in replacements:
+        candidates = [
+            old,
+            old.replace('"', "'"),
+            old.replace("'", '"'),
+        ]
+        for candidate in candidates:
+            if candidate in text:
+                text = text.replace(candidate, new)
+                break
+        else:
+            pattern = []
+            for char in old:
+                if char in {"'", '"'}:
+                    pattern.append(r"""['"]""")
+                elif char.isspace():
+                    pattern.append(r"\s+")
+                else:
+                    pattern.append(re.escape(char))
+            text, count = re.subn("".join(pattern), new, text, count=1)
+            if count != 1:
+                raise SystemExit(f"Failed to locate patch target in {path_str}: {old}")
+    if text != original:
+        text = ensure_helper_import(text)
+        path.write_text(text)
+
+
+patch_text(
+    "agent/auxiliary_client.py",
+    [
+        (
+            '_AUTH_JSON_PATH = Path.home() / ".hermes" / "auth.json"',
+            '_AUTH_JSON_PATH = get_hermes_home() / "auth.json"',
+        ),
+    ],
+)
+
+patch_text(
+    "agent/prompt_builder.py",
+    [
+        (
+            '        global_soul = Path.home() / ".hermes" / "SOUL.md"',
+            '        global_soul = get_hermes_home() / "SOUL.md"',
+        ),
+    ],
+)
+
+patch_text(
+    "cli.py",
+    [
+        (
+            '        path = Path.home() / ".hermes" / path',
+            '        path = _hermes_home / path',
+        ),
+        (
+            "    user_config_path = Path.home() / '.hermes' / 'config.yaml'",
+            "    user_config_path = _hermes_home / 'config.yaml'",
+        ),
+        (
+            '        self._history_file = Path.home() / ".hermes_history"',
+            '        self._history_file = _hermes_home / ".history"',
+        ),
+        (
+            '        img_dir = Path.home() / ".hermes" / "images"',
+            '        img_dir = _hermes_home / "images"',
+        ),
+        (
+            '                paste_dir = Path(os.path.expanduser("~/.hermes/pastes"))',
+            '                paste_dir = _hermes_home / "pastes"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/channel_directory.py",
+    [
+        (
+            'DIRECTORY_PATH = Path.home() / ".hermes" / "channel_directory.json"',
+            'DIRECTORY_PATH = get_hermes_home() / "channel_directory.json"',
+        ),
+        (
+            '    sessions_path = Path.home() / ".hermes" / "sessions" / "sessions.json"',
+            '    sessions_path = get_hermes_home() / "sessions" / "sessions.json"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/config.py",
+    [
+        (
+            '    sessions_dir: Path = field(default_factory=lambda: Path.home() / ".hermes" / "sessions")',
+            '    sessions_dir: Path = field(default_factory=lambda: get_hermes_home() / "sessions")',
+        ),
+        (
+            '        sessions_dir = Path.home() / ".hermes" / "sessions"',
+            '        sessions_dir = get_hermes_home() / "sessions"',
+        ),
+        (
+            '    gateway_config_path = Path.home() / ".hermes" / "gateway.json"',
+            '    gateway_config_path = get_hermes_home() / "gateway.json"',
+        ),
+        (
+            '        config_yaml_path = Path.home() / ".hermes" / "config.yaml"',
+            '        config_yaml_path = get_hermes_home() / "config.yaml"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/delivery.py",
+    [
+        (
+            '        self.output_dir = Path.home() / ".hermes" / "cron" / "output"',
+            '        self.output_dir = get_hermes_home() / "cron" / "output"',
+        ),
+        (
+            '        out_dir = Path.home() / ".hermes" / "cron" / "output"',
+            '        out_dir = get_hermes_home() / "cron" / "output"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/hooks.py",
+    [
+        (
+            'HOOKS_DIR = Path(os.path.expanduser("~/.hermes/hooks"))',
+            'HOOKS_DIR = get_hermes_home() / "hooks"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/mirror.py",
+    [
+        (
+            '_SESSIONS_DIR = Path.home() / ".hermes" / "sessions"',
+            '_SESSIONS_DIR = get_hermes_home() / "sessions"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/pairing.py",
+    [
+        (
+            'PAIRING_DIR = Path(os.path.expanduser("~/.hermes/pairing"))',
+            'PAIRING_DIR = get_hermes_home() / "pairing"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/platforms/base.py",
+    [
+        (
+            'IMAGE_CACHE_DIR = Path(os.path.expanduser("~/.hermes/image_cache"))',
+            'IMAGE_CACHE_DIR = get_hermes_home() / "image_cache"',
+        ),
+        (
+            'AUDIO_CACHE_DIR = Path(os.path.expanduser("~/.hermes/audio_cache"))',
+            'AUDIO_CACHE_DIR = get_hermes_home() / "audio_cache"',
+        ),
+        (
+            'DOCUMENT_CACHE_DIR = Path(os.path.expanduser("~/.hermes/document_cache"))',
+            'DOCUMENT_CACHE_DIR = get_hermes_home() / "document_cache"',
+        ),
+    ],
+)
+
+patch_text(
+    "gateway/sticker_cache.py",
+    [
+        (
+            'CACHE_PATH = Path(os.path.expanduser("~/.hermes/sticker_cache.json"))',
+            'CACHE_PATH = get_hermes_home() / "sticker_cache.json"',
+        ),
+    ],
+)
+
+patch_text(
+    "hermes_cli/status.py",
+    [
+        (
+            'from hermes_cli.config import get_env_path, get_env_value',
+            'from hermes_cli.config import get_env_path, get_env_value, get_hermes_home',
+        ),
+        (
+            '    jobs_file = Path.home() / ".hermes" / "cron" / "jobs.json"',
+            '    jobs_file = get_hermes_home() / "cron" / "jobs.json"',
+        ),
+        (
+            '    sessions_file = Path.home() / ".hermes" / "sessions" / "sessions.json"',
+            '    sessions_file = get_hermes_home() / "sessions" / "sessions.json"',
+        ),
+    ],
+)
+
+patch_text(
+    "run_agent.py",
+    [
+        (
+            '        _error_log_dir = Path.home() / ".hermes" / "logs"',
+            '        _error_log_dir = get_hermes_home() / "logs"',
+        ),
+    ],
+)
+
+patch_text(
+    "tools/environments/base.py",
+    [
+        (
+            '        p = Path.home() / ".hermes" / "sandboxes"',
+            '        p = get_hermes_home() / "sandboxes"',
+        ),
+    ],
+)
+
+patch_text(
+    "tools/environments/modal.py",
+    [
+        (
+            '_SNAPSHOT_STORE = Path.home() / ".hermes" / "modal_snapshots.json"',
+            '_SNAPSHOT_STORE = get_hermes_home() / "modal_snapshots.json"',
+        ),
+    ],
+)
+
+patch_text(
+    "tools/environments/singularity.py",
+    [
+        (
+            '_SNAPSHOT_STORE = Path.home() / ".hermes" / "singularity_snapshots.json"',
+            '_SNAPSHOT_STORE = get_hermes_home() / "singularity_snapshots.json"',
+        ),
+    ],
+)
+
+patch_text(
+    "tools/process_registry.py",
+    [
+        (
+            'CHECKPOINT_PATH = Path(os.path.expanduser("~/.hermes/processes.json"))',
+            'CHECKPOINT_PATH = get_hermes_home() / "processes.json"',
+        ),
+    ],
+)
+
+patch_text(
+    "tools/tts_tool.py",
+    [
+        (
+            'DEFAULT_OUTPUT_DIR = os.path.expanduser("~/.hermes/audio_cache")',
+            'DEFAULT_OUTPUT_DIR = str(get_hermes_home() / "audio_cache")',
+        ),
+    ],
+)
+
 PY
 
           if ! ${pkgs.gnugrep}/bin/grep -q "TINKER_LOGS_DIR" "$out/tools/rl_training_tool.py"; then
@@ -447,6 +739,21 @@ PY
 
           if ! ${pkgs.gnugrep}/bin/grep -q 'key_path in {"agent.system_prompt", "model.default"}' "$out/cli.py"; then
             echo "Failed to patch cli.py for Nix-managed slash-command config guards" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q "def get_hermes_home() -> Path" "$out/hermes_paths.py"; then
+            echo "Failed to add shared Hermes path helper" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q 'get_hermes_home() / "pairing"' "$out/gateway/pairing.py"; then
+            echo "Failed to patch gateway/pairing.py for HERMES_HOME-aware storage" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -q 'get_hermes_home() / "sessions"' "$out/gateway/config.py"; then
+            echo "Failed to patch gateway/config.py for HERMES_HOME-aware sessions" >&2
             exit 1
           fi
 
@@ -732,7 +1039,7 @@ exit 0
 EOF
               chmod +x "$TMPDIR/bin/agent-browser"
 
-              doctor_output="$(HOME="$tmp_home" PATH="$TMPDIR/bin:$PATH" "$out/bin/hermes" doctor 2>&1 || true)"
+doctor_output="$(HOME="$tmp_home" PATH="$TMPDIR/bin:$PATH" "$out/bin/hermes" doctor 2>&1 || true)"
               printf '%s\n' "$doctor_output" | ${gnugrep}/bin/grep -q "browser automation via Nix PATH"
 
               if printf '%s\n' "$doctor_output" | ${gnugrep}/bin/grep -q "run: npm install"; then
@@ -746,6 +1053,33 @@ EOF
                 printf '%s\n' "$doctor_output" >&2
                 exit 1
               fi
+
+hermes_home_output="$(HOME="$TMPDIR/real-home" HERMES_HOME="$TMPDIR/custom-hermes" PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
+from gateway.channel_directory import DIRECTORY_PATH
+from gateway.config import GatewayConfig
+from gateway.pairing import PAIRING_DIR
+from gateway.sticker_cache import CACHE_PATH
+from tools.environments.base import get_sandbox_dir
+from tools.process_registry import CHECKPOINT_PATH
+from tools.tts_tool import DEFAULT_OUTPUT_DIR
+
+cfg = GatewayConfig()
+print(cfg.sessions_dir)
+print(PAIRING_DIR)
+print(DIRECTORY_PATH)
+print(CACHE_PATH)
+print(CHECKPOINT_PATH)
+print(DEFAULT_OUTPUT_DIR)
+print(get_sandbox_dir())
+PY
+)"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sessions"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/pairing"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/channel_directory.json"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sticker_cache.json"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/processes.json"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/audio_cache"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sandboxes"
 
               runHook postInstallCheck
             '';
