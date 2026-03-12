@@ -28,7 +28,7 @@
         # Optional dependencies and install artifacts may vary by architecture.
         outputHashBySystem = {
           "aarch64-linux" = "sha256-Hs6xKyBWYbGHdbAcnTzMxDokNf0DJjMo3yemcv7v+fI=";
-          "x86_64-linux" = "sha256-VOm6EY6Mx9a4HQQSjh0EIdZTZZ57Ujj6rOIZ/r6ZXOc=";
+          "x86_64-linux" = "sha256-tZLEomFnER5wOUSSYQz7EAdgOI2Oajz9+Cwaqgg41Pg=";
         };
 
         source = pkgs.fetchurl {
