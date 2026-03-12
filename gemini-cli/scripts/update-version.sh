@@ -51,6 +51,19 @@ get_current_system_key() {
   nix eval --impure --raw --expr builtins.currentSystem
 }
 
+get_other_output_hash_systems() {
+  local current_system_key="$1"
+  awk -v target="$current_system_key" '
+    /outputHashBySystem[[:space:]]*=[[:space:]]*\{/ { in_map = 1; next }
+    in_map && /\};/ { in_map = 0 }
+    in_map {
+      if (match($0, /"([^"]+)"[[:space:]]*=/, a) > 0 && a[1] != target) {
+        print a[1]
+      }
+    }
+  ' "$flake_file"
+}
+
 has_fake_hash() {
   local current_system_key
   local output_hash_line
@@ -123,6 +136,17 @@ update_output_hash_for_system() {
 
 cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
+}
+
+warn_other_output_hash_systems() {
+  local current_system_key="$1"
+  local other_systems
+
+  other_systems="$(get_other_output_hash_systems "$current_system_key" | tr '\n' ' ' | sed -E 's/[[:space:]]+$//')"
+  if [ -n "$other_systems" ]; then
+    log_warn "Only ${current_system_key} outputHash was refreshed here."
+    log_warn "Re-run this script on: ${other_systems} if those package hashes drift."
+  fi
 }
 
 update_flake_lock() {
@@ -372,6 +396,7 @@ main() {
   fi
 
   rm -f "$backup"
+  warn_other_output_hash_systems "$(get_current_system_key)"
 
   if [ "$update_lock" = true ]; then
     update_flake_lock
