@@ -11,8 +11,8 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 readonly GITHUB_API_BASE="https://api.github.com"
-readonly REPO_OWNER="steveyegge"
-readonly REPO_NAME="beads"
+readonly REPO_OWNER="parallel-web"
+readonly REPO_NAME="parallel-web-tools"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -50,9 +50,9 @@ tag_to_version() {
 
 prefetch_sha256_sri() {
   local url="$1"
-  nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+  local nix32_hash
+  nix32_hash="$(nix-prefetch-url --unpack "$url" 2>/dev/null)"
+  nix hash to-sri --type sha256 "$nix32_hash"
 }
 
 update_flake_version() {
@@ -78,12 +78,12 @@ update_flake_lock() {
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  out_path="$(cd "$pkg_dir" && nix build .#beads --no-link --print-out-paths)"
-  if [ -z "$out_path" ] || [ ! -x "$out_path/bin/bd" ]; then
-    log_error "Build succeeded but expected binary not found at: $out_path/bin/bd"
+  out_path="$(cd "$pkg_dir" && nix build .#parallel-cli --no-link --print-out-paths)"
+  if [ -z "$out_path" ] || [ ! -x "$out_path/bin/parallel-cli" ]; then
+    log_error "Build succeeded but expected binary not found at: $out_path/bin/parallel-cli"
     return 1
   fi
-  "$out_path/bin/bd" --help >/dev/null 2>&1 || true
+  "$out_path/bin/parallel-cli" --help >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
@@ -158,7 +158,7 @@ Options:
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --version 0.29.0
+  ./scripts/update-version.sh --version 0.1.0
 EOF
 }
 
@@ -251,16 +251,16 @@ main() {
   fi
 
   local url_aarch64 url_x86_64
-  url_aarch64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/beads_${latest_version}_linux_arm64.tar.gz"
-  url_x86_64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/beads_${latest_version}_linux_amd64.tar.gz"
+  url_aarch64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/parallel-cli-linux-arm64.zip"
+  url_x86_64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/parallel-cli-linux-x64.zip"
 
-  log_info "Prefetching tarball hashes..."
+  log_info "Prefetching zip hashes..."
   local hash_aarch64 hash_x86_64
   hash_aarch64="$(prefetch_sha256_sri "$url_aarch64")"
   hash_x86_64="$(prefetch_sha256_sri "$url_x86_64")"
 
   if [ -z "$hash_aarch64" ] || [ -z "$hash_x86_64" ]; then
-    log_error "Failed to prefetch one or more tarball hashes"
+    log_error "Failed to prefetch one or more zip hashes"
     exit 2
   fi
 
@@ -300,7 +300,7 @@ main() {
   fi
   maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
 
-  log_info "Successfully updated beads from $current_version to $latest_version"
+  log_info "Successfully updated parallel-web-tools from $current_version to $latest_version"
 }
 
 main "$@"

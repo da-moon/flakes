@@ -18,7 +18,7 @@
         # so the fixed-output hash from "npm install" is not portable across systems.
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-Jr5claQaMaJ/Oz+WGAAu8/xLpcDfNLU+FtdKzzA7n0o=";
+          "aarch64-linux" = "sha256-UMTLpJKUTyyjy0p7as5iOof32GcWYlhZJGRsBYFaLxU=";
           "x86_64-linux" = "sha256-gD0nKC3ijBsiv/MK6nE29XetfFmBbmXi7AEUzXL+2V8=";
         };
 
@@ -31,9 +31,7 @@
             hash = "sha256-25rzgJXTKZKvWKJwFdO1PMLj4nug/A7T2NdftSesnz0=";
           };
 
-          # Uses pnpm instead of npm because npm crashes with "double free or corruption"
-          # on aarch64-linux (Android/nix-on-droid)
-          nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
+          nativeBuildInputs = [ nodejs pkgs.cacert ];
 
           dontPatchShebangs = true;
           outputHashAlgo = "sha256";
@@ -44,9 +42,10 @@
           buildPhase = ''
             runHook preBuild
             export HOME=$TMPDIR
+            export npm_config_cache=$TMPDIR/.npm
             tar -xzf $src
             cd package
-            pnpm install --prod --ignore-scripts --shamefully-hoist
+            npm install --production --ignore-scripts
             runHook postBuild
           '';
 

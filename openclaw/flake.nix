@@ -2,9 +2,6 @@
   # ============================================================================
   # GENERIC OPENCLAW HOME-MANAGER FLAKE
   # ============================================================================
-  # Designed for WSL2 sandboxes but not limited to them — works on any
-  # NixOS / non-NixOS Linux with home-manager.
-  #
   # This flake sets up OpenClaw (AI assistant gateway) with:
   #   - Moonshot Kimi K2.5 as the primary LLM
   #   - Fallback providers: OpenAI GPT-5.2, MiniMax M2.5, Z.AI GLM-5, Anthropic Claude Sonnet 4.6
@@ -13,10 +10,9 @@
   #   - Web search (Perplexity Sonar Reasoning Pro)
   #   - Speech-to-text (OpenAI Whisper)
   #   - Configurable memory backend (voyage, qmd, openai, ollama, local, builtin)
-  #   - Tailscale integration (toggle via tailscaleMode: "off" | "serve" | "funnel")
+  #   - Tailscale integration (serve/funnel/off) for remote access
   #   - Workspace directory scaffolding via systemd-tmpfiles (memory/cron/)
   #   - Syncthing file sync for workspace sharing across devices
-  #   - Optional dev toolchains (Rust, Go, Terraform — toggle flags)
   #
   # SECURITY: All API keys live in ~/.secrets/ files (never in this flake)
   # ============================================================================
@@ -85,15 +81,9 @@
       # Tailscale integration mode for the OpenClaw gateway.
       # "serve"  = tailnet-only HTTPS (tailscale serve), allows Tailscale identity auth
       # "funnel" = public HTTPS (tailscale funnel), requires OPENCLAW_GATEWAY_PASSWORD
-      # "off"    = no tailscale, local-only (default — Tailscale runs at the Windows host level)
-      tailscaleMode = "off";  # "serve" | "funnel" | "off"
+      # "off"    = no tailscale, local-only
+      tailscaleMode = "serve";  # "serve" | "funnel" | "off"
       isTailscale = tailscaleMode != "off";
-
-      # ── Optional dev toolchains ────────────────────────────────────────────
-      # Toggle to install language toolchains at the home-manager level.
-      enableRust      = true;
-      enableGo        = false;
-      enableTerraform = false;
       # ───────────────────────────────────────────────────────────────────────────
 
       mkHome = username: home-manager.lib.homeManagerConfiguration {
@@ -131,8 +121,7 @@
                     ]) ++
                     (pkgs.lib.optionals isTailscale [
                       tailscaleWrappedGw
-                    ]) ++
-                    [
+                    ]) ++ [
                       pkgs.coreutils
                       pkgs.bash
                     ]
@@ -171,6 +160,7 @@
 
             # ── User systemd services ────────────────────────────────────────
             systemd.user.services = let
+              # Tailscale helpers (userspace networking on WSL2)
               tailscaleSocket = "/home/${username}/.local/share/tailscale/tailscaled.sock";
               tailscaleWrapped = pkgs.writeShellScriptBin "tailscale" ''
                 exec ${pkgs.tailscale}/bin/tailscale --socket="${tailscaleSocket}" "$@"
@@ -265,8 +255,7 @@
                 };
                 Install.WantedBy = [ "default.target" ];
               };
-            })
-            // (pkgs.lib.optionalAttrs isTailscale {
+            }) // (pkgs.lib.optionalAttrs isTailscale {
               # ── Tailscale daemon (userspace networking) ─────────────────
               # Runs tailscaled without TUN device (suitable for WSL2 user services).
               # Trade-off: no subnet routing or exit node, but serve/funnel work fine.
@@ -329,8 +318,7 @@
                 };
                 Install.WantedBy = [ "default.target" ];
               };
-            })
-            // (pkgs.lib.optionalAttrs (syncthingIntroducerId != "") {
+            }) // (pkgs.lib.optionalAttrs (syncthingIntroducerId != "") {
               # ── Syncthing post-start configuration ────────────────────
               # Adds cloud VPS as introducer + shares workspace folder.
               # Logs: tail -f ~/.openclaw/logs/syncthing-configure.log
@@ -408,12 +396,6 @@
 
             # ── Shell setup ───────────────────────────────────────────────────
             programs.bash.enable = true;  # Required for shell aliases
-            programs.bash.shellAliases = {
-              # Launch visible Chromium (default profile has OpenClaw Browser Relay extension)
-              claw-browser = "chromium --no-sandbox --no-first-run --noerrdialogs about:blank";
-              # Inspect pages running in the headless claw-chrome systemd service
-              claw-inspect = "chromium --no-sandbox --no-first-run --noerrdialogs 'chrome://inspect/#devices'";
-            };
 
             # ── Zoxide (smarter cd) ─────────────────────────────────────────
             programs.zoxide = {
@@ -449,22 +431,6 @@
               enableBashIntegration = true;
             };
 
-            # ── Git ───────────────────────────────────────────────────────
-            # NOTE: We use home.file instead of programs.git to avoid
-            # triggering the nix-openclaw module's autoExcludeTools
-            # (which requires pkgs.openclaw overlay).
-            home.file.".config/git/config".text = ''
-              [diff]
-                tool = difftastic
-                external = ${pkgsUnstable.difftastic}/bin/difft
-              [difftool]
-                prompt = false
-              [difftool "difftastic"]
-                cmd = ${pkgsUnstable.difftastic}/bin/difft "$LOCAL" "$REMOTE"
-              [pager]
-                difftool = true
-            '';
-
             # ── Syncthing (file sync) ──────────────────────────────────────
             # Shares ~/.openclaw/workspace with other devices.
             # Introducer device configured via syncthing-configure service.
@@ -480,7 +446,6 @@
               # Core Packages
               pkgs.which
               pkgs.unzip
-              pkgs.less
               
               
               # Editor and CLI tools (from unstable)
@@ -492,8 +457,7 @@
               pkgsUnstable.diffutils
               pkgsUnstable.difftastic
               pkgsUnstable.delta
-              pkgsUnstable.zellij
-              
+
               # some core useful packages and libs
               pkgsUnstable.nixfmt
               pkgsUnstable.vtsls
@@ -508,28 +472,16 @@
               inputs.beads.packages.${system}.beads
               pkgsUnstable.dolt
 
+              # Tailscale - VPN mesh for serve/funnel + general tailnet access
+              pkgs.tailscale
+
               # Browser and fonts (required for GUI apps in WSL2)
               pkgs.chromium
               pkgs.liberation_ttf
               pkgs.dejavu_fonts
               pkgs.noto-fonts
 
-            ] ++ (pkgs.lib.optionals isTailscale [
-              pkgs.tailscale
-            ]) ++ (pkgs.lib.optionals enableRust [
-              # Rust toolchain
-              pkgsUnstable.cargo
-              pkgsUnstable.rustc
-              pkgsUnstable.rust-analyzer
-            ]) ++ (pkgs.lib.optionals enableGo [
-              # Go toolchain
-              pkgsUnstable.go
-              pkgsUnstable.gopls
-            ]) ++ (pkgs.lib.optionals enableTerraform [
-              # Terraform / OpenTofu
-              pkgsUnstable.opentofu
-              pkgsUnstable.terraform-ls
-            ]) ++ (pkgs.lib.optionals isQmd [
+            ] ++ (pkgs.lib.optionals isQmd [
               # QMD — local semantic search for the memory backend
               # Wraps Bun + node-llama-cpp with Nix-compatible LD_LIBRARY_PATH
               inputs.qmd.packages.${system}.qmd
@@ -546,7 +498,7 @@
                 # Auth token/password read from env vars (OPENCLAW_GATEWAY_TOKEN,
                 # OPENCLAW_GATEWAY_PASSWORD) — never baked into config JSON.
                 gateway = {
-                  mode = if isTailscale then tailscaleMode else "local";
+                  mode = "local";
                   auth = { mode = "token"; }
                     // (pkgs.lib.optionalAttrs (tailscaleMode == "serve") {
                       allowTailscale = true;
@@ -823,7 +775,6 @@
 #      PLAYWRIGHT_BROWSERS_PATH=...    (set to ~/.openclaw/playwright-browsers)
 #
 # 4. (Optional) ~/.secrets/tailscale-authkey
-#    Required when tailscaleMode is "serve" or "funnel".
 #    Tailscale auth key for automatic device login (one-time use).
 #    Generate: https://login.tailscale.com/admin/settings/keys → "Generate auth key"
 #    Write:    echo -n 'tskey-auth-...' > ~/.secrets/tailscale-authkey
@@ -838,7 +789,7 @@
 #    chmod 600 ~/.secrets/*
 #
 # 7. Activate:
-#    rm -f ~/.openclaw/openclaw.json.backup && nix run home-manager/release-24.11 -- switch --impure --flake ~/.config/home-manager#$USER
+#    nix run home-manager/release-24.11 -- switch --impure --flake ~/.config/home-manager#$USER
 #
 #    If home-manager reports conflicts with existing files, use -b backup:
 #    nix run home-manager/release-24.11 -- switch --impure --flake ~/.config/home-manager#$USER -b backup
@@ -873,9 +824,7 @@
 #     Web UI:       http://127.0.0.1:8384
 #     Config logs:  tail -f ~/.openclaw/logs/syncthing-configure.log
 #
-# 12. Tailscale — Controlled by tailscaleMode flag ("off" by default):
-#     Set tailscaleMode = "serve" or "funnel" at the top of this flake to enable.
-#     When "off", no Tailscale services or packages are included.
+# 12. Tailscale (auto-starts when tailscaleMode != "off"):
 #     Check status: systemctl --user status tailscaled tailscale-auth
 #     Tailscale:    tailscale --socket=~/.local/share/tailscale/tailscaled.sock status
 #     Auth logs:    tail -f ~/.openclaw/logs/tailscale-auth.log
@@ -888,5 +837,5 @@
 #   18792  Extension relay (gateway + 3, HMAC auth)
 #   18793  Headless Chromium CDP (claw-chrome systemd service)
 #   8384   Syncthing Web UI
-#   # 443  Tailscale serve/funnel (disabled — running at the Windows host level)
+#   443    Tailscale serve/funnel (external, managed by tailscale)
 # ============================================================================
