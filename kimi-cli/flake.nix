@@ -34,11 +34,11 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "kimi-cli";
-        version = "1.20.0";
+        version = "1.21.0";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-+4yWi/O+Z7xnemMf+7gpRjoDN6okCLo+XeDT7OUDE9U=";
-          "x86_64-linux" = "sha256-+4yWi/O+Z7xnemMf+7gpRjoDN6okCLo+XeDT7OUDE9U=";
+          "aarch64-linux" = "sha256-DewqEoVnnlw6U02IGqr5O5Nn3kLaFf/SWPN6I02RKpc=";
+          "x86_64-linux" = "sha256-DewqEoVnnlw6U02IGqr5O5Nn3kLaFf/SWPN6I02RKpc=";
         };
 
         source = let
