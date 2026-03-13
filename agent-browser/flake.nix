@@ -22,7 +22,7 @@
 
         outputHashBySystem = {
           "aarch64-darwin" = "sha256-ZOSFNEAINB61izAz+4UvuCSZko8AI8ElFqJwttw5VKw=";
-          "aarch64-linux" = "sha256-uOvzRDcktyUW+6dcpOy8Y8tZepWgUtLztj4epu0prfQ=";
+          "aarch64-linux" = "sha256-ex6LdUevlMVOAXVz7sceRMDG4mTFT6PZorFx4w+rSSg=";
           "x86_64-darwin" = "sha256-ZOSFNEAINB61izAz+4UvuCSZko8AI8ElFqJwttw5VKw=";
           "x86_64-linux" = "sha256-lQfvpSe98HGPe2otx3zeB4jROuoC3BoLoarh5zDqLWE=";
         };
