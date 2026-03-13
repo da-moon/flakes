@@ -34,12 +34,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "hermes-agent";
-        version = "unstable-2026-03-12";
-        revision = "2a62514d1750eb7170a5e5ef1cc9e4fde1fafe78";
+        version = "unstable-2026-03-13";
+        revision = "6235fdde7597a45ac386e5e5de3fdb386171e529";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-Q4c9sxZRgDunYoC6XHdMVNdvVC0eHlPwoK+w0zLKLzs=";
-          "x86_64-linux" = "sha256-Q4c9sxZRgDunYoC6XHdMVNdvVC0eHlPwoK+w0zLKLzs=";
+          "aarch64-linux" = "sha256-aChtc2R99rztD36WQjepo28rcmVV8oGZhhb/mYfeB+M=";
+          "x86_64-linux" = "sha256-aChtc2R99rztD36WQjepo28rcmVV8oGZhhb/mYfeB+M=";
         };
 
         sourceRoot = pkgs.fetchFromGitHub {
@@ -53,14 +53,68 @@
           cp -r ${sourceRoot} "$out"
           chmod -R u+w "$out"
 
-          ${pkgs.perl}/bin/perl -0pi -e 's@# Path to tinker-atropos submodule \(relative to hermes-agent root\)\nHERMES_ROOT = Path\(__file__\)\.parent\.parent\nTINKER_ATROPOS_ROOT = HERMES_ROOT / "tinker-atropos"\nENVIRONMENTS_DIR = TINKER_ATROPOS_ROOT / "tinker_atropos" / "environments"\nCONFIGS_DIR = TINKER_ATROPOS_ROOT / "configs"\nLOGS_DIR = TINKER_ATROPOS_ROOT / "logs"\n\n# Ensure logs directory exists\nLOGS_DIR\.mkdir\(exist_ok=True\)@# Path to tinker-atropos workspace (defaulting to a user-writable Hermes home path)\nHERMES_HOME = Path(os.getenv("HERMES_HOME", Path.home() / ".hermes"))\nHERMES_ROOT = Path(__file__).parent.parent\nTINKER_ATROPOS_ROOT = Path(os.getenv("TINKER_ATROPOS_ROOT", str(HERMES_HOME / "tinker-atropos")))\nENVIRONMENTS_DIR = TINKER_ATROPOS_ROOT / "tinker_atropos" / "environments"\nCONFIGS_DIR = TINKER_ATROPOS_ROOT / "configs"\nLOGS_DIR = Path(os.getenv("TINKER_LOGS_DIR", str(HERMES_HOME / "logs" / "tinker-atropos")))\n\n# Ensure logs directory exists\nLOGS_DIR.mkdir(parents=True, exist_ok=True)@s' "$out/tools/rl_training_tool.py"
-
           PATCHED_ROOT="$out" ${pkgs.python3}/bin/python - <<'PY'
 from os import environ
 from pathlib import Path
 import re
 
 root = Path(environ["PATCHED_ROOT"])
+
+def replace_first(text: str, pattern: str, replacement: str, path_str: str) -> str:
+    updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+    if count != 1:
+        raise SystemExit(f"Failed to locate patch target in {path_str}: {pattern}")
+    return updated
+
+rl_training_path = root / "tools" / "rl_training_tool.py"
+rl_training_text = rl_training_path.read_text()
+rl_training_original = rl_training_text
+
+rl_training_header = 'HERMES_HOME = Path(os.getenv("HERMES_HOME", Path.home() / ".hermes"))'
+if rl_training_header not in rl_training_text:
+    rl_training_text = replace_first(
+        rl_training_text,
+        r'# Path to tinker-atropos submodule \(relative to hermes-agent root\)\nHERMES_ROOT = Path\(__file__\)\.parent\.parent',
+        '# Path to tinker-atropos workspace (defaulting to a user-writable Hermes home path)\nHERMES_HOME = Path(os.getenv("HERMES_HOME", Path.home() / ".hermes"))\nHERMES_ROOT = Path(__file__).parent.parent',
+        "tools/rl_training_tool.py",
+    )
+
+rl_training_root = 'TINKER_ATROPOS_ROOT = Path(os.getenv("TINKER_ATROPOS_ROOT", str(HERMES_HOME / "tinker-atropos")))'
+if rl_training_root not in rl_training_text:
+    rl_training_text = replace_first(
+        rl_training_text,
+        r'TINKER_ATROPOS_ROOT = HERMES_ROOT / "tinker-atropos"',
+        rl_training_root,
+        "tools/rl_training_tool.py",
+    )
+
+rl_training_logs = 'LOGS_DIR = Path(os.getenv("TINKER_LOGS_DIR", str(HERMES_HOME / "logs" / "rl_training")))'
+if rl_training_logs not in rl_training_text:
+    rl_training_text = replace_first(
+        rl_training_text,
+        r'LOGS_DIR = (?:TINKER_ATROPOS_ROOT / "logs"|Path\(os.getenv\("HERMES_HOME", Path\.home\(\) / "\.hermes"\)\) / "logs" / "rl_training")',
+        rl_training_logs,
+        "tools/rl_training_tool.py",
+    )
+
+if 'CONFIGS_DIR.mkdir(parents=True, exist_ok=True)' not in rl_training_text:
+    rl_training_text = replace_first(
+        rl_training_text,
+        r'CONFIGS_DIR\.mkdir\(exist_ok=True\)',
+        'CONFIGS_DIR.mkdir(parents=True, exist_ok=True)',
+        "tools/rl_training_tool.py",
+    )
+
+if 'LOGS_DIR.mkdir(parents=True, exist_ok=True)' not in rl_training_text:
+    rl_training_text = replace_first(
+        rl_training_text,
+        r'LOGS_DIR\.mkdir\(exist_ok=True\)',
+        'LOGS_DIR.mkdir(parents=True, exist_ok=True)',
+        "tools/rl_training_tool.py",
+    )
+
+if rl_training_text != rl_training_original:
+    rl_training_path.write_text(rl_training_text)
 
 doctor_path = root / "hermes_cli" / "doctor.py"
 doctor_new = """    # Node.js + agent-browser (for browser automation tools)
@@ -820,7 +874,7 @@ hermes_home="''${HERMES_HOME:-$HOME/.hermes}"
 export HERMES_HOME="$hermes_home"
 env_file="$hermes_home/.env"
 export TINKER_ATROPOS_ROOT="''${TINKER_ATROPOS_ROOT:-$hermes_home/tinker-atropos}"
-export TINKER_LOGS_DIR="''${TINKER_LOGS_DIR:-$hermes_home/logs/tinker-atropos}"
+export TINKER_LOGS_DIR="''${TINKER_LOGS_DIR:-$hermes_home/logs/rl_training}"
 if [ -n "''${PYTHONPATH:-}" ]; then
   export PYTHONPATH="${patchedSource}:$PYTHONPATH"
 else
@@ -876,7 +930,7 @@ export HERMES_NIX_MANAGED=1
 hermes_home="''${HERMES_HOME:-$HOME/.hermes}"
 export HERMES_HOME="$hermes_home"
 export TINKER_ATROPOS_ROOT="''${TINKER_ATROPOS_ROOT:-$hermes_home/tinker-atropos}"
-export TINKER_LOGS_DIR="''${TINKER_LOGS_DIR:-$hermes_home/logs/tinker-atropos}"
+export TINKER_LOGS_DIR="''${TINKER_LOGS_DIR:-$hermes_home/logs/rl_training}"
 if [ -n "''${PYTHONPATH:-}" ]; then
   export PYTHONPATH="${patchedSource}:$PYTHONPATH"
 else
@@ -1059,6 +1113,9 @@ from gateway.channel_directory import DIRECTORY_PATH
 from gateway.config import GatewayConfig
 from gateway.pairing import PAIRING_DIR
 from gateway.sticker_cache import CACHE_PATH
+from tools.rl_training_tool import CONFIGS_DIR as RL_CONFIGS_DIR
+from tools.rl_training_tool import LOGS_DIR as RL_LOGS_DIR
+from tools.rl_training_tool import TINKER_ATROPOS_ROOT as RL_TINKER_ATROPOS_ROOT
 from tools.environments.base import get_sandbox_dir
 from tools.process_registry import CHECKPOINT_PATH
 from tools.tts_tool import DEFAULT_OUTPUT_DIR
@@ -1071,6 +1128,9 @@ print(CACHE_PATH)
 print(CHECKPOINT_PATH)
 print(DEFAULT_OUTPUT_DIR)
 print(get_sandbox_dir())
+print(RL_TINKER_ATROPOS_ROOT)
+print(RL_CONFIGS_DIR)
+print(RL_LOGS_DIR)
 PY
 )"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sessions"
@@ -1080,6 +1140,9 @@ PY
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/processes.json"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/audio_cache"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sandboxes"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/tinker-atropos"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/tinker-atropos/configs"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/logs/rl_training"
 
               runHook postInstallCheck
             '';
