@@ -23,13 +23,8 @@
         # Platform-specific output hashes for pnpm install
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build
         outputHashBySystem = {
-<<<<<<< HEAD
-          "aarch64-linux" = "sha256-tDCxVVVBnhEnTsWB3kIzYZ9vmFcgZ5PWPlZMEBnkCaE=";
-          "x86_64-linux" = "sha256-X6P7CTSo+/Jv6Lb5svOhkO7Tkfav2uaLN91XT8v7p14=";
-=======
           "aarch64-linux" = "sha256-f9wFb3nYrg13FTLPmwMnQOX5gOD6Fo0tIqIta7sJ+SE=";
           "x86_64-linux" = "sha256-/Oa6mNVXYf8K4nhdqmUTB7pxpkiShhIe7NGUS3Lwmis=";
->>>>>>> 3b2bce3 (chore(gemini-cli): bump to 0.33.1)
         };
 
         # Fixed-output derivation that runs pnpm install with network access
