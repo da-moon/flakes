@@ -34,12 +34,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "hermes-agent";
-        version = "unstable-2026-03-13";
-        revision = "646b4ec5338072a20c11bdaf7dc4f9c1f6d3d557";
+        version = "unstable-2026-03-14";
+        revision = "1114841a2cdd24497742c023d149d3bceab3065b";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-n2ngEf+ndJGvCEmcoEktn2N3pWF7fDYAryxpGRGeQZg=";
-          "x86_64-linux" = "sha256-n2ngEf+ndJGvCEmcoEktn2N3pWF7fDYAryxpGRGeQZg=";
+          "aarch64-linux" = "sha256-BigaEUK2P/D3vsmANph8HkQXj3DbtcFGIHvIlUIb9RI=";
+          "x86_64-linux" = "sha256-BigaEUK2P/D3vsmANph8HkQXj3DbtcFGIHvIlUIb9RI=";
         };
 
         sourceRoot = pkgs.fetchFromGitHub {
@@ -369,7 +369,7 @@ update_new = """    async def _handle_update_command(self, event: MessageEvent) 
 """
 gateway_run_text = gateway_run_path.read_text()
 model_pattern = re.compile(
-    r'    async def _handle_model_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_personality_command)',
+    r'    async def _handle_model_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_provider_command|    async def _handle_personality_command)',
     re.S,
 )
 model_match = model_pattern.search(gateway_run_text)
@@ -467,33 +467,27 @@ if not save_config_match:
     raise SystemExit("Failed to locate save_config_value in cli.py")
 cli_path.write_text(cli_text[:save_config_match.start()] + save_config_guard + cli_text[save_config_match.end():])
 
-paths_helper_path = root / "hermes_paths.py"
-paths_helper_path.write_text(
-    """import os
-from pathlib import Path
-
-
-def get_hermes_home() -> Path:
-    return Path(os.getenv("HERMES_HOME", Path.home() / ".hermes"))
-"""
-)
-
 def ensure_helper_import(text: str) -> str:
     if "get_hermes_home()" not in text:
         return text
-    if "def get_hermes_home" in text:
-        return text
     if re.search(r"from hermes_cli\.config import [^\n]*\bget_hermes_home\b", text):
         return text
-    if "from hermes_paths import get_hermes_home" in text:
-        return text
+    config_import = re.search(r"^from hermes_cli\.config import ([^\n]+)$", text, flags=re.M)
+    if config_import:
+        return re.sub(
+            r"^from hermes_cli\.config import ([^\n]+)$",
+            r"from hermes_cli.config import \1, get_hermes_home",
+            text,
+            count=1,
+            flags=re.M,
+        )
     if "from pathlib import Path\n" in text:
         return text.replace(
             "from pathlib import Path\n",
-            "from pathlib import Path\n\nfrom hermes_paths import get_hermes_home\n",
+            "from pathlib import Path\n\nfrom hermes_cli.config import get_hermes_home\n",
             1,
         )
-    return "from hermes_paths import get_hermes_home\n" + text
+    return "from hermes_cli.config import get_hermes_home\n" + text
 
 
 def patch_text(path_str: str, replacements: list[tuple[str, str]]) -> None:
@@ -501,6 +495,8 @@ def patch_text(path_str: str, replacements: list[tuple[str, str]]) -> None:
     text = path.read_text()
     original = text
     for old, new in replacements:
+        if new in text:
+            continue
         candidates = [
             old,
             old.replace('"', "'"),
@@ -508,20 +504,8 @@ def patch_text(path_str: str, replacements: list[tuple[str, str]]) -> None:
         ]
         for candidate in candidates:
             if candidate in text:
-                text = text.replace(candidate, new)
+                text = text.replace(candidate, new, 1)
                 break
-        else:
-            pattern = []
-            for char in old:
-                if char in {"'", '"'}:
-                    pattern.append(r"""['"]""")
-                elif char.isspace():
-                    pattern.append(r"\s+")
-                else:
-                    pattern.append(re.escape(char))
-            text, count = re.subn("".join(pattern), new, text, count=1)
-            if count != 1:
-                raise SystemExit(f"Failed to locate patch target in {path_str}: {old}")
     if text != original:
         text = ensure_helper_import(text)
         path.write_text(text)
@@ -793,21 +777,6 @@ PY
 
           if ! ${pkgs.gnugrep}/bin/grep -q 'key_path in {"agent.system_prompt", "model.default"}' "$out/cli.py"; then
             echo "Failed to patch cli.py for Nix-managed slash-command config guards" >&2
-            exit 1
-          fi
-
-          if ! ${pkgs.gnugrep}/bin/grep -q "def get_hermes_home() -> Path" "$out/hermes_paths.py"; then
-            echo "Failed to add shared Hermes path helper" >&2
-            exit 1
-          fi
-
-          if ! ${pkgs.gnugrep}/bin/grep -q 'get_hermes_home() / "pairing"' "$out/gateway/pairing.py"; then
-            echo "Failed to patch gateway/pairing.py for HERMES_HOME-aware storage" >&2
-            exit 1
-          fi
-
-          if ! ${pkgs.gnugrep}/bin/grep -q 'get_hermes_home() / "sessions"' "$out/gateway/config.py"; then
-            echo "Failed to patch gateway/config.py for HERMES_HOME-aware sessions" >&2
             exit 1
           fi
 
