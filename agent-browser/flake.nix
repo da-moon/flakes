@@ -18,13 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "agent-browser";
-        version = "0.19.0";
+        version = "0.20.1";
 
         outputHashBySystem = {
           "aarch64-darwin" = "sha256-ZOSFNEAINB61izAz+4UvuCSZko8AI8ElFqJwttw5VKw=";
           "aarch64-linux" = "sha256-ex6LdUevlMVOAXVz7sceRMDG4mTFT6PZorFx4w+rSSg=";
           "x86_64-darwin" = "sha256-ZOSFNEAINB61izAz+4UvuCSZko8AI8ElFqJwttw5VKw=";
-          "x86_64-linux" = "sha256-lQfvpSe98HGPe2otx3zeB4jROuoC3BoLoarh5zDqLWE=";
+          "x86_64-linux" = "sha256-izJAtIv0KP2w673b9nDjD5Dn+34p/juK4EdUgCjExk0=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -32,7 +32,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-IVfumUhoT8EClAyQvckIk+lyHBmpxCIS1Ny6tu+aIfk=";
+            hash = "sha256-pN056Dui1ZNSVSDifo+3ZCLDl4Zw4ZqmX5wtto608tc=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
@@ -79,6 +79,11 @@
           nativeBuildInputs = [
             pkgs.makeWrapper
             pkgs.coreutils
+          ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+            pkgs.autoPatchelfHook
+          ];
+          buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+            pkgs.stdenv.cc.cc.lib
           ];
           dontBuild = true;
           dontConfigure = true;
@@ -89,13 +94,18 @@
             mkdir -p "$out/lib/${pname}" "$out/bin"
             cp -r "$src"/* "$out/lib/${pname}/"
             chmod -R u+w "$out/lib/${pname}"
-
-            if [ -d "$out/lib/${pname}/bin" ]; then
-              find "$out/lib/${pname}/bin" -type f ! -name 'agent-browser.js' -delete
+            entrypoint=""
+            if [ -f "$out/lib/${pname}/bin/agent-browser.js" ]; then
+              entrypoint="$out/lib/${pname}/bin/agent-browser.js"
+            elif [ -f "$out/lib/${pname}/dist/daemon.js" ]; then
+              entrypoint="$out/lib/${pname}/dist/daemon.js"
+            else
+              echo "Could not find agent-browser entrypoint" >&2
+              exit 1
             fi
 
             makeWrapper ${nodejs}/bin/node "$out/bin/agent-browser" \
-              --add-flags "$out/lib/${pname}/dist/daemon.js" \
+              --add-flags "$entrypoint" \
               --set NODE_ENV "production" \
               --set AGENT_BROWSER_NATIVE "0" \
               --set NODE_PATH "$out/lib/${pname}/node_modules"
