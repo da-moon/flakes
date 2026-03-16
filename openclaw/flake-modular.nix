@@ -23,7 +23,7 @@
     # ── OpenClaw ──────────────────────────────────────────────────────────
     beads.url = "git+https://github.com/da-moon/flakes.git?dir=beads";
     qmd.url = "git+https://github.com/da-moon/flakes.git?dir=qmd";
-    # nix-openclaw.url = "github:openclaw/nix-openclaw";
+    nix-openclaw.url = "github:openclaw/nix-openclaw";
   };
 
   outputs = { self, ... }@inputs:
