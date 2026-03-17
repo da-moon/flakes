@@ -18,13 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "gemini-cli";
-        version = "0.33.1";
+        version = "0.33.2";
 
         # Platform-specific output hashes for pnpm install
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build
         outputHashBySystem = {
           "aarch64-linux" = "sha256-f9wFb3nYrg13FTLPmwMnQOX5gOD6Fo0tIqIta7sJ+SE=";
-          "x86_64-linux" = "sha256-/Oa6mNVXYf8K4nhdqmUTB7pxpkiShhIe7NGUS3Lwmis=";
+          "x86_64-linux" = "sha256-q2Q8i7Y5SOWFKB6daKBGIS6YBP5iembinE+MQFduDwE=";
         };
 
         # Fixed-output derivation that runs pnpm install with network access
@@ -35,7 +35,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-${version}.tgz";
-            sha256 = "sha256-teh/8hdgJnnJd5CYFIXLI0lwZDEC10UDBBdE9kEDyqU=";
+            sha256 = "sha256-TaT0UeebW32McDUJBrf/Ow5AQzCEVH6TZjN2AJlC7ag=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
