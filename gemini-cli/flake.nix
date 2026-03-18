@@ -23,7 +23,7 @@
         # Platform-specific output hashes for pnpm install
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-f9wFb3nYrg13FTLPmwMnQOX5gOD6Fo0tIqIta7sJ+SE=";
+          "aarch64-linux" = "sha256-Y8TLWYoozv84aQR6c/qXa+71So5pZcnPFgn8z1tv49s=";
           "x86_64-linux" = "sha256-bC4Kps4LfMWRFZEdHrXuJsF/Eo0GsxoUHAuNceW+RDA=";
         };
 
