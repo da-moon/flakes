@@ -24,7 +24,7 @@
         # so the fixed-output hash from "npm install" is not always portable.
         # Start from fakeHash and rehash per-system after build.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-iHaQRB6P+pne26JnSZ5UpJ3jK1OG0Y384sV3eB/oeyo=";
+          "aarch64-linux" = "sha256-SRcLT8T19LLh4H1WLRTJK4PP52WO8bOIwt4fyc4g7Ks=";
           "x86_64-linux" = "sha256-FP1GSQL3Y9yCSEk8Sd5fQ8ombugox/lWPZQ4aTKfjek=";
         };
 
