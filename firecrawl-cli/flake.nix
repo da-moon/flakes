@@ -18,7 +18,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "firecrawl-cli";
-        version = "1.11.1";
+        version = "1.11.2";
 
         # NOTE: npm optionalDependencies and native dependencies can be platform-specific,
         # so the fixed-output hash from "npm install" is not always portable.
@@ -33,7 +33,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-cSins4cEye7B7OsbsT6lXpRP9rK70EAvrThzehsKSP4=";
+            hash = "sha256-DSCaQrQsJBCuTQtBab8zYeB4lPTSMxoU3N5QA/Pn1Xg=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
@@ -54,6 +54,15 @@
 
             tar -xzf $src
             cd package
+
+            # Upstream may pin a pnpm CLI version that cannot self-bootstrap in
+            # the Nix sandbox. Keep using pnpm, but ignore the packageManager pin.
+            ${nodejs}/bin/node -e '
+              const fs = require("fs");
+              const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+              delete pkg.packageManager;
+              fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+            '
 
             # Use pnpm instead of npm because npm crashes with "double free or corruption"
             # on aarch64-linux (Android/nix-on-droid)

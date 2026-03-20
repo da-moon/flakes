@@ -11,10 +11,10 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 readonly NPM_REGISTRY_URL="https://registry.npmjs.org"
-readonly NPM_PACKAGE="firecrawl-mcp"
-readonly TARBALL_NAME="firecrawl-mcp"
-readonly PACKAGE_ATTR="firecrawl-mcp"
-readonly BIN_NAME="firecrawl-mcp"
+readonly NPM_PACKAGE="gitnexus"
+readonly TARBALL_NAME="gitnexus"
+readonly PACKAGE_ATTR="gitnexus"
+readonly BIN_NAME="gitnexus"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -45,13 +45,6 @@ get_latest_version_from_npm() {
     | grep -o '"version":[[:space:]]*"[^"]*"' \
     | head -n1 \
     | sed -E 's/^"version":[[:space:]]*"([^"]*)"$/\1/'
-}
-
-prefetch_sha256_sri() {
-  local url="$1"
-  nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
 }
 
 get_current_system_key() {
@@ -100,6 +93,13 @@ has_fake_hash() {
   return 1
 }
 
+prefetch_sha256_sri() {
+  local url="$1"
+  nix store prefetch-file --json --hash-type sha256 "$url" \
+    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
+    | head -n1
+}
+
 extract_got_hash_from_build() {
   sed -n 's/.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | head -n1
 }
@@ -117,7 +117,7 @@ update_tarball_hash() {
 set_output_hash_placeholder_for_system() {
   local system_key="$1"
   local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\{/,/\};/ s~^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\.lib\.fakeHash|\"[^\"]*\")[[:space:]]*;~\1\"${placeholder}\";~" "$flake_file"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s~^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;~\\1\"${placeholder}\";~" "$flake_file"
   if ! grep -Fq "\"${system_key}\" = \"${placeholder}\";" "$flake_file"; then
     log_error "Failed to set outputHash placeholder for system: $system_key"
     return 1
@@ -127,7 +127,7 @@ set_output_hash_placeholder_for_system() {
 update_output_hash_for_system() {
   local system_key="$1"
   local new_hash_value="$2"
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\{/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash_value}\\2|" "$flake_file"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash_value}\\2|" "$flake_file"
   if ! grep -Fq "\"${system_key}\" = \"${new_hash_value}\";" "$flake_file"; then
     log_error "Failed to update outputHash for system: $system_key"
     return 1
@@ -172,7 +172,7 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
+  "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
@@ -280,7 +280,7 @@ Options:
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --version 3.6.2
+  ./scripts/update-version.sh --version 1.4.6
 EOF
 }
 

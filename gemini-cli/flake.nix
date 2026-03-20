@@ -57,6 +57,7 @@
             ${nodejs}/bin/node -e "
               const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
               delete p.devDependencies;
+              delete p.packageManager;
               require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));
             "
 

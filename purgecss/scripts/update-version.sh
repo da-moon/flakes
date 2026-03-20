@@ -51,6 +51,19 @@ get_current_system_key() {
   nix eval --impure --raw --expr builtins.currentSystem
 }
 
+get_other_output_hash_systems() {
+  local current_system_key="$1"
+  awk -v target="$current_system_key" '
+    /outputHashBySystem[[:space:]]*=[[:space:]]*\{/ { in_map = 1; next }
+    in_map && /\};/ { in_map = 0 }
+    in_map {
+      if (match($0, /"([^"]+)"[[:space:]]*=/, a) > 0 && a[1] != target) {
+        print a[1]
+      }
+    }
+  ' "$flake_file"
+}
+
 has_fake_hash() {
   local current_system_key
   local output_hash_line
@@ -123,6 +136,27 @@ update_output_hash_for_system() {
 
 cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
+}
+
+mark_other_output_hashes_pending() {
+  local current_system_key="$1"
+  local other_system
+
+  while IFS= read -r other_system; do
+    [ -n "$other_system" ] || continue
+    sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${other_system}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;|\\1pkgs.lib.fakeHash;|" "$flake_file"
+  done < <(get_other_output_hash_systems "$current_system_key")
+}
+
+warn_other_output_hash_systems() {
+  local current_system_key="$1"
+  local other_systems
+
+  other_systems="$(get_other_output_hash_systems "$current_system_key" | tr '\n' ' ' | sed -E 's/[[:space:]]+$//')"
+  if [ -n "$other_systems" ]; then
+    log_warn "Only ${current_system_key} outputHash was refreshed here."
+    log_warn "Re-run this script on: ${other_systems} if those package hashes drift."
+  fi
 }
 
 update_flake_lock() {
@@ -346,6 +380,13 @@ main() {
   fi
   log_info "Tarball hash: $tarball_hash"
 
+  local current_system_key
+  current_system_key="$(get_current_system_key)"
+  if [ -z "$current_system_key" ]; then
+    log_error "Failed to detect current system key"
+    exit 2
+  fi
+
   local backup
   backup="$(mktemp -t flake.nix.backup.XXXXXX)"
   cp "$flake_file" "$backup"
@@ -353,6 +394,9 @@ main() {
   cleanup_backups
   update_flake_version "$latest_version"
   update_tarball_hash "$tarball_hash"
+  if [ "$current_version" != "$latest_version" ]; then
+    mark_other_output_hashes_pending "$current_system_key"
+  fi
   cleanup_backups
 
   if ! compute_and_update_output_hash; then
@@ -372,6 +416,7 @@ main() {
   fi
 
   rm -f "$backup"
+  warn_other_output_hash_systems "$current_system_key"
 
   if [ "$update_lock" = true ]; then
     update_flake_lock

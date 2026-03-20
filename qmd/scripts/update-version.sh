@@ -132,6 +132,16 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
+mark_other_output_hashes_pending() {
+  local current_system_key="$1"
+  local other_system
+
+  while IFS= read -r other_system; do
+    [ -n "$other_system" ] || continue
+    sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${other_system}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;|\\1pkgs.lib.fakeHash;|" "$flake_file"
+  done < <(get_other_output_hash_systems "$current_system_key")
+}
+
 warn_other_output_hash_systems() {
   local current_system_key="$1"
   local other_systems
@@ -380,6 +390,9 @@ main() {
   update_flake_version "$latest_version"
   update_source_hash "aarch64-linux" "$source_hash"
   update_source_hash "x86_64-linux" "$source_hash"
+  if [ "$current_version" != "$latest_version" ]; then
+    mark_other_output_hashes_pending "$current_system_key"
+  fi
   if [ "$no_build" != true ]; then
     if ! compute_and_update_output_hash; then
       log_error "Failed to update outputHash; restoring previous flake.nix"

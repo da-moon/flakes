@@ -138,6 +138,16 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
+mark_other_output_hashes_pending() {
+  local current_system_key="$1"
+  local other_system
+
+  while IFS= read -r other_system; do
+    [ -n "$other_system" ] || continue
+    sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\{/,/\};/ s|^([[:space:]]*\"${other_system}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;|\\1pkgs.lib.fakeHash;|" "$flake_file"
+  done < <(get_other_output_hash_systems "$current_system_key")
+}
+
 warn_other_output_hash_systems() {
   local current_system_key="$1"
   local other_systems
@@ -370,6 +380,13 @@ main() {
   fi
   log_info "Tarball hash: $tarball_hash"
 
+  local current_system_key
+  current_system_key="$(get_current_system_key)"
+  if [ -z "$current_system_key" ]; then
+    log_error "Failed to detect current system key"
+    exit 2
+  fi
+
   local backup
   backup="$(mktemp -t flake.nix.backup.XXXXXX)"
   cp "$flake_file" "$backup"
@@ -377,6 +394,9 @@ main() {
   cleanup_backups
   update_flake_version "$latest_version"
   update_tarball_hash "$tarball_hash"
+  if [ "$current_version" != "$latest_version" ]; then
+    mark_other_output_hashes_pending "$current_system_key"
+  fi
   cleanup_backups
 
   if ! compute_and_update_output_hash; then
@@ -396,7 +416,7 @@ main() {
   fi
 
   rm -f "$backup"
-  warn_other_output_hash_systems "$(get_current_system_key)"
+  warn_other_output_hash_systems "$current_system_key"
 
   if [ "$update_lock" = true ]; then
     update_flake_lock
