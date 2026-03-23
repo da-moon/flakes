@@ -18,7 +18,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "gitnexus";
-        version = "1.4.7";
+        version = "1.4.8";
 
         # Native parser/database dependencies make the fixed-output install
         # arch-specific. Rehash each supported Linux system separately.
@@ -32,7 +32,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-dAudAjGqQDV2y+H3D4SQAfMBjh+SjMh3BjwoTVHVkIg=";
+            hash = "sha256-ReLWZ7IUnxbxK1murf95Q05BISlOxB5IH3xZKc1tp28=";
           };
 
           nativeBuildInputs = [
