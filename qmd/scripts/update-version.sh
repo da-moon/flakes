@@ -132,13 +132,15 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
+trap cleanup_backups EXIT
+
 mark_other_output_hashes_pending() {
   local current_system_key="$1"
   local other_system
 
   while IFS= read -r other_system; do
     [ -n "$other_system" ] || continue
-    sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${other_system}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;|\\1pkgs.lib.fakeHash;|" "$flake_file"
+    sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s~^([[:space:]]*\"${other_system}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;~\\1pkgs.lib.fakeHash;~" "$flake_file"
   done < <(get_other_output_hash_systems "$current_system_key")
 }
 

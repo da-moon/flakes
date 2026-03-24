@@ -117,6 +117,8 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
+trap cleanup_backups EXIT
+
 verify_build() {
   log_info "Verifying build..."
   local out_path

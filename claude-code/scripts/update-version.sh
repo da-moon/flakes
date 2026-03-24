@@ -65,6 +65,8 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
+trap cleanup_backups EXIT
+
 update_flake_lock() {
   log_info "Updating flake.lock..."
   (cd "$pkg_dir" && nix flake update)
