@@ -23,7 +23,7 @@
         # Native parser/database dependencies make the fixed-output install
         # arch-specific. Rehash each supported Linux system separately.
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-lT9Q3luiGkSXjJy6eVC6z9dCUloHXtfpDgq3C8L1PMU=";
+          "aarch64-linux" = "sha256-OBUN9VGISDH07EaVVhjQ5PoMN9837N5KvifLOtr7O7I=";
           "x86_64-linux" = "sha256-wJUBKLYAknjoWsnqKbIWAn4iha7TCOF06rqdzgaVbJ0=";
         };
 
