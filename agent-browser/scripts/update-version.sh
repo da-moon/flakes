@@ -117,7 +117,7 @@ update_tarball_hash() {
 set_output_hash_placeholder_for_system() {
   local system_key="$1"
   local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\{/,/\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${placeholder}\\2|" "$flake_file"
+  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s~^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;~\\1\"${placeholder}\";~" "$flake_file"
   if ! grep -Fq "\"${system_key}\" = \"${placeholder}\";" "$flake_file"; then
     log_error "Failed to set outputHash placeholder for system: $system_key"
     return 1
