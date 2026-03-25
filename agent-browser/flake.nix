@@ -22,7 +22,7 @@
 
         outputHashBySystem = {
           "aarch64-darwin" = pkgs.lib.fakeHash;
-          "aarch64-linux" = pkgs.lib.fakeHash;
+          "aarch64-linux" = "sha256-JR0hk6TLbf3hfuWZ6mztNJ8XV40omLADdA7We0PQS0g=";
           "x86_64-darwin" = pkgs.lib.fakeHash;
           "x86_64-linux" = "sha256-QCKsTil+hgsm9OA+eloAzo8gIv4VX0wQHa7VGCEtlMM=";
         };
