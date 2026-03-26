@@ -81,7 +81,10 @@ update_flake_lock() {
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  out_path="$(cd "$pkg_dir" && nix build .#codex --no-link --print-out-paths)"
+  if ! out_path="$(cd "$pkg_dir" && nix build .#codex --no-link --print-out-paths)"; then
+    log_error "nix build failed for codex"
+    return 1
+  fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/codex" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/codex"
     return 1

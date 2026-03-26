@@ -94,7 +94,10 @@ update_flake_lock() {
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  out_path="$(cd "$pkg_dir" && nix build .#fzf-tab-completion --no-link --print-out-paths)"
+  if ! out_path="$(cd "$pkg_dir" && nix build .#fzf-tab-completion --no-link --print-out-paths)"; then
+    log_error "nix build failed for fzf-tab-completion"
+    return 1
+  fi
   if [ -z "$out_path" ]; then
     log_error "Build succeeded but out path was empty"
     return 1

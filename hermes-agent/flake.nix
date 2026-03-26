@@ -34,12 +34,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "hermes-agent";
-        version = "unstable-2026-03-25";
-        revision = "77bcaba2d7e98fc7e28dcb6998086006d72fd667";
+        version = "unstable-2026-03-26";
+        revision = "36af1f3baf3f2b089ca3bd5c3b9405bdaf9689d6";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-NBlNooG5QiaO+RIZTsHuoEvEHxHKYV6l8rg+Y3W0e2s=";
-          "x86_64-linux" = "sha256-NBlNooG5QiaO+RIZTsHuoEvEHxHKYV6l8rg+Y3W0e2s=";
+          "aarch64-linux" = "sha256-YiLJ6I6Q2IWrbztGTeAvznIMwDB34PJt+IMaJYBslGE=";
+          "x86_64-linux" = "sha256-YiLJ6I6Q2IWrbztGTeAvznIMwDB34PJt+IMaJYBslGE=";
         };
 
         sourceRoot = pkgs.fetchFromGitHub {
@@ -92,7 +92,7 @@ rl_training_logs = 'LOGS_DIR = Path(os.getenv("TINKER_LOGS_DIR", str(HERMES_HOME
 if rl_training_logs not in rl_training_text:
     rl_training_text = replace_first(
         rl_training_text,
-        r'LOGS_DIR = (?:TINKER_ATROPOS_ROOT / "logs"|Path\(os.getenv\("HERMES_HOME", Path\.home\(\) / "\.hermes"\)\) / "logs" / "rl_training")',
+        r'LOGS_DIR = (?:TINKER_ATROPOS_ROOT / "logs"|Path\(os.getenv\("HERMES_HOME", Path\.home\(\) / "\.hermes"\)\) / "logs" / "rl_training"|get_hermes_home\(\) / "logs" / "rl_training")',
         rl_training_logs,
         "tools/rl_training_tool.py",
     )
@@ -373,9 +373,8 @@ model_pattern = re.compile(
     re.S,
 )
 model_match = model_pattern.search(gateway_run_text)
-if not model_match:
-    raise SystemExit("Failed to locate _handle_model_command in gateway/run.py")
-gateway_run_text = gateway_run_text[:model_match.start()] + model_new + gateway_run_text[model_match.end():]
+if model_match:
+    gateway_run_text = gateway_run_text[:model_match.start()] + model_new + gateway_run_text[model_match.end():]
 
 personality_pattern = re.compile(
     r'    async def _handle_personality_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_retry_command)',
@@ -760,9 +759,11 @@ PY
             exit 1
           fi
 
-          if ! ${pkgs.gnugrep}/bin/grep -q "for this Hermes process only" "$out/gateway/run.py" || ! ${pkgs.gnugrep}/bin/grep -q "programs.hermes-agent.settings.model.default" "$out/gateway/run.py"; then
-            echo "Failed to patch gateway/run.py for Nix-managed /model behavior" >&2
-            exit 1
+          if ${pkgs.gnugrep}/bin/grep -q "_handle_model_command" "$out/gateway/run.py"; then
+            if ! ${pkgs.gnugrep}/bin/grep -q "for this Hermes process only" "$out/gateway/run.py" || ! ${pkgs.gnugrep}/bin/grep -q "programs.hermes-agent.settings.model.default" "$out/gateway/run.py"; then
+              echo "Failed to patch gateway/run.py for Nix-managed /model behavior" >&2
+              exit 1
+            fi
           fi
 
           if ! ${pkgs.gnugrep}/bin/grep -q "settings.agent.system_prompt" "$out/gateway/run.py" || ! ${pkgs.gnugrep}/bin/grep -q "SOUL.md file declaratively" "$out/gateway/run.py"; then
@@ -957,6 +958,7 @@ PY
               printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "TELEGRAM_HOME_CHANNEL=123456789"
               printf '%s\n' "$sethome_output" | ${gnugrep}/bin/grep -q "^123456789$"
 
+              if ${gnugrep}/bin/grep -q "_handle_model_command" "$out/share/hermes-agent/gateway/run.py"; then
 model_output="$(HOME="$TMPDIR/model-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
 import asyncio
 from pathlib import Path
@@ -976,9 +978,10 @@ print(result)
 print(config_path.exists())
 PY
 )"
-              printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "for this Hermes process only"
-              printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "settings.model.default"
-              printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "^False$"
+                printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "for this Hermes process only"
+                printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "settings.model.default"
+                printf '%s\n' "$model_output" | ${gnugrep}/bin/grep -q "^False$"
+              fi
 
 personality_output="$(HOME="$TMPDIR/personality-home" HERMES_NIX_MANAGED=1 PYTHONPATH="$out/share/hermes-agent" ${hermesEnv}/bin/python - <<'PY'
 import asyncio

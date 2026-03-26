@@ -71,7 +71,10 @@ trap cleanup_backups EXIT
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --print-out-paths)"
+  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --print-out-paths)"; then
+    log_error "nix build failed for ${PACKAGE_ATTR}"
+    return 1
+  fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
