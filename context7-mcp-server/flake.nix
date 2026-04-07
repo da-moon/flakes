@@ -18,13 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "context7-mcp";
-        version = "2.1.6";
+        version = "2.1.7";
 
         # NOTE: npm optionalDependencies can be platform-specific (for example, esbuild),
         # so the fixed-output hash from "npm install" is not portable across systems.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-IRSggXSEVi2npKlop407A38MfvK364eIdmd2IwMyjAM=";
+          "x86_64-linux" = "sha256-fjOpCh1layHa6PYlqg+B2kOYWKvnQTgyJ+AR/d+Rv9U=";
         };
 
         # Fixed-output derivation to fetch npm package with all dependencies
@@ -34,7 +34,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/@upstash/context7-mcp/-/context7-mcp-${version}.tgz";
-            hash = "sha256-alZkQhVf/mifYwWafZPcOxnXLqbgiyYRw+JvWu767MM=";
+            hash = "sha256-IEgTf9uutHqXn9KBm8uVWN4YkFSkRj5/OhSaydRg7IQ=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
