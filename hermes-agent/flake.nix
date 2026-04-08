@@ -34,12 +34,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "hermes-agent";
-        version = "unstable-2026-03-26";
-        revision = "bdccdd67a1c3f16aa4d15f700a9615bbc4d141f7";
+        version = "unstable-2026-04-08";
+        revision = "ff6a86cb529a372198b4b80d5e022e32a4a3f2cc";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-7ohxWUYWw1FqmzOx/hKUuoUO0xeskIijzeDFCQysXAU=";
-          "x86_64-linux" = "sha256-7ohxWUYWw1FqmzOx/hKUuoUO0xeskIijzeDFCQysXAU=";
+          "aarch64-linux" = "sha256-m1DICRvc4jc1Rar0zKrVA6TYXjef8QFRXjRc5/AU0rc=";
+          "x86_64-linux" = "sha256-m1DICRvc4jc1Rar0zKrVA6TYXjef8QFRXjRc5/AU0rc=";
         };
 
         sourceRoot = pkgs.fetchFromGitHub {
@@ -150,63 +150,318 @@ if not doctor_match:
 doctor_path.write_text(doctor_text[:doctor_match.start()] + doctor_new + doctor_text[doctor_match.end():])
 
 gateway_run_path = root / "gateway" / "run.py"
-model_new = """    async def _handle_model_command(self, event: MessageEvent) -> str:
-        \"\"\"Handle /model command - show or change the current model.\"\"\"
+model_new = """    async def _handle_model_command(self, event: MessageEvent) -> Optional[str]:
+        \"\"\"Handle /model command — switch model for this session.
+
+        Supports:
+          /model                              — interactive picker (Telegram/Discord) or text list
+          /model <name>                       — switch for this session only
+          /model <name> --global              — switch and persist to config.yaml
+          /model <name> --provider <provider> — switch provider + model
+          /model --provider <provider>        — switch to provider, auto-detect model
+        \"\"\"
         import yaml
+        from hermes_cli.model_switch import (
+            switch_model as _switch_model, parse_model_flags,
+            list_authenticated_providers,
+        )
+        from hermes_cli.providers import get_label
 
-        args = event.get_command_args().strip()
-        config_path = _hermes_home / 'config.yaml'
+        raw_args = event.get_command_args().strip()
 
-        # Resolve current model the same way the agent init does:
-        # env vars first, then config.yaml always overrides.
-        current = os.getenv("HERMES_MODEL") or os.getenv("LLM_MODEL") or "anthropic/claude-opus-4.6"
+        # Parse --provider and --global flags
+        model_input, explicit_provider, persist_global = parse_model_flags(raw_args)
+
+        # Read current model/provider from config
+        current_model = ""
+        current_provider = "openrouter"
+        current_base_url = ""
+        current_api_key = ""
+        user_provs = None
+        config_path = _hermes_home / "config.yaml"
         try:
             if config_path.exists():
-                with open(config_path) as f:
+                with open(config_path, encoding="utf-8") as f:
                     cfg = yaml.safe_load(f) or {}
                 model_cfg = cfg.get("model", {})
-                if isinstance(model_cfg, str):
-                    current = model_cfg
-                elif isinstance(model_cfg, dict):
-                    current = model_cfg.get("default", current)
+                if isinstance(model_cfg, dict):
+                    current_model = model_cfg.get("default", "")
+                    current_provider = model_cfg.get("provider", current_provider)
+                    current_base_url = model_cfg.get("base_url", "")
+                user_provs = cfg.get("providers")
         except Exception:
             pass
 
-        if not args:
-            return f"🤖 **Current model:** `{current}`\\n\\nTo change: `/model provider/model-name`"
+        # Check for session override
+        source = event.source
+        session_key = self._session_key_for_source(source)
+        override = getattr(self, "_session_model_overrides", {}).get(session_key, {})
+        if override:
+            current_model = override.get("model", current_model)
+            current_provider = override.get("provider", current_provider)
+            current_base_url = override.get("base_url", current_base_url)
+            current_api_key = override.get("api_key", current_api_key)
 
-        if "/" not in args:
-            return (
-                f"🤖 Invalid model format: `{args}`\\n\\n"
-                f"Use `provider/model-name` format, e.g.:\\n"
-                f"• `anthropic/claude-sonnet-4`\\n"
-                f"• `google/gemini-2.5-pro`\\n"
-                f"• `openai/gpt-4o`"
+        # No args: show interactive picker (Telegram/Discord) or text list
+        if not model_input and not explicit_provider:
+            # Try interactive picker if the platform supports it
+            adapter = self.adapters.get(source.platform)
+            has_picker = (
+                adapter is not None
+                and getattr(type(adapter), "send_model_picker", None) is not None
             )
 
-        if os.getenv("HERMES_NIX_MANAGED") == "1":
-            os.environ["HERMES_MODEL"] = args
-            return (
-                f"🤖 Model set to `{args}` for this Hermes process only.\\n"
-                "To persist it under Nix, set programs.hermes-agent.settings.model.default and re-run Home Manager."
-            )
+            if has_picker:
+                try:
+                    providers = list_authenticated_providers(
+                        current_provider=current_provider,
+                        user_providers=user_provs,
+                        max_models=50,
+                    )
+                except Exception:
+                    providers = []
 
-        # Write to config.yaml (source of truth), same pattern as CLI save_config_value.
-        try:
-            user_config = {}
-            if config_path.exists():
-                with open(config_path) as f:
-                    user_config = yaml.safe_load(f) or {}
-            if "model" not in user_config or not isinstance(user_config["model"], dict):
-                user_config["model"] = {}
-            user_config["model"]["default"] = args
-            with open(config_path, 'w') as f:
-                yaml.dump(user_config, f, default_flow_style=False, sort_keys=False)
-        except Exception as e:
-            return f"⚠️ Failed to save model change: {e}"
+                if providers:
+                    # Build a callback closure for when the user picks a model.
+                    # Captures self + locals needed for the switch logic.
+                    _self = self
+                    _session_key = session_key
+                    _cur_model = current_model
+                    _cur_provider = current_provider
+                    _cur_base_url = current_base_url
+                    _cur_api_key = current_api_key
 
-        os.environ["HERMES_MODEL"] = args
-        return f"🤖 Model changed to `{args}`\\n_(takes effect on next message)_"
+                    async def _on_model_selected(
+                        _chat_id: str, model_id: str, provider_slug: str
+                    ) -> str:
+                        \"\"\"Perform the model switch and return confirmation text.\"\"\"
+                        result = _switch_model(
+                            raw_input=model_id,
+                            current_provider=_cur_provider,
+                            current_model=_cur_model,
+                            current_base_url=_cur_base_url,
+                            current_api_key=_cur_api_key,
+                            is_global=False,
+                            explicit_provider=provider_slug,
+                        )
+                        if not result.success:
+                            return f"Error: {result.error_message}"
+
+                        # Update cached agent in-place
+                        cached_entry = None
+                        _cache_lock = getattr(_self, "_agent_cache_lock", None)
+                        _cache = getattr(_self, "_agent_cache", None)
+                        if _cache_lock and _cache is not None:
+                            with _cache_lock:
+                                cached_entry = _cache.get(_session_key)
+                        if cached_entry and cached_entry[0] is not None:
+                            try:
+                                cached_entry[0].switch_model(
+                                    new_model=result.new_model,
+                                    new_provider=result.target_provider,
+                                    api_key=result.api_key,
+                                    base_url=result.base_url,
+                                    api_mode=result.api_mode,
+                                )
+                            except Exception as exc:
+                                logger.warning("Picker model switch failed for cached agent: %s", exc)
+
+                        # Store model note + session override
+                        if not hasattr(_self, "_pending_model_notes"):
+                            _self._pending_model_notes = {}
+                        _self._pending_model_notes[_session_key] = (
+                            f"[Note: model was just switched from {_cur_model} to {result.new_model} "
+                            f"via {result.provider_label or result.target_provider}. "
+                            f"Adjust your self-identification accordingly.]"
+                        )
+                        if not hasattr(_self, "_session_model_overrides"):
+                            _self._session_model_overrides = {}
+                        _self._session_model_overrides[_session_key] = {
+                            "model": result.new_model,
+                            "provider": result.target_provider,
+                            "api_key": result.api_key,
+                            "base_url": result.base_url,
+                            "api_mode": result.api_mode,
+                        }
+
+                        # Build confirmation text
+                        plabel = result.provider_label or result.target_provider
+                        lines = [f"Model switched to `{result.new_model}`"]
+                        lines.append(f"Provider: {plabel}")
+                        mi = result.model_info
+                        if mi:
+                            if mi.context_window:
+                                lines.append(f"Context: {mi.context_window:,} tokens")
+                            if mi.max_output:
+                                lines.append(f"Max output: {mi.max_output:,} tokens")
+                            if mi.has_cost_data():
+                                lines.append(f"Cost: {mi.format_cost()}")
+                            lines.append(f"Capabilities: {mi.format_capabilities()}")
+                        lines.append("_(session only — use `/model <name> --global` to persist)_")
+                        return "\\n".join(lines)
+
+                    metadata = {"thread_id": source.thread_id} if source.thread_id else None
+                    result = await adapter.send_model_picker(
+                        chat_id=source.chat_id,
+                        providers=providers,
+                        current_model=current_model,
+                        current_provider=current_provider,
+                        session_key=session_key,
+                        on_model_selected=_on_model_selected,
+                        metadata=metadata,
+                    )
+                    if result.success:
+                        return None  # Picker sent — adapter handles the response
+
+            # Fallback: text list (for platforms without picker or if picker failed)
+            provider_label = get_label(current_provider)
+            lines = [f"Current: `{current_model or 'unknown'}` on {provider_label}", ""]
+
+            try:
+                providers = list_authenticated_providers(
+                    current_provider=current_provider,
+                    user_providers=user_provs,
+                    max_models=5,
+                )
+                for p in providers:
+                    tag = " (current)" if p["is_current"] else ""
+                    lines.append(f"**{p['name']}** `--provider {p['slug']}`{tag}:")
+                    if p["models"]:
+                        model_strs = ", ".join(f"`{m}`" for m in p["models"])
+                        extra = f" (+{p['total_models'] - len(p['models'])} more)" if p["total_models"] > len(p["models"]) else ""
+                        lines.append(f"  {model_strs}{extra}")
+                    elif p.get("api_url"):
+                        lines.append(f"  `{p['api_url']}`")
+                    lines.append("")
+            except Exception:
+                pass
+
+            lines.append("`/model <name>` — switch model")
+            lines.append("`/model <name> --provider <slug>` — switch provider")
+            lines.append("`/model <name> --global` — persist")
+            return "\\n".join(lines)
+
+        # Perform the switch
+        result = _switch_model(
+            raw_input=model_input,
+            current_provider=current_provider,
+            current_model=current_model,
+            current_base_url=current_base_url,
+            current_api_key=current_api_key,
+            is_global=persist_global,
+            explicit_provider=explicit_provider,
+        )
+
+        if not result.success:
+            return f"Error: {result.error_message}"
+
+        # If there's a cached agent, update it in-place
+        cached_entry = None
+        _cache_lock = getattr(self, "_agent_cache_lock", None)
+        _cache = getattr(self, "_agent_cache", None)
+        if _cache_lock and _cache is not None:
+            with _cache_lock:
+                cached_entry = _cache.get(session_key)
+
+        if cached_entry and cached_entry[0] is not None:
+            try:
+                cached_entry[0].switch_model(
+                    new_model=result.new_model,
+                    new_provider=result.target_provider,
+                    api_key=result.api_key,
+                    base_url=result.base_url,
+                    api_mode=result.api_mode,
+                )
+            except Exception as exc:
+                logger.warning("In-place model switch failed for cached agent: %s", exc)
+
+        # Store a note to prepend to the next user message so the model
+        # knows about the switch (avoids system messages mid-history).
+        if not hasattr(self, "_pending_model_notes"):
+            self._pending_model_notes = {}
+        self._pending_model_notes[session_key] = (
+            f"[Note: model was just switched from {current_model} to {result.new_model} "
+            f"via {result.provider_label or result.target_provider}. "
+            f"Adjust your self-identification accordingly.]"
+        )
+
+        # Store session override so next agent creation uses the new model
+        if not hasattr(self, "_session_model_overrides"):
+            self._session_model_overrides = {}
+        self._session_model_overrides[session_key] = {
+            "model": result.new_model,
+            "provider": result.target_provider,
+            "api_key": result.api_key,
+            "base_url": result.base_url,
+            "api_mode": result.api_mode,
+        }
+
+        # Build confirmation message with full metadata
+        provider_label = result.provider_label or result.target_provider
+        lines = [f"Model switched to `{result.new_model}`"]
+        lines.append(f"Provider: {provider_label}")
+
+        # Rich metadata from models.dev
+        mi = result.model_info
+        if mi:
+            if mi.context_window:
+                lines.append(f"Context: {mi.context_window:,} tokens")
+            if mi.max_output:
+                lines.append(f"Max output: {mi.max_output:,} tokens")
+            if mi.has_cost_data():
+                lines.append(f"Cost: {mi.format_cost()}")
+            lines.append(f"Capabilities: {mi.format_capabilities()}")
+        else:
+            try:
+                from agent.model_metadata import get_model_context_length
+                ctx = get_model_context_length(
+                    result.new_model,
+                    base_url=result.base_url or current_base_url,
+                    api_key=result.api_key or current_api_key,
+                    provider=result.target_provider,
+                )
+                lines.append(f"Context: {ctx:,} tokens")
+            except Exception:
+                pass
+
+        # Cache notice
+        cache_enabled = (
+            ("openrouter" in (result.base_url or "").lower() and "claude" in result.new_model.lower())
+            or result.api_mode == "anthropic_messages"
+        )
+        if cache_enabled:
+            lines.append("Prompt caching: enabled")
+
+        if result.warning_message:
+            lines.append(f"Warning: {result.warning_message}")
+
+        if persist_global:
+            if os.getenv("HERMES_NIX_MANAGED") == "1":
+                lines.append(
+                    "Saved for this Hermes process only under Nix; set programs.hermes-agent.settings.model.default and re-run Home Manager to persist."
+                )
+            else:
+                try:
+                    if config_path.exists():
+                        with open(config_path, encoding="utf-8") as f:
+                            cfg = yaml.safe_load(f) or {}
+                    else:
+                        cfg = {}
+                    model_cfg = cfg.setdefault("model", {})
+                    model_cfg["default"] = result.new_model
+                    model_cfg["provider"] = result.target_provider
+                    if result.base_url:
+                        model_cfg["base_url"] = result.base_url
+                    from hermes_cli.config import save_config
+                    save_config(cfg)
+                except Exception as e:
+                    logger.warning("Failed to persist model switch: %s", e)
+                else:
+                    lines.append("Saved to config.yaml (`--global`)")
+        else:
+            lines.append("_(session only -- add `--global` to persist)_")
+
+        return "\\n".join(lines)
 """
 personality_new = """    async def _handle_personality_command(self, event: MessageEvent) -> str:
         \"\"\"Handle /personality command - list or set a personality.\"\"\"
@@ -214,10 +469,11 @@ personality_new = """    async def _handle_personality_command(self, event: Mess
 
         args = event.get_command_args().strip().lower()
         config_path = _hermes_home / 'config.yaml'
+        nix_managed = os.getenv("HERMES_NIX_MANAGED") == "1"
 
         try:
             if config_path.exists():
-                with open(config_path, 'r') as f:
+                with open(config_path, 'r', encoding="utf-8") as f:
                     config = yaml.safe_load(f) or {}
                 personalities = config.get("agent", {}).get("personalities", {})
             else:
@@ -232,16 +488,47 @@ personality_new = """    async def _handle_personality_command(self, event: Mess
 
         if not args:
             lines = ["🎭 **Available Personalities**\\n"]
+            lines.append("• `none` — (no personality overlay)")
             for name, prompt in personalities.items():
-                preview = prompt[:50] + "..." if len(prompt) > 50 else prompt
+                if isinstance(prompt, dict):
+                    preview = prompt.get("description") or prompt.get("system_prompt", "")[:50]
+                else:
+                    preview = prompt[:50] + "..." if len(prompt) > 50 else prompt
                 lines.append(f"• `{name}` — {preview}")
-            lines.append(f"\\nUsage: `/personality <name>`")
+            lines.append("\\nUsage: `/personality <name>`")
             return "\\n".join(lines)
 
-        if args in personalities:
-            new_prompt = personalities[args]
+        def _resolve_prompt(value):
+            if isinstance(value, dict):
+                parts = [value.get("system_prompt", "")]
+                if value.get("tone"):
+                    parts.append(f'Tone: {value["tone"]}')
+                if value.get("style"):
+                    parts.append(f'Style: {value["style"]}')
+                return "\\n".join(p for p in parts if p)
+            return str(value)
 
-            if os.getenv("HERMES_NIX_MANAGED") == "1":
+        if args in ("none", "default", "neutral"):
+            if nix_managed:
+                self._ephemeral_system_prompt = ""
+                return (
+                    "🎭 Personality cleared — using base agent behavior for this Hermes process only.\\n"
+                    "To persist it under Nix, set settings.agent.system_prompt or manage a SOUL.md file declaratively."
+                )
+
+            try:
+                if "agent" not in config or not isinstance(config.get("agent"), dict):
+                    config["agent"] = {}
+                config["agent"]["system_prompt"] = ""
+                atomic_yaml_write(config_path, config)
+            except Exception as e:
+                return f"⚠️ Failed to save personality change: {e}"
+            self._ephemeral_system_prompt = ""
+            return "🎭 Personality cleared — using base agent behavior.\\n_(takes effect on next message)_"
+        elif args in personalities:
+            new_prompt = _resolve_prompt(personalities[args])
+
+            if nix_managed:
                 self._ephemeral_system_prompt = new_prompt
                 return (
                     f"🎭 Personality set to **{args}** for this Hermes process only.\\n"
@@ -253,15 +540,14 @@ personality_new = """    async def _handle_personality_command(self, event: Mess
                 if "agent" not in config or not isinstance(config.get("agent"), dict):
                     config["agent"] = {}
                 config["agent"]["system_prompt"] = new_prompt
-                with open(config_path, 'w') as f:
-                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                atomic_yaml_write(config_path, config)
             except Exception as e:
                 return f"⚠️ Failed to save personality change: {e}"
 
             self._ephemeral_system_prompt = new_prompt
             return f"🎭 Personality set to **{args}**\\n_(takes effect on next message)_"
 
-        available = ", ".join(f"`{n}`" for n in personalities.keys())
+        available = "`none`, " + ", ".join(f"`{n}`" for n in personalities)
         return f"Unknown personality: `{args}`\\n\\nAvailable: {available}"
 """
 sethome_new = """    async def _handle_set_home_command(self, event: MessageEvent) -> str:
@@ -369,12 +655,13 @@ update_new = """    async def _handle_update_command(self, event: MessageEvent) 
 """
 gateway_run_text = gateway_run_path.read_text()
 model_pattern = re.compile(
-    r'    async def _handle_model_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_provider_command|    async def _handle_personality_command)',
+    r'    async def _handle_model_command\(self, event: MessageEvent\) -> Optional\[str\]:\n.*?(?=    async def _handle_provider_command|    async def _handle_personality_command)',
     re.S,
 )
 model_match = model_pattern.search(gateway_run_text)
-if model_match:
-    gateway_run_text = gateway_run_text[:model_match.start()] + model_new + gateway_run_text[model_match.end():]
+if not model_match:
+    raise SystemExit("Failed to locate _handle_model_command in gateway/run.py")
+gateway_run_text = gateway_run_text[:model_match.start()] + model_new + gateway_run_text[model_match.end():]
 
 personality_pattern = re.compile(
     r'    async def _handle_personality_command\(self, event: MessageEvent\) -> str:\n.*?(?=    async def _handle_retry_command)',
@@ -968,11 +1255,18 @@ from gateway.run import GatewayRunner
 home = Path.home() / ".hermes"
 home.mkdir(parents=True, exist_ok=True)
 
-class Event:
-    def get_command_args(self):
-        return "anthropic/claude-sonnet-4"
+source = SimpleNamespace(platform=None, chat_id="123456789", thread_id=None)
 
-result = asyncio.run(GatewayRunner._handle_model_command(SimpleNamespace(), Event()))
+class Event:
+    source = source
+
+    def get_command_args(self):
+        return "anthropic/claude-sonnet-4 --global"
+
+self_obj = SimpleNamespace(
+    _session_key_for_source=lambda source: "install-check-model",
+)
+result = asyncio.run(GatewayRunner._handle_model_command(self_obj, Event()))
 config_path = home / "config.yaml"
 print(result)
 print(config_path.exists())
@@ -1106,11 +1400,11 @@ print(RL_LOGS_DIR)
 PY
 )"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sessions"
-              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/pairing"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/platforms/pairing"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/channel_directory.json"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sticker_cache.json"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/processes.json"
-              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/audio_cache"
+              printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/cache/audio"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/sandboxes"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/tinker-atropos"
               printf '%s\n' "$hermes_home_output" | ${gnugrep}/bin/grep -q "$TMPDIR/custom-hermes/tinker-atropos/configs"
