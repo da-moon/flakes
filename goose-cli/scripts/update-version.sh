@@ -16,6 +16,8 @@ readonly REPO_NAME="goose"
 readonly PACKAGE_ATTR="goose-cli"
 
 BUILD_SYSTEM=""
+LAST_VERIFY_BUILD_OUTPUT=""
+REPO_STATE_BACKUP_DIR=""
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -106,7 +108,35 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
-trap cleanup_backups EXIT
+discard_repo_state_backup() {
+  if [ -n "$REPO_STATE_BACKUP_DIR" ] && [ -d "$REPO_STATE_BACKUP_DIR" ]; then
+    rm -rf "$REPO_STATE_BACKUP_DIR"
+  fi
+  REPO_STATE_BACKUP_DIR=""
+}
+
+backup_repo_state() {
+  REPO_STATE_BACKUP_DIR="$(mktemp -d -t "${PACKAGE_DIR_NAME}.backup.XXXXXX")"
+  cp "$flake_file" "$REPO_STATE_BACKUP_DIR/flake.nix"
+  if [ -f "$pkg_dir/flake.lock" ]; then
+    cp "$pkg_dir/flake.lock" "$REPO_STATE_BACKUP_DIR/flake.lock"
+  fi
+}
+
+restore_repo_state() {
+  if [ -z "$REPO_STATE_BACKUP_DIR" ] || [ ! -d "$REPO_STATE_BACKUP_DIR" ]; then
+    return 0
+  fi
+
+  cp "$REPO_STATE_BACKUP_DIR/flake.nix" "$flake_file"
+  if [ -f "$REPO_STATE_BACKUP_DIR/flake.lock" ]; then
+    cp "$REPO_STATE_BACKUP_DIR/flake.lock" "$pkg_dir/flake.lock"
+  else
+    rm -f "$pkg_dir/flake.lock"
+  fi
+}
+
+trap 'cleanup_backups; discard_repo_state_backup' EXIT
 
 update_flake_lock() {
   log_info "Updating flake.lock..."
@@ -120,6 +150,7 @@ verify_build() {
   local old_lc_all="${LC_ALL-}"
   LC_ALL=C
   if ! build_output="$(run_nix_build with_cd 2>&1)"; then
+    LAST_VERIFY_BUILD_OUTPUT="$build_output"
     log_error "Nix build failed for package verification"
     printf '%s\n' "$build_output" | sed -n '1,200p'
     if [ -z "${old_lc_all+x}" ]; then
@@ -135,6 +166,7 @@ verify_build() {
     LC_ALL="$old_lc_all"
   fi
 
+  LAST_VERIFY_BUILD_OUTPUT="$build_output"
   out_path="$(extract_nix_store_path "$build_output")"
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/goose" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/goose"
@@ -156,6 +188,11 @@ verify_build() {
     log_warn "goose binary exists but --help returned non-zero; continuing as this may be acceptable in offline checks"
   fi
   log_info "Build successful!"
+}
+
+build_failed_for_rust_toolchain() {
+  printf '%s\n' "$1" | grep -Eq \
+    'rustc [0-9.]+ is not supported|requires rustc [0-9.]+|select compatible dependency versions|rust-version'
 }
 
 compute_and_update_src_sha256() {
@@ -379,9 +416,8 @@ main() {
     exit 0
   fi
 
-  local backup
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
+  local auto_refreshed_lock=false
+  backup_repo_state
 
   cleanup_backups
   update_flake_version "$latest_version"
@@ -389,30 +425,48 @@ main() {
 
   if ! compute_and_update_src_sha256; then
     log_error "Failed to compute src sha256; restoring previous flake.nix"
-    cp "$backup" "$flake_file"
-    rm -f "$backup"
+    restore_repo_state
+    discard_repo_state_backup
     exit 1
   fi
 
   if ! compute_and_update_cargo_hash; then
     log_error "Failed to compute cargoHash; restoring previous flake.nix"
-    cp "$backup" "$flake_file"
-    rm -f "$backup"
+    restore_repo_state
+    discard_repo_state_backup
     exit 1
   fi
 
   if [ "$no_build" != true ]; then
     if ! verify_build; then
-      log_error "Build verification failed; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
-      rm -f "$backup"
-      exit 1
+      if build_failed_for_rust_toolchain "$LAST_VERIFY_BUILD_OUTPUT"; then
+        log_warn "Detected a Rust toolchain mismatch; refreshing flake.lock and retrying once."
+        if ! update_flake_lock; then
+          log_error "flake.lock refresh failed; restoring previous package state"
+          restore_repo_state
+          discard_repo_state_backup
+          exit 1
+        fi
+        auto_refreshed_lock=true
+
+        if ! verify_build; then
+          log_error "Build verification still failed after refreshing flake.lock; restoring previous package state"
+          restore_repo_state
+          discard_repo_state_backup
+          exit 1
+        fi
+      else
+        log_error "Build verification failed; restoring previous package state"
+        restore_repo_state
+        discard_repo_state_backup
+        exit 1
+      fi
     fi
   fi
 
-  rm -f "$backup"
+  discard_repo_state_backup
 
-  if [ "$update_lock" = true ]; then
+  if [ "$update_lock" = true ] && [ "$auto_refreshed_lock" != true ]; then
     update_flake_lock
   fi
 
