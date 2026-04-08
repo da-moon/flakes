@@ -16,17 +16,17 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.62.0";
+        version = "1.0.0";
 
         # Architecture-specific configuration
         archConfig = {
           "aarch64-linux" = {
             arch = "arm64";
-            sha256 = "sha256-xroqSq4VDbMIWYS9N7CQyEstG+6sMkcu4AG9IDrXx9s=";
+            sha256 = "sha256-m7MEEwQeUNrJRaD4qmQBHks0Xr/Qo/m1/M1kbG3KYac=";
           };
           "x86_64-linux" = {
             arch = "amd64";
-            sha256 = "sha256-TMpyZbIuXDyo1iqwuXUr7DH2i39fpjYoKkx+VFTDVTU=";
+            sha256 = "sha256-cFfbHpJCj89cCNXcawfq1X5YiyYsuni5omiT1VvSn9s=";
           };
         };
 
@@ -46,6 +46,11 @@
 
           # Use autoPatchelfHook to fix dynamic linker path
           nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+          # Beads 1.0.0 links against ICU 74 and libstdc++/libgcc at runtime.
+          buildInputs = [
+            pkgs.icu74
+            (pkgs.lib.getLib pkgs.stdenv.cc.cc)
+          ];
 
           # No build needed - precompiled binary
           dontBuild = true;
