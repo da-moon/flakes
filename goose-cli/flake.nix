@@ -34,16 +34,16 @@
 
         goose-cli = pkgs.rustPlatform.buildRustPackage rec {
           pname = "goose-cli";
-          version = "1.28.0";
+          version = "1.29.1";
 
           src = pkgs.fetchFromGitHub {
             owner = "block";
             repo = "goose";
             rev = "v${version}";
-            sha256 = "sha256-/1TtsnNiLoTkvyeFR282qSpo+Jt3pvFxduJ7lyzsTXI=";
+            sha256 = "sha256-49ktv745b2wGu5gQmkh/huKzre70E5cKdql1IOyBQpM=";
           };
 
-          cargoHash = "sha256-bhnbSjGqyWbQd5PjZ116JH91vjVy6R/+iBlNKL6debg=";
+          cargoHash = "sha256-pTXSTN8UUNNxPfNqjFT75JwDz/lBP95WFNImdyrNm7s=";
 
           # Build only the goose-cli crate
           buildAndTestSubdir = "crates/goose-cli";
@@ -51,6 +51,8 @@
           env = {
             RUSTY_V8_ARCHIVE = "${rustyV8Archive}";
             LIBCLANG_PATH = "${pkgs.lib.getLib pkgs.llvmPackages.libclang}/lib";
+            SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+            NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
           };
 
           nativeBuildInputs = with pkgs; [
@@ -59,6 +61,7 @@
             pkg-config
             python3
             curl
+            cacert
           ];
 
           buildInputs = with pkgs; [
