@@ -34,12 +34,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "hermes-agent";
-        version = "unstable-2026-04-13";
-        revision = "3804556cd9b6f1e07cf9bf69caee465f6753c9e7";
+        version = "unstable-2026-04-14";
+        revision = "16f9d0208429a16db983634dd11f62852faf329a";
 
         sourceHashBySystem = {
-          "aarch64-linux" = "sha256-33dzc6pzI6hmEU16YRnqlbSuSdFKfXPJznJd5Rl/Upg=";
-          "x86_64-linux" = "sha256-33dzc6pzI6hmEU16YRnqlbSuSdFKfXPJznJd5Rl/Upg=";
+          "aarch64-linux" = "sha256-bAwAv3YgfPcBbpMn7Vc1VPdR53Q8+83hK0oAY5+soJc=";
+          "x86_64-linux" = "sha256-bAwAv3YgfPcBbpMn7Vc1VPdR53Q8+83hK0oAY5+soJc=";
         };
 
         sourceRoot = pkgs.fetchFromGitHub {
