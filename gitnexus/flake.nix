@@ -18,13 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "gitnexus";
-        version = "1.6.1";
+        version = "1.6.2";
 
         # Native parser/database dependencies make the fixed-output install
         # arch-specific. Rehash each supported Linux system separately.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-1W74bQ4mgj4M7wLu0YLY6nmFjl4qnBtfFIQAiB9mMzc=";
+          "x86_64-linux" = "sha256-4ZTaKqrNsGkLDp1wK2woLVLWIm4jd+k2tG+N3Tp5kFQ=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -32,7 +32,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-BdGhP3ptSn6n1br9xN+fB2WzyOq3FZ95As2J+45Z1S8=";
+            hash = "sha256-6Ja4kR/gF0bRS6u1wgXQyPeilq3XmvsNT/HfpnODs58=";
           };
 
           nativeBuildInputs = [
