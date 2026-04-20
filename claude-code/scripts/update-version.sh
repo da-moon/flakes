@@ -10,18 +10,38 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
-readonly NPM_REGISTRY_URL="https://registry.npmjs.org"
-readonly PACKAGE_NAME="@anthropic-ai/claude-code"
+readonly DOWNLOAD_BASE_URL="https://downloads.claude.ai/claude-code-releases"
+declare -Ar SYSTEM_TO_RELEASE_PLATFORM=(
+  [x86_64-linux]="linux-x64"
+  [aarch64-linux]="linux-arm64"
+)
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
+DOWNLOADER=""
+HAS_JQ=false
+temp_flake_file=""
+
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
   command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  command -v awk >/dev/null 2>&1 || { log_error "awk is required but not installed."; exit 2; }
+
+  if command -v curl >/dev/null 2>&1; then
+    DOWNLOADER="curl"
+  elif command -v wget >/dev/null 2>&1; then
+    DOWNLOADER="wget"
+  else
+    log_error "Either curl or wget is required but neither is installed."
+    exit 2
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    HAS_JQ=true
+  fi
 }
 
 ensure_in_package_directory() {
@@ -31,24 +51,61 @@ ensure_in_package_directory() {
   fi
 }
 
+download_file() {
+  local url="$1"
+  local output="${2:-}"
+
+  if [ "$DOWNLOADER" = "curl" ]; then
+    if [ -n "$output" ]; then
+      curl -fsSL -o "$output" "$url"
+    else
+      curl -fsSL "$url"
+    fi
+  else
+    if [ -n "$output" ]; then
+      wget -q -O "$output" "$url"
+    else
+      wget -q -O - "$url"
+    fi
+  fi
+}
+
 get_current_version() {
   sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
 }
 
-get_latest_version_from_npm() {
-    local latest_json
-    latest_json="$(curl -fsSL "$NPM_REGISTRY_URL/$PACKAGE_NAME/latest")"
-    printf '%s\n' "$latest_json" \
-      | grep -o '"version":[[:space:]]*"[^"]*"' \
-      | head -n1 \
-      | sed -E 's/^"version":[[:space:]]*"([^"]*)"$/\1/'
+get_latest_version() {
+  download_file "$DOWNLOAD_BASE_URL/latest"
 }
 
-prefetch_sha256_sri() {
-  local url="$1"
-  nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+get_manifest_json() {
+  local version="$1"
+  download_file "$DOWNLOAD_BASE_URL/$version/manifest.json"
+}
+
+get_manifest_checksum() {
+  local manifest_json="$1"
+  local platform="$2"
+
+  if [ "$HAS_JQ" = true ]; then
+    printf '%s' "$manifest_json" | jq -r ".platforms[\"$platform\"].checksum // empty"
+    return 0
+  fi
+
+  local normalized_json
+  normalized_json="$(printf '%s' "$manifest_json" | tr -d '\n\r\t' | sed 's/ \+/ /g')"
+
+  if [[ $normalized_json =~ \"$platform\"[^}]*\"checksum\"[[:space:]]*:[[:space:]]*\"([a-f0-9]{64})\" ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  return 1
+}
+
+sha256_hex_to_sri() {
+  local hex_hash="$1"
+  nix hash to-sri --type sha256 "$hex_hash"
 }
 
 update_flake_version() {
@@ -56,13 +113,59 @@ update_flake_version() {
   sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
 }
 
-update_flake_sha256() {
-  local new_sha256="$1"
-  sed -i.bak -E "s|^([[:space:]]*sha256 = \")[^\"]*(\";)|\\1${new_sha256}\\2|" "$flake_file"
+update_flake_hash_block() {
+  local x86_64_hash="$1"
+  local aarch64_hash="$2"
+
+  temp_flake_file="$(mktemp "${flake_file}.XXXXXX")"
+
+  if ! awk -v x86="$x86_64_hash" -v arm="$aarch64_hash" '
+    BEGIN {
+      in_block = 0
+      replaced = 0
+    }
+
+    /^[[:space:]]*binarySha256BySystem = \{/ {
+      print
+      print "          # update-version.sh managed hashes."
+      print "          x86_64-linux = \"" x86 "\";"
+      print "          aarch64-linux = \"" arm "\";"
+      in_block = 1
+      replaced = 1
+      next
+    }
+
+    in_block && /^[[:space:]]*};[[:space:]]*$/ {
+      in_block = 0
+      print
+      next
+    }
+
+    !in_block {
+      print
+    }
+
+    END {
+      if (!replaced) {
+        exit 10
+      }
+    }
+  ' "$flake_file" > "$temp_flake_file"; then
+    rm -f "$temp_flake_file"
+    temp_flake_file=""
+    log_error "Failed to rewrite binarySha256BySystem block in flake.nix"
+    exit 2
+  fi
+
+  mv "$temp_flake_file" "$flake_file"
+  temp_flake_file=""
 }
 
 cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
+  if [ -n "$temp_flake_file" ]; then
+    rm -f "$temp_flake_file" 2>/dev/null || true
+  fi
 }
 
 trap cleanup_backups EXIT
@@ -150,7 +253,7 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 Options:
   --version VERSION   Update to a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute tarball hash for current version
+  --rehash            Recompute Linux release hashes for the current version
   --no-build          Skip build verification
   --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
@@ -158,7 +261,7 @@ Options:
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --version 2.0.71
+  ./scripts/update-version.sh --version 2.1.114
 EOF
 }
 
@@ -215,9 +318,9 @@ main() {
   fi
 
   local latest_version
-  latest_version="$(get_latest_version_from_npm)"
+  latest_version="$(get_latest_version)"
   if [ -z "$latest_version" ]; then
-    log_error "Failed to fetch latest version from npm"
+    log_error "Failed to fetch latest version"
     exit 2
   fi
 
@@ -242,16 +345,35 @@ main() {
     exit 0
   fi
 
-  local tarball_url
-  tarball_url="$NPM_REGISTRY_URL/$PACKAGE_NAME/-/claude-code-$latest_version.tgz"
-  log_info "Prefetching tarball hash..."
-  local tarball_hash
-  tarball_hash="$(prefetch_sha256_sri "$tarball_url")"
-  if [ -z "$tarball_hash" ]; then
-    log_error "Failed to prefetch tarball hash"
+  log_info "Fetching release manifest..."
+  local manifest_json
+  manifest_json="$(get_manifest_json "$latest_version")"
+  if [ -z "$manifest_json" ]; then
+    log_error "Failed to fetch manifest for version $latest_version"
     exit 2
   fi
-  log_info "Tarball hash: $tarball_hash"
+
+  local x86_64_checksum_hex
+  x86_64_checksum_hex="$(get_manifest_checksum "$manifest_json" "${SYSTEM_TO_RELEASE_PLATFORM[x86_64-linux]}")"
+  if [ -z "$x86_64_checksum_hex" ]; then
+    log_error "Missing manifest checksum for ${SYSTEM_TO_RELEASE_PLATFORM[x86_64-linux]}"
+    exit 2
+  fi
+
+  local aarch64_checksum_hex
+  aarch64_checksum_hex="$(get_manifest_checksum "$manifest_json" "${SYSTEM_TO_RELEASE_PLATFORM[aarch64-linux]}")"
+  if [ -z "$aarch64_checksum_hex" ]; then
+    log_error "Missing manifest checksum for ${SYSTEM_TO_RELEASE_PLATFORM[aarch64-linux]}"
+    exit 2
+  fi
+
+  local x86_64_hash
+  x86_64_hash="$(sha256_hex_to_sri "$x86_64_checksum_hex")"
+  local aarch64_hash
+  aarch64_hash="$(sha256_hex_to_sri "$aarch64_checksum_hex")"
+
+  log_info "x86_64-linux hash: $x86_64_hash"
+  log_info "aarch64-linux hash: $aarch64_hash"
 
   local backup
   backup="$(mktemp -t flake.nix.backup.XXXXXX)"
@@ -259,7 +381,7 @@ main() {
 
   cleanup_backups
   update_flake_version "$latest_version"
-  update_flake_sha256 "$tarball_hash"
+  update_flake_hash_block "$x86_64_hash" "$aarch64_hash"
   cleanup_backups
 
   if [ "$no_build" != true ]; then
