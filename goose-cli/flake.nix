@@ -34,16 +34,16 @@
 
         goose-cli = pkgs.rustPlatform.buildRustPackage rec {
           pname = "goose-cli";
-          version = "1.31.0";
+          version = "1.31.1";
 
           src = pkgs.fetchFromGitHub {
             owner = "block";
             repo = "goose";
             rev = "v${version}";
-            sha256 = "sha256-Cp1wNczg/YnouxwX7tFgyfodooL0ToTb7sWvstSK/wA=";
+            sha256 = "sha256-ANW+JE0Jj6YSZuMrCy4HYO+tzD22LFD2icp9ODJAc6Y=";
           };
 
-          cargoHash = "sha256-G8G3Pv1sTO/7H7yyfGbu0R4B82b3SK1RIufOvgaFxls=";
+          cargoHash = "sha256-UxgyrcKBMK16XtE6WfBBuZRK62x8jntCy3RzZpX1TB0=";
 
           # Build only the goose-cli crate
           buildAndTestSubdir = "crates/goose-cli";
