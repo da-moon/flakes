@@ -97,7 +97,7 @@ update_rev() {
 
 update_src_hash() {
   local new_hash="$1"
-  sed -i.bak -E "s/^([[:space:]]*srcHash = \")[^\"]*(\";)/\\1${new_hash}\\2/" "$flake_file"
+  sed -i.bak -E "s~^([[:space:]]*srcHash = \")[^\"]*(\";)~\\1${new_hash}\\2~" "$flake_file"
 }
 
 cleanup_backups() {

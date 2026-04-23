@@ -27,7 +27,7 @@
         pname = "opennews-mcp";
         baseVersion = "0.1.0";
         rev = "e4f40e1eddd0438939850f69a7435314d8fbeb7f";
-        version = "${baseVersion}-unstable-2026-04-10-e4f40e1";
+        version = "0.1.0-unstable-2026-04-10-e4f40e1";
         srcHash = "sha256-4LUpy2n9cVSlXi/AHdc/AKx4Ttji1CXoyZ1c0Rq8Zfo=";
 
         src = pkgs.fetchFromGitHub {
