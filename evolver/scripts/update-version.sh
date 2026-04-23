@@ -108,7 +108,7 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
+  "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
