@@ -87,7 +87,7 @@ update_flake_version() {
 }
 
 update_wheel_url() {
-  local new_url="$2"
+  local new_url="$1"
   sed -i.bak -E "s|^([[:space:]]*codeReviewGraphWheelUrl = \")[^\"]*(\";)|\\1${new_url}\\2|" "$flake_file"
 }
 
