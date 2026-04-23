@@ -87,15 +87,13 @@ update_flake_version() {
 }
 
 update_wheel_url() {
-  local new_version="$1"
   local new_url="$2"
-  sed -i.bak -E "0,/code_review_graph-[^\"]*-py3-none-any\\.whl/s|https://files\\.pythonhosted\\.org/packages/[^\"]*/code_review_graph-[^\"]*-py3-none-any\\.whl|${new_url}|" "$flake_file"
-  sed -i.bak -E "0,/code_review_graph-[0-9][^\"]*-py3-none-any\\.whl/s|code_review_graph-[0-9][^\"]*-py3-none-any\\.whl|code_review_graph-${new_version}-py3-none-any.whl|" "$flake_file"
+  sed -i.bak -E "s|^([[:space:]]*codeReviewGraphWheelUrl = \")[^\"]*(\";)|\\1${new_url}\\2|" "$flake_file"
 }
 
 update_wheel_hash() {
   local new_hash="$1"
-  sed -i.bak -E "0,/^[[:space:]]*hash = \"/s|^([[:space:]]*hash = \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
+  sed -i.bak -E "s|^([[:space:]]*codeReviewGraphWheelHash = \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
 }
 
 cleanup_backups() {
@@ -292,7 +290,7 @@ main() {
 
     log_info "Wheel URL:  $wheel_url"
     log_info "Wheel hash: $wheel_hash"
-    update_wheel_url "$target_version" "$wheel_url"
+    update_wheel_url "$wheel_url"
     update_wheel_hash "$wheel_hash"
     cleanup_backups
   fi

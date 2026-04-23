@@ -26,6 +26,8 @@
         py = pkgs.python3Packages;
         pname = "code-review-graph";
         version = "2.3.2";
+        codeReviewGraphWheelUrl = "https://files.pythonhosted.org/packages/25/14/c47e2bbb607956bc057c53d405ec90007496566efc6e431ea65d81ee1826/code_review_graph-2.3.2-py3-none-any.whl";
+        codeReviewGraphWheelHash = "sha256-CNcVYHrv3jQU0os6eEQkOCOxUNxjuk3UUp1pGfVA0Eg=";
 
         pyKeyValueAio = py.buildPythonPackage rec {
           pname = "py-key-value-aio";
@@ -98,8 +100,8 @@
           dontCheckRuntimeDeps = true;
 
           src = pkgs.fetchurl {
-            url = "https://files.pythonhosted.org/packages/25/14/c47e2bbb607956bc057c53d405ec90007496566efc6e431ea65d81ee1826/code_review_graph-2.3.2-py3-none-any.whl";
-            hash = "sha256-CNcVYHrv3jQU0os6eEQkOCOxUNxjuk3UUp1pGfVA0Eg=";
+            url = codeReviewGraphWheelUrl;
+            hash = codeReviewGraphWheelHash;
           };
 
           propagatedBuildInputs = [
