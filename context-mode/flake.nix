@@ -51,7 +51,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-+PeO7yul7aTc2OW6Cs5F4/rjsKBAYwsScE5aa3j3acU=";
+          outputHash = "sha256-tSlJYOCciScflKy+f65q4idr0lAR+ErmVIvPyxLvTZ8=";
 
           buildPhase = ''
             runHook preBuild
