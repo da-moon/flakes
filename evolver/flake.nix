@@ -45,7 +45,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-DY/ZHhhW/uuvuHC95G4fZ6b9KkDLQA0j6PGRYoJFn/4=";
+          outputHash = "sha256-bDWDmctQJ7QNf03Sy4Ixgi+sKSelv2wrIOvDVDGU2Kk=";
 
           buildPhase = ''
             runHook preBuild
@@ -90,7 +90,7 @@
             mkdir -p $out/bin
             cp -r $src/* $out/lib/${pname}/
 
-            makeWrapper ${nodejs}/bin/node $out/bin/evolver \
+            makeWrapper ${nodejs}/bin/node $out/bin/.evolver-real \
               --add-flags "$out/lib/${pname}/index.js" \
               --set NODE_PATH "$out/lib/${pname}/node_modules" \
               --set NODE_ENV "production" \
@@ -99,6 +99,26 @@
                 pkgs.bash
                 pkgs.coreutils
               ]}
+
+            cat > $out/bin/evolver <<'EOF'
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            export MEMORY_DIR="''${MEMORY_DIR:-$PWD/memory}"
+
+            case "''${1:-}" in
+              --version|-V)
+                echo "evolver __VERSION__"
+                exit 0
+                ;;
+            esac
+
+            exec "__REAL_BIN__" "$@"
+            EOF
+            substituteInPlace $out/bin/evolver \
+              --replace-fail "__VERSION__" "${version}" \
+              --replace-fail "__REAL_BIN__" "$out/bin/.evolver-real"
+            chmod +x $out/bin/evolver
 
             runHook postInstall
           '';
