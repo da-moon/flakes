@@ -25,6 +25,7 @@ ensure_required_tools_installed() {
   command -v git >/dev/null 2>&1 || { log_error "git is required but not installed."; exit 2; }
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
   command -v nix-prefetch-url >/dev/null 2>&1 || { log_error "nix-prefetch-url is required but not installed."; exit 2; }
+  command -v python3 >/dev/null 2>&1 || { log_error "python3 is required but not installed."; exit 2; }
   command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
 }
 
@@ -50,8 +51,7 @@ get_latest_commit_sha() {
 get_commit_date() {
   local sha="$1"
   curl -fsSL "https://api.github.com/repos/${OWNER}/${REPO}/commits/${sha}" \
-    | sed -n 's/.*"date":[[:space:]]*"\([0-9-]\{10\}\)T.*/\1/p' \
-    | head -n1
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["commit"]["committer"]["date"][:10])'
 }
 
 build_version_string() {
