@@ -23,7 +23,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "2.1.118";
+        version = "2.1.119";
 
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
@@ -32,8 +32,8 @@
 
         binarySha256BySystem = {
           # update-version.sh managed hashes.
-          x86_64-linux = "sha256-ujY7JBCkcSDS1Ljs4uEf4LvF1ZrbEyno+4fqDzcPTkY=";
-          aarch64-linux = "sha256-t3si/pPBVAnzxkvmeVD+EeX8F9HNMniRWWy4fdm+BJI=";
+          x86_64-linux = "sha256-zKQwU/BilJSVWWsRtv0bWc95ECrbE7rL5mmX5vrkHko=";
+          aarch64-linux = "sha256-OCqnPqSwf9jWmOMVm1754bhzn651BbqN3Si4pqYoGc4=";
         };
 
         releasePlatform = releasePlatformBySystem.${system};
@@ -68,12 +68,20 @@
 
             install -m755 $src $out/libexec/claude
 
+            # This package is Nix-managed, so bypass native-installer checks and updates.
             makeWrapper $out/libexec/claude $out/bin/claude \
               --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]} \
+              --set DISABLE_INSTALLATION_CHECKS 1 \
+              --set DISABLE_UPDATES 1 \
+              --set DISABLE_UPGRADE_COMMAND 1 \
               --set DISABLE_AUTOUPDATER 1
 
             makeWrapper $out/libexec/claude $out/bin/claude-direct \
-              --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]}
+              --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]} \
+              --set DISABLE_INSTALLATION_CHECKS 1 \
+              --set DISABLE_UPDATES 1 \
+              --set DISABLE_UPGRADE_COMMAND 1 \
+              --set DISABLE_AUTOUPDATER 1
 
             runHook postInstall
           '';
