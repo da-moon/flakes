@@ -26,9 +26,9 @@
         py = pkgs.python3Packages;
         pname = "opennews-mcp";
         baseVersion = "0.1.0";
-        rev = "4e8266b305084f7cf4206d220d832fa9af38e71b";
-        version = "0.1.0-unstable-2026-05-04-4e8266b";
-        srcHash = "sha256-E28yDUEYSFCEmdEfDwRwXdBMERUw7VYUw4wjJowUlmU=";
+        rev = "188140679b03fb6707481232126e7fb88358a98e";
+        version = "0.1.0-unstable-2026-05-06-1881406";
+        srcHash = "sha256-Lxg0hd8RoPlA/+V+lN1ojX+a6/mW2UZiXSa3dSTPoNM=";
 
         src = pkgs.fetchFromGitHub {
           owner = "6551Team";
