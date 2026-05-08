@@ -18,13 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "agent-browser";
-        version = "0.26.0";
+        version = "0.27.0";
 
         outputHashBySystem = {
           "aarch64-darwin" = pkgs.lib.fakeHash;
           "aarch64-linux" = pkgs.lib.fakeHash;
           "x86_64-darwin" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-XZUh4KXgOAgSX8jAmBrz5Yjr5WPiKmEnlD7XCWd9FmU=";
+          "x86_64-linux" = "sha256-j5ermpBV/R06X/VsT9zdsrQMP9mLKPDhGaV2ZoZeaAk=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -32,7 +32,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-ikjPQRDX3CwSwcTW0l4Lq9+jFgS1N/Bd8NyDX+L4VL8=";
+            hash = "sha256-Yu87yAx1/GjNcKRexM6YGmekqVc3WAtn6KRwmvwo2HU=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
