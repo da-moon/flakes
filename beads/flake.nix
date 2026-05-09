@@ -16,17 +16,17 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "1.0.3";
+        version = "1.0.4";
 
         # Architecture-specific configuration
         archConfig = {
           "aarch64-linux" = {
             arch = "arm64";
-            sha256 = "sha256-JDqcdQEueUiI/K+5V+diS4/v3+8DPRTNA+vJgxw7wS8=";
+            sha256 = "sha256-SM31cc2LZLroHagpwTCeQCvBLmpMxrh2Bt/JIgt+zmA=";
           };
           "x86_64-linux" = {
             arch = "amd64";
-            sha256 = "sha256-HvXcqBjX6BV0356fn8KharcR2gmw+nuCKuFi2agciRI=";
+            sha256 = "sha256-ZD5gLif2Zshyar/w8iAB4rWIOYj6lgIEveIKMSnUSKU=";
           };
         };
 
