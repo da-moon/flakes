@@ -26,7 +26,7 @@
 
         tradingview-mcp = pkgs.buildNpmPackage rec {
           pname = "tradingview-mcp";
-          version = "1.0.0-unstable-2026-05-08";
+          version = "1.0.0-unstable-2026-05-11";
           rev = "4795784a19dd64ff4e2649d2499a536b01bd2d68";
 
           src = pkgs.fetchFromGitHub {

@@ -26,11 +26,11 @@
         pname = "drawio-mcp";
         npmPackage = "@drawio/mcp";
         tarballName = "mcp";
-        version = "1.2.6";
+        version = "1.2.7";
 
         outputHashBySystem = {
-          "aarch64-linux" = "sha256-AmD6lxiIN0DjCThWigRAiX07wqFN3pW9t/CQ/YbBK90=";
-          "x86_64-linux" = "sha256-AmD6lxiIN0DjCThWigRAiX07wqFN3pW9t/CQ/YbBK90=";
+          "aarch64-linux" = pkgs.lib.fakeHash;
+          "x86_64-linux" = "sha256-poELdlf1B/ApaRoeZsIM/XFf7ixDLzBjZjy7m4Z86tw=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -38,7 +38,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${npmPackage}/-/${tarballName}-${version}.tgz";
-            hash = "sha256-nApSc078NsZ9qjdL7uvrwH/JyqqCMqAwIEYPUZTl0tk=";
+            hash = "sha256-FVdjC/xj+sSwRp9SF2qNVSGbSA580cKxA7MWvvm4QF0=";
           };
 
           nativeBuildInputs = [

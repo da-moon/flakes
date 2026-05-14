@@ -23,19 +23,19 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "dexter";
-        version = "2026.5.1";
-        rev = "v2026.5.1";
+        version = "2026.5.9";
+        rev = "v2026.5.9";
 
         src = pkgs.fetchFromGitHub {
           owner = "virattt";
           repo = "dexter";
           inherit rev;
-          hash = "sha256-1JJWpFtH9STr49XqIXnY6hSF4sF/rwfqnt/2znSgmHU=";
+          hash = "sha256-htHfT+U0WO20+vDuOXnPqcS2YsZ5Y9EmeL9iaMswxgg=";
         };
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-pfH07jR3BPlJ1scWpWc+b76JMHwkaJoW7I7jsHTeLm0=";
+          "x86_64-linux" = "sha256-p+xETSUdSnn+MUPThJFW4Eycz/2DvdPjiUKGPX8/pO4=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {

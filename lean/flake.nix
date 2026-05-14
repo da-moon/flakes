@@ -24,22 +24,22 @@
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python312;
 
-        engineImageTag = "17711";
-        engineImageDigest = "sha256:1a8835b6e849b8bbd7b1024e589a8456726555e4c1209b9c7272b36e5e725f02";
-        researchImageDigest = "sha256:4f95844aaef8a105f995d01b58cb16d5a7d084472d49fbd0622c18295095cd34";
+        engineImageTag = "17715";
+        engineImageDigest = "sha256:d19b64a5d8ff4fc2dd302df8996301a4a1e58b682e3f01798357869e91c13d94";
+        researchImageDigest = "sha256:fc273e8a617df4d04de3998a043927964292627b69a6d540b398f6bf31385e67";
 
         quantconnect-stubs = python.pkgs.buildPythonPackage {
           pname = "quantconnect-stubs";
-          version = "17711";
+          version = "17713";
           format = "wheel";
 
           src = pkgs.fetchPypi {
             pname = "quantconnect_stubs";
-            version = "17711";
+            version = "17713";
             format = "wheel";
             dist = "py3";
             python = "py3";
-            hash = "sha256-5kBY1a/rhMOeDQ+laK6wzEih9ynEm9DdyWLUcM0UT5Y=";
+            hash = "sha256-NzPf8nXsfWHAfiHN1LXocOx3s3lS6+BDrMn8DMB6zRo=";
           };
 
           propagatedBuildInputs = with python.pkgs; [
