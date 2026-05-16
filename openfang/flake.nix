@@ -23,16 +23,16 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.6.4";
+        version = "0.6.9";
 
         releaseBySystem = {
           "x86_64-linux" = {
             target = "x86_64-unknown-linux-gnu";
-            hash = "sha256-sjEkPosSTgKKOLN8LYysqwYhzxhsBSScm3aiy2zmnfM=";
+            hash = "sha256-QwmwvPKtxdrEV3biAICHqK0HKTPxrmmP+NTgb7a4dgI=";
           };
           "aarch64-linux" = {
             target = "aarch64-unknown-linux-gnu";
-            hash = "sha256-L1o4dNMtCc9Z4cbRnd3lth2kklSol/eKp/yjfjMURGg=";
+            hash = "sha256-jquFK6eJg8PPM0uBJwoUwRfIyxTMgkE0P9G0V222SuA=";
           };
         };
 
