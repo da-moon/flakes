@@ -103,6 +103,7 @@
             PM_RECOVERY_BATCH_LIMIT = cfg.recovery.batchLimit;
             PM_RECOVERY_CALL_CONCURRENCY = cfg.recovery.callConcurrency;
             PM_RECOVERY_INTER_ROW_DELAY_SEC = cfg.recovery.interRowDelaySec;
+            PM_PAPER_INITIAL_COLLATERAL_BALANCE = cfg.paper.initialCollateralBalance;
             PM_REDEEMER_MAX_GAS_GWEI = cfg.redeemer.maxGasGwei;
             PM_BACKGROUND_EXECUTOR_WORKERS = cfg.performance.backgroundExecutorWorkers;
             PM_TRADE_LEDGER_QUEUE_MAXSIZE = cfg.performance.tradeLedgerQueueMaxsize;
@@ -139,6 +140,7 @@
           reservedEnvPrefixes = [
             "PM_BACKGROUND_"
             "PM_NH_"
+            "PM_PAPER_"
             "PM_RECOVERY_"
             "PM_REDEEM_"
             "PM_REDEEMER_"
@@ -231,6 +233,8 @@
               example = 8080;
               description = "Dashboard port. Null disables the dashboard.";
             };
+
+            paper.initialCollateralBalance = mkNumberOption 100.0 "Initial paper-mode collateral balance in USD.";
 
             connection = {
               host = mkOption {
@@ -469,6 +473,14 @@
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
               cp -r $src/. $out/lib/${pname}/
+
+              substituteInPlace $out/lib/${pname}/bot/exchange/paper.py \
+                --replace-fail $'import time' $'import os\nimport time' \
+                --replace-fail "        initial_collateral_balance: float = 100.0," "        initial_collateral_balance: float | None = None," \
+                --replace-fail $'        self._collateral_balance = float(initial_collateral_balance)' $'        if initial_collateral_balance is None:\n            initial_collateral_balance = float(os.getenv("PM_PAPER_INITIAL_COLLATERAL_BALANCE", "100.0"))\n        self._collateral_balance = float(initial_collateral_balance)'
+
+              substituteInPlace $out/lib/${pname}/bot/standalone_markets.py \
+                --replace-fail $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:' $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 422 and offset > 0:\n                logger.info(\n                    "gamma_markets_pagination_exhausted offset=%d status=%s",\n                    offset,\n                    exc.status,\n                )\n                return\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:'
 
               cat > $out/bin/nothing-ever-happens <<'EOF'
               #!/usr/bin/env bash
