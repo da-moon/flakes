@@ -104,6 +104,7 @@
             PM_RECOVERY_CALL_CONCURRENCY = cfg.recovery.callConcurrency;
             PM_RECOVERY_INTER_ROW_DELAY_SEC = cfg.recovery.interRowDelaySec;
             PM_PAPER_INITIAL_COLLATERAL_BALANCE = cfg.paper.initialCollateralBalance;
+            PM_NH_MAX_END_DATE_DAYS = cfg.strategy.maxEndDateDays;
             PM_REDEEMER_MAX_GAS_GWEI = cfg.redeemer.maxGasGwei;
             PM_BACKGROUND_EXECUTOR_WORKERS = cfg.performance.backgroundExecutorWorkers;
             PM_TRADE_LEDGER_QUEUE_MAXSIZE = cfg.performance.tradeLedgerQueueMaxsize;
@@ -268,6 +269,7 @@
               buyRetryCount = mkIntOption 3 "Number of buy retry attempts.";
               buyRetryBaseDelaySec = mkNumberOption 1.0 "Base delay between buy retries.";
               maxBackoffSec = mkNumberOption 900.0 "Maximum retry backoff.";
+              maxEndDateDays = mkIntOption 90 "Maximum days until candidate market end date.";
               maxNewPositions = mkIntOption (-1) "Maximum new positions per run. -1 means unlimited.";
               shutdownOnMaxNewPositions = mkOption {
                 type = types.bool;
@@ -480,6 +482,8 @@
                 --replace-fail $'        self._collateral_balance = float(initial_collateral_balance)' $'        if initial_collateral_balance is None:\n            initial_collateral_balance = float(os.getenv("PM_PAPER_INITIAL_COLLATERAL_BALANCE", "100.0"))\n        self._collateral_balance = float(initial_collateral_balance)'
 
               substituteInPlace $out/lib/${pname}/bot/standalone_markets.py \
+                --replace-fail $'import json' $'import json\nimport os' \
+                --replace-fail "    cutoff = now + timedelta(days=max_end_date_months * 30)" $'    max_end_date_days = int(os.getenv("PM_NH_MAX_END_DATE_DAYS", str(max_end_date_months * 30)))\n    cutoff = now + timedelta(days=max(1, max_end_date_days))' \
                 --replace-fail $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:' $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 422 and offset > 0:\n                logger.info(\n                    "gamma_markets_pagination_exhausted offset=%d status=%s",\n                    offset,\n                    exc.status,\n                )\n                return\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:'
 
               cat > $out/bin/nothing-ever-happens <<'EOF'
