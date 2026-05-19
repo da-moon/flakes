@@ -23,18 +23,18 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.2.4";
+        version = "0.2.5";
 
         releaseBySystem = {
           "x86_64-linux" = {
             asset = "hoangsa-linux-x64.tar.gz";
             sourceRoot = "hoangsa-linux-x64";
-            hash = "sha256-B7zAyXNkgh+wZmSFRSUx8F1gRroAgxCC3eNxQmmQ9OM=";
+            hash = "sha256-ejh0qfE900uaUlL2KuhbkCdFL5ZlYXEokpl48hJmkb8=";
           };
           "aarch64-linux" = {
             asset = "hoangsa-linux-arm64.tar.gz";
             sourceRoot = "hoangsa-linux-arm64";
-            hash = "sha256-Jm73TA/PkH2R665LRVhi+MlEE8zv8cegRy9G1svLdcg=";
+            hash = "sha256-84NahoIkdFL1es2HLnmsQfr7ZyZG5YKRqNrY1tVEtgw=";
           };
         };
 
