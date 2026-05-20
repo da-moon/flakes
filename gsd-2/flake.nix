@@ -25,14 +25,14 @@
         lib = pkgs.lib;
         pname = "gsd-2";
         npmPackage = "gsd-pi";
-        version = "2.82.0";
+        version = "3.0.0";
         nodejs = pkgs.nodejs_22;
 
         # npm optionalDependencies include native and platform-specific engine packages,
         # so the fixed-output hash is expected to differ by Linux architecture.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-/1b+wLbde+Im1+T0nH79fM5qFCZxxgGt/riqo1QACtM=";
+          "x86_64-linux" = "sha256-SkNPmTJe2h7+9qkJVaEEVgJZYSpGX+aXhdc+jAZ2ius=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -40,7 +40,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${npmPackage}/-/${npmPackage}-${version}.tgz";
-            hash = "sha256-d9J2p98xhHuJk0AGQJsgUwY5SZcqBrJP3omI7EPu4CM=";
+            hash = "sha256-kiLB8tzZXo54kj0TYfthUP317oh46or5mSUXGH6EByQ=";
           };
 
           nativeBuildInputs = [
@@ -127,6 +127,40 @@ NODE
             mkdir -p $out/lib/${pname}
             mkdir -p $out/bin
             cp -r $src/* $out/lib/${pname}/
+            chmod -R u+w $out/lib/${pname}/node_modules
+
+            export GSD_INSTALL_ROOT="$out/lib/${pname}"
+            ${nodejs}/bin/node <<'NODE'
+            const fs = require("fs");
+            const path = require("path");
+
+            const root = process.env.GSD_INSTALL_ROOT;
+            const packagesDir = path.join(root, "packages");
+            const nodeModulesDir = path.join(root, "node_modules");
+
+            if (fs.existsSync(packagesDir)) {
+              for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
+                if (!entry.isDirectory()) continue;
+
+                const packageDir = path.join(packagesDir, entry.name);
+                const packageJsonPath = path.join(packageDir, "package.json");
+                if (!fs.existsSync(packageJsonPath)) continue;
+
+                const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+                if (typeof pkg.name !== "string" || !pkg.name.startsWith("@")) continue;
+
+                const [scope, name] = pkg.name.split("/");
+                if (!scope || !name) continue;
+
+                const scopeDir = path.join(nodeModulesDir, scope);
+                const linkPath = path.join(scopeDir, name);
+                fs.mkdirSync(scopeDir, { recursive: true });
+                if (!fs.existsSync(linkPath)) {
+                  fs.symlinkSync(packageDir, linkPath, "dir");
+                }
+              }
+            }
+NODE
 
             makeWrapper ${nodejs}/bin/node $out/bin/gsd \
               --add-flags "$out/lib/${pname}/dist/loader.js" \
