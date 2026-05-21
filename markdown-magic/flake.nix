@@ -46,6 +46,39 @@
 
             tar -xzf $src
             cd package
+            ${nodejs}/bin/node <<'NODE'
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+
+            function exactSpec(spec) {
+              if (typeof spec !== "string") return spec;
+              if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+              const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+              return bare ? bare[1] : spec;
+            }
+
+            function isExactInstallSpec(spec) {
+              return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+            }
+
+            const unresolved = [];
+            for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+              for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                const next = exactSpec(spec);
+                pkg[field][name] = next;
+                if (typeof next === "string" && !isExactInstallSpec(next)) {
+                  unresolved.push(field + "." + name + "=" + next);
+                }
+              }
+            }
+
+            if (unresolved.length > 0) {
+              throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+            }
+
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+NODE
             npm install --omit=dev --ignore-scripts
 
             runHook postBuild

@@ -30,7 +30,7 @@
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-poELdlf1B/ApaRoeZsIM/XFf7ixDLzBjZjy7m4Z86tw=";
+          "x86_64-linux" = "sha256-jHgPL0NpqANvSJQmJ80BuM/232w4TeDc7NJ/Ch9bh/c=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -68,6 +68,29 @@
               const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
               delete pkg.devDependencies;
               delete pkg.packageManager;
+              function exactSpec(spec) {
+                if (typeof spec !== "string") return spec;
+                if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+                const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+                return bare ? bare[1] : spec;
+              }
+              function isExactInstallSpec(spec) {
+                return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                  || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+              }
+              const unresolved = [];
+              for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+                for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                  const next = exactSpec(spec);
+                  pkg[field][name] = next;
+                  if (typeof next === "string" && !isExactInstallSpec(next)) {
+                    unresolved.push(field + "." + name + "=" + next);
+                  }
+                }
+              }
+              if (unresolved.length > 0) {
+                throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+              }
               fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
             '
 

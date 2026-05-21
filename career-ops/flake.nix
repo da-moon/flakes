@@ -24,19 +24,19 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "career-ops";
-        version = "1.7.0";
-        rev = "career-ops-v1.7.0";
+        version = "1.8.0";
+        rev = "career-ops-v1.8.0";
 
         src = pkgs.fetchFromGitHub {
           owner = "santifer";
           repo = "career-ops";
           inherit rev;
-          hash = "sha256-SnLPuA7ByCmiMKDTkB1MSRXzf0JswspCrmo69vAn9ZM=";
+          hash = "sha256-a3LHn0UJUfeE80SsJWoAktYcxtvli/qIn9U9yyoaH/E=";
         };
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-FXCxbq+OUmB7JrKd3dF949W75C33A7pqIeilLJHqQI8=";
+          "x86_64-linux" = "sha256-hpLCn35lUTFADEwvvduNAb5BgMiYw7MZ5QWHU8hL+7o=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -65,6 +65,39 @@
             cp -r $src/. .
             chmod -R u+w .
 
+            ${nodejs}/bin/node <<'NODE'
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+
+            function exactSpec(spec) {
+              if (typeof spec !== "string") return spec;
+              if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+              const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+              return bare ? bare[1] : spec;
+            }
+
+            function isExactInstallSpec(spec) {
+              return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+            }
+
+            const unresolved = [];
+            for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+              for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                const next = exactSpec(spec);
+                pkg[field][name] = next;
+                if (typeof next === "string" && !isExactInstallSpec(next)) {
+                  unresolved.push(field + "." + name + "=" + next);
+                }
+              }
+            }
+
+            if (unresolved.length > 0) {
+              throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+            }
+
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+NODE
             npm install --omit=dev --ignore-scripts
 
             runHook postBuild

@@ -24,7 +24,7 @@
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-yscEn5rh+2cAJqyjyk6zXP1RejgaOEwvfz8rpYRJylE=";
+          "x86_64-linux" = "sha256-ol8/5uydKbfUopS4SGlDPXzy3vvWKxGS2i8cvdugTww=";
         };
 
         # Fixed-output derivation that runs pnpm install with network access
@@ -54,12 +54,35 @@
             cd package
 
             # Remove devDependencies to avoid pnpm resolving file:../test-utils references
-            ${nodejs}/bin/node -e "
+            ${nodejs}/bin/node <<'NODE'
               const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
               delete p.devDependencies;
               delete p.packageManager;
+              function exactSpec(spec) {
+                if (typeof spec !== "string") return spec;
+                if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+                const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+                return bare ? bare[1] : spec;
+              }
+              function isExactInstallSpec(spec) {
+                return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                  || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+              }
+              const unresolved = [];
+              for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+                for (const [name, spec] of Object.entries(p[field] || {})) {
+                  const next = exactSpec(spec);
+                  p[field][name] = next;
+                  if (typeof next === "string" && !isExactInstallSpec(next)) {
+                    unresolved.push(field + "." + name + "=" + next);
+                  }
+                }
+              }
+              if (unresolved.length > 0) {
+                throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+              }
               require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));
-            "
+NODE
 
             # Use pnpm with --shamefully-hoist for flat node_modules layout
             # (required for ESM module resolution compatibility)

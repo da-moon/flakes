@@ -24,7 +24,7 @@
         # so the fixed-output hash from "npm install" is not portable across systems.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-zgpLCn2TxcIcgf2LkYm9Xnw/q8KW1YpsHT1nKOhUXXA=";
+          "x86_64-linux" = "sha256-qKYrQXVXlIWqs1NUUqX/1vwMU+crsO8aeKKhBQnQCjc=";
         };
 
         # Fixed-output derivation to fetch npm package with all dependencies
@@ -55,6 +55,54 @@
 
             tar -xzf $src
             cd package
+            ${nodejs}/bin/node <<'NODE'
+            const fs = require("fs");
+            const childProcess = require("child_process");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+
+            function exactFromNpm(name, spec) {
+              if (!/^[~^]/.test(spec)) return null;
+              const raw = childProcess.execFileSync(
+                "npm",
+                ["view", name + "@" + spec, "version", "--json"],
+                { encoding: "utf8" }
+              ).trim();
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) return parsed[parsed.length - 1];
+              return parsed;
+            }
+
+            function exactSpec(name, spec) {
+              if (typeof spec !== "string") return spec;
+              if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+              const resolved = exactFromNpm(name, spec);
+              if (resolved) return resolved;
+              const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+              return bare ? bare[1] : spec;
+            }
+
+            function isExactInstallSpec(spec) {
+              return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+            }
+
+            const unresolved = [];
+            for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+              for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                const next = exactSpec(name, spec);
+                pkg[field][name] = next;
+                if (typeof next === "string" && !isExactInstallSpec(next)) {
+                  unresolved.push(field + "." + name + "=" + next);
+                }
+              }
+            }
+
+            if (unresolved.length > 0) {
+              throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+            }
+
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+NODE
             npm install --production --ignore-scripts
 
             runHook postBuild

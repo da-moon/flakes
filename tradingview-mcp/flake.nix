@@ -26,7 +26,7 @@
 
         tradingview-mcp = pkgs.buildNpmPackage rec {
           pname = "tradingview-mcp";
-          version = "1.0.0-unstable-2026-05-11";
+          version = "1.0.0-unstable-2026-05-20";
           rev = "4795784a19dd64ff4e2649d2499a536b01bd2d68";
 
           src = pkgs.fetchFromGitHub {
@@ -38,6 +38,53 @@
 
           npmDepsHash = "sha256-7yfQf47RpHUa3zg5fwrFBtek6EVR2TeLKs1oN4eD2W0=";
           dontNpmBuild = true;
+
+          postPatch = ''
+            ${nodejs}/bin/node <<'NODE'
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+
+            function exactFromPackageLock(name) {
+              if (!fs.existsSync("package-lock.json")) return null;
+              const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+              const lockedPackage = lock.packages && lock.packages["node_modules/" + name];
+              if (lockedPackage && lockedPackage.version) return lockedPackage.version;
+              const lockedDependency = lock.dependencies && lock.dependencies[name];
+              return lockedDependency && lockedDependency.version ? lockedDependency.version : null;
+            }
+
+            function exactSpec(name, spec) {
+              if (typeof spec !== "string") return spec;
+              if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+              const locked = exactFromPackageLock(name);
+              if (locked) return locked;
+              const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+              return bare ? bare[1] : spec;
+            }
+
+            function isExactInstallSpec(spec) {
+              return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+            }
+
+            const unresolved = [];
+            for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+              for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                const next = exactSpec(name, spec);
+                pkg[field][name] = next;
+                if (typeof next === "string" && !isExactInstallSpec(next)) {
+                  unresolved.push(field + "." + name + "=" + next);
+                }
+              }
+            }
+
+            if (unresolved.length > 0) {
+              throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+            }
+
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+NODE
+          '';
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
 
