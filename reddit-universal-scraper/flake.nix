@@ -39,14 +39,14 @@
 
         reddit-universal-scraper = pkgs.stdenv.mkDerivation rec {
           pname = "reddit-universal-scraper";
-          version = "unstable-2026-05-08";
-          rev = "f79659148ddf3fce3e8b6a1d8100d27960b1b79a";
+          version = "unstable-2026-05-19";
+          rev = "c416fef6aae0b4ed889edcf5ce77c6407a1662a4";
 
           src = pkgs.fetchFromGitHub {
             owner = "ksanjeev284";
             repo = "reddit-universal-scraper";
             inherit rev;
-            hash = "sha256-sDc7KEdT1+6PER6oLy8HaIS65FU5vLI1YRaB529kez0=";
+            hash = "sha256-op7RHKXccNJ6dCsE7NccMbVELRozAPJUo/Y+7blLACg=";
           };
 
           nativeBuildInputs = [ pkgs.makeWrapper ];

@@ -20,7 +20,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.11.1";
+        version = "0.12.2";
 
         honeclaw = pkgs.stdenv.mkDerivation rec {
           pname = "honeclaw";
@@ -28,7 +28,7 @@
 
           src = pkgs.fetchurl {
             url = "https://github.com/B-M-Capital-Research/honeclaw/releases/download/v${version}/honeclaw-linux-x86_64.tar.gz";
-            hash = "sha256-SvzYBvhjPg1jECN8rOKcR/GPW7LvnHxVYmw3T4qBvxg=";
+            hash = "sha256-ecgSsU/QmUjCd6uAOhZNuRfGvDii6F+qz2U02dudEB8=";
           };
 
           sourceRoot = "honeclaw-v${version}-x86_64-unknown-linux-gnu";
@@ -62,7 +62,7 @@
           '';
 
           meta = with lib; {
-            description = "AI workspace orchestration CLI";
+            description = "HoneClaw (Hone-Financial) is dedicated to being a professional investment assistant that truly understands you.";
             homepage = "https://github.com/B-M-Capital-Research/honeclaw";
             mainProgram = "hone-cli";
             platforms = linuxSystems;
