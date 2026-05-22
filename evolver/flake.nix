@@ -25,14 +25,14 @@
         lib = pkgs.lib;
         nodejs = pkgs.nodejs_22;
         pname = "evolver";
-        version = "1.84.1";
+        version = "1.85.0";
 
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/@evomap/evolver/-/evolver-${version}.tgz";
-            hash = "sha256-GH0aV8yjqd5Tgs1VfNp4Sy4sSwyLh6LxtrVuHolVjiU=";
+            hash = "sha256-4Dzyi+jyFI4/gXyaa88z81qt268uqS3bpMd4xed1L2M=";
           };
 
           nativeBuildInputs = [
@@ -45,7 +45,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-BRwcu3ds5gARcgFsfHRnNcZTjW+BMaWtdfyX2Fad0Kk=";
+          outputHash = "sha256-CTB0HBwP8saOSNLfjjCd4jNUUGXY6J2ODVftre4uunA=";
 
           buildPhase = ''
             runHook preBuild
