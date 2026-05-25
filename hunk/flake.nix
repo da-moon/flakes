@@ -23,18 +23,18 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.13.1";
+        version = "0.13.2";
 
         releaseBySystem = {
           "x86_64-linux" = {
             asset = "hunkdiff-linux-x64.tar.gz";
             sourceRoot = "hunkdiff-linux-x64";
-            hash = "sha256-mwtJyWtsbqejH7kMExEyORPLgcAfeA8Ub9oezrFCp9A=";
+            hash = "sha256-PckV92RkBWRd0uk3HKa5ZKUYT+4m9sSgfHJ0KOVEY5I=";
           };
           "aarch64-linux" = {
             asset = "hunkdiff-linux-arm64.tar.gz";
             sourceRoot = "hunkdiff-linux-arm64";
-            hash = "sha256-KWEWZsWz8N3qeFkGKqCt6xceVxMEPUzqjGOxqFbzUl8=";
+            hash = "sha256-myi4qBwH0YMozqXTU3+diljFTjShDhveILcAsyPYpFI=";
           };
         };
 
