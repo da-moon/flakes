@@ -23,16 +23,16 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "1.23.0";
+        version = "1.24.0";
 
         releaseBySystem = {
           "x86_64-linux" = {
             asset = "leaf-linux-x86_64";
-            hash = "sha256-PZKxg617tnlRBTRNeAm4qSl+znkQb5/9ON49LkWQls0=";
+            hash = "sha256-135G24fwZoecxXay+1POUn0izNFa6GkwVEfqFepJiFs=";
           };
           "aarch64-linux" = {
             asset = "leaf-linux-arm64";
-            hash = "sha256-11axwJYaLRCXiTTPr7thEVJxrZ4w5zCICwjrNGdXkjs=";
+            hash = "sha256-24UrTSQLAayJF6oOLBouWFnoDloarvdAzUtwOSddK7c=";
           };
         };
 
