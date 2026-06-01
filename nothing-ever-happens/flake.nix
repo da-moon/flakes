@@ -465,7 +465,10 @@
           nothingEverHappens = pkgs.stdenv.mkDerivation {
             inherit pname version src;
 
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            nativeBuildInputs = [
+              pkgs.makeWrapper
+              pkgs.patch
+            ];
             dontBuild = true;
             dontConfigure = true;
 
@@ -475,6 +478,7 @@
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
               cp -r $src/. $out/lib/${pname}/
+              chmod -R u+w $out/lib/${pname}
 
               substituteInPlace $out/lib/${pname}/bot/exchange/paper.py \
                 --replace-fail $'import time' $'import os\nimport time' \
@@ -488,6 +492,8 @@
 
               substituteInPlace $out/lib/${pname}/bot/strategy/nothing_happens.py \
                 --replace-fail $'    def _position_target_reached(self) -> bool:\n        new_entry_capacity = self._remaining_new_entry_capacity()\n        if new_entry_capacity is not None and new_entry_capacity <= 0:\n            return True\n        target = self._current_target_open_positions()\n        return target is not None and (len(self._positions_by_slug) + len(self._recovery_blocked_slugs)) >= target' $'    def _position_target_reached(self) -> bool:\n        if not self._uses_manual_target_override() and self.cfg.max_new_positions >= 0:\n            remaining_new_entries = (\n                self.cfg.max_new_positions\n                - self._opened_position_count\n                - len(self._recovery_blocked_slugs)\n            )\n            if remaining_new_entries <= 0:\n                return True\n        target = self._current_target_open_positions()\n        return target is not None and (len(self._positions_by_slug) + len(self._recovery_blocked_slugs)) >= target'
+
+              patch -d $out/lib/${pname} -p1 < ${./patches/paper-resolution.patch}
 
               cat > $out/bin/nothing-ever-happens <<'EOF'
               #!/usr/bin/env bash
