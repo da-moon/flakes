@@ -26,7 +26,7 @@
         # Use Node 22 on Linux so runtime falls back to built-in node:sqlite
         # instead of needing the optional better-sqlite3 native addon.
         pname = "context-mode";
-        version = "1.0.155";
+        version = "1.0.161";
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ pname ];
@@ -38,7 +38,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/context-mode/-/context-mode-${version}.tgz";
-            hash = "sha256-IJ/Ohhh8zCqKM88BUIXZgSBM8PTyOB9o//ghcolojfQ=";
+            hash = "sha256-Y+dWtwFIwqGlb74Ri5+z1D4fBkoznNxvNlik3ac8vIM=";
           };
 
           nativeBuildInputs = [
@@ -51,7 +51,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-CEixltKYh2tl9zTZebrlY0i40R1ZsITbT8cT9eswye0=";
+          outputHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
           buildPhase = ''
             runHook preBuild

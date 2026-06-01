@@ -18,14 +18,14 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_22;
         pname = "markdown-magic";
-        version = "4.8.0";
+        version = "4.9.0";
 
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-k9KdIWjHmWqDwfTJM+Zg+LFA5MBDlwrUB1XlMgtceWY=";
+            hash = "sha256-M+As1FtFEJyg+vvsqtoaiftbzzh9wXqpo1rFFgu2+Vw=";
           };
 
           nativeBuildInputs = [
@@ -36,7 +36,7 @@
           dontPatchShebangs = true;
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-ToaGW1Y3Wge+P7YNjVfhsWcrEY9UM05dYPOJ9/LOHww=";
+          outputHash = "sha256-uTW6LDe+yNZ7Z5TiPclp3SfB466cmMiybJh9TyejiMM=";
 
           buildPhase = ''
             runHook preBuild

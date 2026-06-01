@@ -20,7 +20,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.12.2";
+        version = "0.12.4";
 
         honeclaw = pkgs.stdenv.mkDerivation rec {
           pname = "honeclaw";
@@ -28,7 +28,7 @@
 
           src = pkgs.fetchurl {
             url = "https://github.com/B-M-Capital-Research/honeclaw/releases/download/v${version}/honeclaw-linux-x86_64.tar.gz";
-            hash = "sha256-ecgSsU/QmUjCd6uAOhZNuRfGvDii6F+qz2U02dudEB8=";
+            hash = "sha256-oeNA+gnQa7XYtvam0GhrJln/HhVLm8hG37sXvxfCiQs=";
           };
 
           sourceRoot = "honeclaw-v${version}-x86_64-unknown-linux-gnu";
