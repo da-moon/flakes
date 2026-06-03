@@ -11,7 +11,7 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 readonly NPM_REGISTRY_URL="https://registry.npmjs.org"
-readonly NPM_PACKAGE="gsd-pi"
+readonly NPM_PACKAGE="@opengsd/gsd-pi"
 readonly TARBALL_NAME="gsd-pi"
 readonly PACKAGE_ATTR="gsd-2"
 readonly BIN_NAME="gsd"

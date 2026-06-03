@@ -1,5 +1,5 @@
 {
-  description = "GSD 2 CLI packaged from the gsd-pi npm artifact";
+  description = "GSD Pi CLI packaged from the @opengsd/gsd-pi npm artifact";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -24,23 +24,24 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
         pname = "gsd-2";
-        npmPackage = "gsd-pi";
-        version = "3.0.0";
+        npmPackage = "@opengsd/gsd-pi";
+        npmTarballName = "gsd-pi";
+        version = "1.1.1";
         nodejs = pkgs.nodejs_22;
 
         # npm optionalDependencies include native and platform-specific engine packages,
         # so the fixed-output hash is expected to differ by Linux architecture.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-SkNPmTJe2h7+9qkJVaEEVgJZYSpGX+aXhdc+jAZ2ius=";
+          "x86_64-linux" = "sha256-xNVTxm6LX06mWWa6Js5OVpB2t3MRts6DT9Q7QYIh1dc=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
 
           src = pkgs.fetchurl {
-            url = "https://registry.npmjs.org/${npmPackage}/-/${npmPackage}-${version}.tgz";
-            hash = "sha256-kiLB8tzZXo54kj0TYfthUP317oh46or5mSUXGH6EByQ=";
+            url = "https://registry.npmjs.org/${npmPackage}/-/${npmTarballName}-${version}.tgz";
+            hash = "sha256-3QCpiA1tvFJb35GLShSmcbyY/cnGOJIgfwf3G7ucUII=";
           };
 
           nativeBuildInputs = [
@@ -89,8 +90,8 @@
             }
 
             const linuxEngines = new Set([
-              "@gsd-build/engine-linux-x64-gnu",
-              "@gsd-build/engine-linux-arm64-gnu",
+              "@opengsd/engine-linux-x64-gnu",
+              "@opengsd/engine-linux-arm64-gnu",
             ]);
             if (pkg.optionalDependencies) {
               for (const name of Object.keys(pkg.optionalDependencies)) {
@@ -98,7 +99,7 @@
                   delete pkg.optionalDependencies[name];
                   continue;
                 }
-                if (name.startsWith("@gsd-build/engine-")) {
+                if (name.startsWith("@opengsd/engine-")) {
                   if (linuxEngines.has(name)) {
                     pkg.optionalDependencies[name] = pkg.version;
                   } else {
@@ -126,8 +127,8 @@
 NODE
 
             pnpm install --prod --ignore-scripts --shamefully-hoist
-            test -d node_modules/@gsd-build/engine-linux-x64-gnu \
-              || test -d node_modules/@gsd-build/engine-linux-arm64-gnu
+            test -d node_modules/@opengsd/engine-linux-x64-gnu \
+              || test -d node_modules/@opengsd/engine-linux-arm64-gnu
 
             runHook postBuild
           '';
@@ -213,7 +214,7 @@ NODE
 
           meta = with lib; {
             description = "GSD coding agent CLI";
-            homepage = "https://github.com/gsd-build/gsd-2";
+            homepage = "https://github.com/open-gsd/gsd-pi";
             license = licenses.mit;
             mainProgram = "gsd";
             platforms = linuxSystems;
