@@ -27,44 +27,48 @@
 
         releaseBySystem = {
           "x86_64-linux" = {
-            asset = "elio-${version}-x86_64-unknown-linux-gnu.tar.gz";
-            sourceRoot = "elio-${version}-x86_64-unknown-linux-gnu";
-            hash = "sha256-VkCkYo9NeCH++mv+fWql5IotQn3SJ0c3PUsahmg+h94=";
+            target = "x86_64-unknown-linux-gnu";
+            sha256 = "sha256-VkCkYo9NeCH++mv+fWql5IotQn3SJ0c3PUsahmg+h94=";
+            needsAutoPatchelf = true;
           };
-          # aarch64-linux has no upstream release; use the x86_64 binary via qemu or leave unpopulated
+          # No upstream aarch64-linux release; macOS ARM exists but is not Linux.
           "aarch64-linux" = {
-            asset = "elio-${version}-x86_64-unknown-linux-gnu.tar.gz";
-            sourceRoot = "elio-${version}-x86_64-unknown-linux-gnu";
-            hash = "sha256-1mbn2nm0a0q88bnlvf9q9gy28a3p5h6493vc93p5il5hjr5qygll";
+            target = "aarch64-unknown-linux-gnu";
+            sha256 = "";
+            needsAutoPatchelf = true;
           };
         };
 
-        release =
+        currentRelease =
           releaseBySystem.${system}
-            or (throw "Unsupported system for elio: ${system}");
+            or (throw "Unsupported system for elio flake: ${system}");
 
         elio = pkgs.stdenv.mkDerivation rec {
           pname = "elio";
           inherit version;
 
           src = pkgs.fetchurl {
-            url = "https://github.com/elio-fm/elio/releases/download/v${version}/${release.asset}";
-            inherit (release) hash;
+            url = "https://github.com/elio-fm/elio/releases/download/v${version}/elio-${version}-${currentRelease.target}.tar.gz";
+            hash = currentRelease.sha256;
           };
 
-          sourceRoot = release.sourceRoot;
+          sourceRoot = "elio-${version}-${currentRelease.target}";
           dontBuild = true;
           dontConfigure = true;
           dontStrip = true;
 
-          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-          buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+          nativeBuildInputs = lib.optionals currentRelease.needsAutoPatchelf [
+            pkgs.autoPatchelfHook
+          ];
+
+          buildInputs = lib.optionals currentRelease.needsAutoPatchelf [
+            pkgs.stdenv.cc.cc.lib
+          ];
 
           installPhase = ''
             runHook preInstall
             install -m755 -D elio $out/bin/elio
 
-            # Install desktop entry and icons
             mkdir -p $out/share/applications
             install -m644 packaging/linux/elio.desktop $out/share/applications/elio.desktop
 
@@ -80,8 +84,9 @@
           meta = with lib; {
             description = "Elio - Terminal music player";
             homepage = "https://github.com/elio-fm/elio";
+            license = licenses.mit;
             mainProgram = "elio";
-            platforms = linuxSystems;
+            platforms = [ "x86_64-linux" ];
             maintainers = [ ];
           };
         };
