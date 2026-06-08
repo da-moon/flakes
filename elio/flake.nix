@@ -8,6 +8,7 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       flake-utils,
       ...
@@ -29,12 +30,6 @@
           "x86_64-linux" = {
             target = "x86_64-unknown-linux-gnu";
             sha256 = "sha256-VkCkYo9NeCH++mv+fWql5IotQn3SJ0c3PUsahmg+h94=";
-            needsAutoPatchelf = true;
-          };
-          # No upstream aarch64-linux release; macOS ARM exists but is not Linux.
-          "aarch64-linux" = {
-            target = "aarch64-unknown-linux-gnu";
-            sha256 = "";
             needsAutoPatchelf = true;
           };
         };
@@ -108,5 +103,8 @@
           };
         };
       }
-    );
+    )
+    // {
+      homeManagerModules.default = import ./home-manager-module.nix;
+    };
 }
