@@ -26,14 +26,14 @@
 
         polyterm = python.pkgs.buildPythonApplication rec {
           pname = "polyterm";
-          version = "0.9.1";
+          version = "0.10.0";
           format = "setuptools";
 
           src = pkgs.fetchFromGitHub {
             owner = "NYTEMODEONLY";
             repo = "polyterm";
             rev = "v${version}";
-            hash = "sha256-wT/+6myT/AuFadktbjU+8AMkaQdy5Yc8fW+AgQICbMk=";
+            hash = "sha256-43R126PynqesJzzTfrqy15RAgu/T82Pjn6UqiCwq0e4=";
           };
 
           propagatedBuildInputs = with python.pkgs; [

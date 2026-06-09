@@ -26,14 +26,14 @@
         pname = "gsd-2";
         npmPackage = "@opengsd/gsd-pi";
         npmTarballName = "gsd-pi";
-        version = "1.1.1";
+        version = "1.2.0";
         nodejs = pkgs.nodejs_22;
 
         # npm optionalDependencies include native and platform-specific engine packages,
         # so the fixed-output hash is expected to differ by Linux architecture.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-xNVTxm6LX06mWWa6Js5OVpB2t3MRts6DT9Q7QYIh1dc=";
+          "x86_64-linux" = "sha256-JtcCbewBjnaSC061Li2WUwXbbFS7tiNNh20lFwJAwYM=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -41,7 +41,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${npmPackage}/-/${npmTarballName}-${version}.tgz";
-            hash = "sha256-3QCpiA1tvFJb35GLShSmcbyY/cnGOJIgfwf3G7ucUII=";
+            hash = "sha256-vIURB5RZbslnG8ULGb9AlcryILMejrgWYqQjEdIlSpk=";
           };
 
           nativeBuildInputs = [
@@ -196,6 +196,7 @@ NODE
               --set NODE_ENV "production" \
               --set npm_config_ignore_scripts "true" \
               --set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD "1" \
+              --set-default GSD_HOME "$HOME/.gsd" \
               --prefix PATH : ${lib.makeBinPath [
                 pkgs.bash
                 pkgs.coreutils
