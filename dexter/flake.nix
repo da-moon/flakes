@@ -23,19 +23,19 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "dexter";
-        version = "2026.5.29";
-        rev = "v2026.5.29";
+        version = "2026.6.3";
+        rev = "v2026.6.3";
 
         src = pkgs.fetchFromGitHub {
           owner = "virattt";
           repo = "dexter";
           inherit rev;
-          hash = "sha256-JSKh7M7zIs91F/4bPO2Lmb7LDM+dwfeLMG2RPOxVyg8=";
+          hash = "sha256-k0X4wSa1NcncVCWyYXlCpXnvVtMW2NY4YD7uhK0tZ98=";
         };
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          "x86_64-linux" = "sha256-QiMguGF5kzcpfytCrjzTqB9k8qVjFLlXx3phMhY6o0U=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -68,6 +68,8 @@
             ${pkgs.nodejs_20}/bin/node <<'NODE'
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+
+            delete pkg.devDependencies;
 
             function exactSpec(spec) {
               if (typeof spec !== "string") return spec;
