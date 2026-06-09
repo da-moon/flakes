@@ -1097,10 +1097,8 @@ PY
             hermesEnv = pythonSet.mkVirtualEnv "${pname}-virtual-env-${version}" {
               hermes-agent = [
                 "cli"
-                "cron"
                 "mcp"
                 "messaging"
-                "pty"
                 "slack"
               ];
             };
