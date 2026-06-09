@@ -104,6 +104,10 @@ update_cargo_hash() {
   sed -i.bak -E "s|^([[:space:]]*cargoHash = \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
 }
 
+has_cargo_lock() {
+  grep -q 'cargoLock' "$flake_file"
+}
+
 cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
@@ -306,7 +310,7 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 Options:
   --version VERSION   Update to a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute src sha256 and cargoHash for current version
+  --rehash            Recompute src sha256 and cargoHash (or cargoLock) for current version
   --no-build          Skip build verification
   --system SYSTEM     Optional nix build system (for hash/update/verify)
   --update-lock       Run 'nix flake update' after updating
@@ -430,11 +434,15 @@ main() {
     exit 1
   fi
 
-  if ! compute_and_update_cargo_hash; then
-    log_error "Failed to compute cargoHash; restoring previous flake.nix"
-    restore_repo_state
-    discard_repo_state_backup
-    exit 1
+  if ! has_cargo_lock; then
+    if ! compute_and_update_cargo_hash; then
+      log_error "Failed to compute cargoHash; restoring previous flake.nix"
+      restore_repo_state
+      discard_repo_state_backup
+      exit 1
+    fi
+  else
+    log_info "Using cargoLock; skipping cargoHash computation"
   fi
 
   if [ "$no_build" != true ]; then
