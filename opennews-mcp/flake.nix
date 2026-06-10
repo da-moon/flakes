@@ -48,6 +48,15 @@
         opennewsMcp = pkgs.stdenv.mkDerivation {
           inherit pname version src;
 
+          meta = with lib; {
+            description = "MCP server for crypto news via 6551 REST and WebSocket APIs";
+            homepage = "https://github.com/6551Team/opennews-mcp";
+            license = licenses.mit;
+            mainProgram = "opennews-mcp";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           nativeBuildInputs = [ pkgs.makeWrapper ];
           dontBuild = true;
           dontConfigure = true;
@@ -99,14 +108,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "MCP server for crypto news via 6551 REST and WebSocket APIs";
-            homepage = "https://github.com/6551Team/opennews-mcp";
-            license = licenses.mit;
-            mainProgram = "opennews-mcp";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {
