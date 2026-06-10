@@ -465,6 +465,15 @@
           nothingEverHappens = pkgs.stdenv.mkDerivation {
             inherit pname version src;
 
+            meta = with lib; {
+              description = "Async Polymarket bot that buys NO on standalone yes/no markets";
+              homepage = "https://github.com/sterlingcrispin/nothing-ever-happens";
+              license = licenses.cc0;
+              mainProgram = "nothing-ever-happens";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
             nativeBuildInputs = [
               pkgs.makeWrapper
               pkgs.patch
@@ -554,14 +563,6 @@
               runHook postInstall
             '';
 
-            meta = with lib; {
-              description = "Async Polymarket bot that buys NO on standalone yes/no markets";
-              homepage = "https://github.com/sterlingcrispin/nothing-ever-happens";
-              license = licenses.cc0;
-              mainProgram = "nothing-ever-happens";
-              platforms = linuxSystems;
-              maintainers = [ ];
-            };
           };
         in
         {
