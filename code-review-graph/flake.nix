@@ -94,6 +94,16 @@
 
         codeReviewGraph = py.buildPythonApplication rec {
           inherit pname version;
+
+          meta = with lib; {
+            description = "Persistent incremental knowledge graph for token-efficient code reviews";
+            homepage = "https://github.com/tirth8205/code-review-graph";
+            license = licenses.mit;
+            mainProgram = "code-review-graph";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           format = "wheel";
           # The published wheel metadata lags behind the current upstream
           # pyproject constraints, so rely on the explicit dependency set below.
@@ -116,14 +126,6 @@
           doCheck = false;
           pythonImportsCheck = [ "code_review_graph" ];
 
-          meta = with lib; {
-            description = "Persistent incremental knowledge graph for token-efficient code reviews";
-            homepage = "https://github.com/tirth8205/code-review-graph";
-            license = licenses.mit;
-            mainProgram = "code-review-graph";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {
