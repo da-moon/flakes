@@ -23,7 +23,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "2.1.170";
+        version = "2.1.173";
 
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
@@ -32,8 +32,8 @@
 
         binarySha256BySystem = {
           # update-version.sh managed hashes.
-          x86_64-linux = "sha256-hJ4AcnegRCqydXDT49bUN4dQeUZZDo3RlH5aObcIH54=";
-          aarch64-linux = "sha256-G7nQMkQKdVMvfdTK+8aH8iCq8Wxj66F+GS377C8EvSU=";
+          x86_64-linux = "sha256-z36hlOF0iTL6MPGA6qn1b5pwOdzjcDApiMKSZimyohk=";
+          aarch64-linux = "sha256-zFk9/CY/cH7SIuM0/1wSqa3cJKvCBnaJYvnQY7L9esk=";
         };
 
         releasePlatform = releasePlatformBySystem.${system};
@@ -42,6 +42,24 @@
         claude-code = pkgs.stdenv.mkDerivation rec {
           pname = "claude-code";
           inherit version;
+
+          meta = with lib; {
+            description = "Claude Code - AI coding assistant CLI for terminal";
+            longDescription = ''
+              Claude Code is an agentic coding tool that lives in your terminal,
+              understands your codebase, and helps you code faster by executing
+              routine tasks, explaining complex code, and handling git workflows
+              through natural language commands.
+
+              This package uses Anthropic's native Linux release binary and keeps
+              updates pinned through the flake rather than using the built-in
+              updater automatically.
+            '';
+            homepage = "https://code.claude.com/docs";
+            mainProgram = "claude";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
 
           src = pkgs.fetchurl {
             url = "https://downloads.claude.ai/claude-code-releases/${version}/${releasePlatform}/claude";
@@ -88,23 +106,6 @@
 
           dontStrip = true;
 
-          meta = with lib; {
-            description = "Claude Code - AI coding assistant CLI for terminal";
-            longDescription = ''
-              Claude Code is an agentic coding tool that lives in your terminal,
-              understands your codebase, and helps you code faster by executing
-              routine tasks, explaining complex code, and handling git workflows
-              through natural language commands.
-
-              This package uses Anthropic's native Linux release binary and keeps
-              updates pinned through the flake rather than using the built-in
-              updater automatically.
-            '';
-            homepage = "https://code.claude.com/docs";
-            mainProgram = "claude";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
 
       in
