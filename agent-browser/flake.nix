@@ -18,13 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "agent-browser";
-        version = "0.27.1";
+        version = "0.27.2";
 
         outputHashBySystem = {
           "aarch64-darwin" = pkgs.lib.fakeHash;
           "aarch64-linux" = pkgs.lib.fakeHash;
           "x86_64-darwin" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-vHKiwXyW6huwVpG5fZV2MTYR/rQYSOp1qsdxaTWNZog=";
+          "x86_64-linux" = "sha256-PSg8kviyiUL+YBeacPmAOYlB+TJEN70jjBZwAWZo56E=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -32,7 +32,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-ZXA5XiwYEqcO6i62WXA5+zQF9v2P1JEif3VBXxnh7bA=";
+            hash = "sha256-njfJMdg7CQQsiOgUsWsKD8xQ+3WZNFyr7QhGhTdNLYY=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
@@ -97,6 +97,15 @@
 
         agent-browser = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Headless browser automation CLI for AI agents";
+            homepage = "https://github.com/vercel-labs/agent-browser";
+            license = licenses.asl20;
+            mainProgram = "agent-browser";
+            platforms = platforms.unix;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [
@@ -144,13 +153,6 @@
             runHook postInstallCheck
           '';
 
-          meta = with pkgs.lib; {
-            description = "Headless browser automation CLI for AI agents";
-            homepage = "https://github.com/vercel-labs/agent-browser";
-            license = licenses.asl20;
-            mainProgram = "agent-browser";
-            platforms = platforms.unix;
-          };
         };
       in
       {
