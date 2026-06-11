@@ -25,13 +25,13 @@
         lib = pkgs.lib;
         py = pkgs.python3Packages;
         pname = "code-review-graph";
-        version = "2.3.5";
-        codeReviewGraphWheelUrl = "https://files.pythonhosted.org/packages/fd/41/e7db686adc941f71f6e43a0310a37e67fbfa2542946923ec672f5e287c2d/code_review_graph-2.3.5-py3-none-any.whl";
-        codeReviewGraphWheelHash = "sha256-NXqLgtNUi4KbB9GZGqBWGCfTO9gOiNPevyLuNfiK9M0=";
+        version = "2.3.6";
+        codeReviewGraphWheelUrl = "https://files.pythonhosted.org/packages/66/c7/01cc7fa8cc574f26118ce3050d8e01d4303d673bf439b1d8d3e009287605/code_review_graph-2.3.6-py3-none-any.whl";
+        codeReviewGraphWheelHash = "sha256-AByGBNDiKhuKphokgkqyXvLbgdXvjTdwo94PYnBIRcc=";
 
         pyKeyValueAio = py.buildPythonPackage rec {
           pname = "py-key-value-aio";
-          version = "2.3.5";
+          version = "2.3.6";
           format = "wheel";
 
           src = pkgs.fetchurl {
@@ -54,7 +54,7 @@
 
         fastmcp = py.buildPythonPackage rec {
           pname = "fastmcp";
-          version = "2.3.5";
+          version = "2.3.6";
           format = "wheel";
 
           src = pkgs.fetchurl {
