@@ -101,6 +101,14 @@ NODE
 
         gemini-cli = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Gemini CLI - AI agent that brings the power of Gemini directly into your terminal";
+            homepage = "https://github.com/google-gemini/gemini-cli";
+            platforms = platforms.unix;
+            maintainers = [ ];
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -125,12 +133,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Gemini CLI - AI agent that brings the power of Gemini directly into your terminal";
-            homepage = "https://github.com/google-gemini/gemini-cli";
-            platforms = platforms.unix;
-            maintainers = [ ];
-          };
         };
 
       in

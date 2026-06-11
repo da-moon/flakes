@@ -21,6 +21,18 @@
           pname = "fzf-tab-completion";
           version = "unstable-2026-04-05";
 
+          meta = with pkgs.lib; {
+            description = "Tab completion using fzf for bash, zsh and readline applications";
+            longDescription = ''
+              fzf-tab-completion provides fuzzy tab completion for bash and zsh shells,
+              as well as for readline-based applications like python REPL, php -a, etc.
+              It integrates seamlessly with existing completion systems.
+            '';
+            homepage = "https://github.com/lincheney/fzf-tab-completion";
+            license = licenses.gpl3;
+            platforms = platforms.unix;
+          };
+
           src = pkgs.fetchFromGitHub {
             owner = "lincheney";
             repo = "fzf-tab-completion";
@@ -51,17 +63,6 @@
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Tab completion using fzf for bash, zsh and readline applications";
-            longDescription = ''
-              fzf-tab-completion provides fuzzy tab completion for bash and zsh shells,
-              as well as for readline-based applications like python REPL, php -a, etc.
-              It integrates seamlessly with existing completion systems.
-            '';
-            homepage = "https://github.com/lincheney/fzf-tab-completion";
-            license = licenses.gpl3;
-            platforms = platforms.unix;
-          };
         };
 
       in

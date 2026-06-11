@@ -92,6 +92,14 @@ NODE
 
         csso-cli = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Command-line CSS optimizer (CSSO) wrapper from npm";
+            homepage = "https://github.com/css/csso-cli";
+            license = licenses.mit;
+            platforms = platforms.unix;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -110,12 +118,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Command-line CSS optimizer (CSSO) wrapper from npm";
-            homepage = "https://github.com/css/csso-cli";
-            license = licenses.mit;
-            platforms = platforms.unix;
-          };
         };
       in
       {

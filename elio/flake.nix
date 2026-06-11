@@ -84,6 +84,15 @@
           pname = "elio";
           inherit version;
 
+          meta = with lib; {
+            description = "Elio - Terminal music player";
+            homepage = "https://github.com/elio-fm/elio";
+            license = licenses.mit;
+            mainProgram = "elio";
+            platforms = [ "x86_64-linux" ];
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/elio-fm/elio/releases/download/v${version}/elio-${version}-${currentRelease.target}.tar.gz";
             hash = currentRelease.sha256;
@@ -118,14 +127,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Elio - Terminal music player";
-            homepage = "https://github.com/elio-fm/elio";
-            license = licenses.mit;
-            mainProgram = "elio";
-            platforms = [ "x86_64-linux" ];
-            maintainers = [ ];
-          };
         };
       in
       {

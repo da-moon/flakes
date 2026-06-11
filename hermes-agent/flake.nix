@@ -1111,6 +1111,16 @@ PY
           in
           stdenvNoCC.mkDerivation {
             inherit pname version;
+
+            meta = with pkgs.lib; {
+              description = "Hermes Agent - self-improving AI agent";
+              homepage = "https://github.com/NousResearch/hermes-agent";
+              license = licenses.mit;
+              mainProgram = "hermes";
+              platforms = [ "aarch64-linux" "x86_64-linux" ];
+              sourceProvenance = with sourceTypes; [ fromSource ];
+            };
+
             dontUnpack = true;
 
             installPhase = ''
@@ -1411,14 +1421,6 @@ PY
               runHook postInstallCheck
             '';
 
-            meta = with pkgs.lib; {
-              description = "Hermes Agent - self-improving AI agent";
-              homepage = "https://github.com/NousResearch/hermes-agent";
-              license = licenses.mit;
-              mainProgram = "hermes";
-              platforms = [ "aarch64-linux" "x86_64-linux" ];
-              sourceProvenance = with sourceTypes; [ fromSource ];
-            };
           };
       in
       {

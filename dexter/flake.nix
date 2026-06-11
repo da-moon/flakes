@@ -23,19 +23,19 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "dexter";
-        version = "2026.6.3";
-        rev = "v2026.6.3";
+        version = "2026.6.9";
+        rev = "v2026.6.9";
 
         src = pkgs.fetchFromGitHub {
           owner = "virattt";
           repo = "dexter";
           inherit rev;
-          hash = "sha256-k0X4wSa1NcncVCWyYXlCpXnvVtMW2NY4YD7uhK0tZ98=";
+          hash = "sha256-TtwDqTRtB+vX+UkgW8FIDQLwSz10mIzaHX75Lqx7ETM=";
         };
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-QiMguGF5kzcpfytCrjzTqB9k8qVjFLlXx3phMhY6o0U=";
+          "x86_64-linux" = "sha256-rY18AoNRxS8ju6UPzBCf4nW87HN89nQMiuUN1YebYZ0=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -117,6 +117,15 @@ NODE
 
         dexter = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Autonomous financial research agent";
+            homepage = "https://github.com/virattt/dexter";
+            license = licenses.mit;
+            mainProgram = "dexter";
+            platforms = linuxSystems;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = with pkgs; [
@@ -166,13 +175,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Autonomous financial research agent";
-            homepage = "https://github.com/virattt/dexter";
-            license = licenses.mit;
-            mainProgram = "dexter";
-            platforms = linuxSystems;
-          };
         };
       in
       {

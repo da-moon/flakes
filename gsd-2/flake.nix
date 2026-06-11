@@ -143,6 +143,16 @@ NODE
 
         gsd-2 = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with lib; {
+            description = "GSD coding agent CLI";
+            homepage = "https://github.com/open-gsd/gsd-pi";
+            license = licenses.mit;
+            mainProgram = "gsd";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -213,14 +223,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "GSD coding agent CLI";
-            homepage = "https://github.com/open-gsd/gsd-pi";
-            license = licenses.mit;
-            mainProgram = "gsd";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

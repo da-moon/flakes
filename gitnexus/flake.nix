@@ -147,6 +147,14 @@
 
         gitnexus = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Graph-powered code intelligence for AI agents";
+            homepage = "https://github.com/abhigyanpatwari/GitNexus";
+            platforms = platforms.unix;
+            mainProgram = "gitnexus";
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [
@@ -213,12 +221,6 @@
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Graph-powered code intelligence for AI agents";
-            homepage = "https://github.com/abhigyanpatwari/GitNexus";
-            platforms = platforms.unix;
-            mainProgram = "gitnexus";
-          };
         };
       in
       {

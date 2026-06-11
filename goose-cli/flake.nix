@@ -36,6 +36,14 @@
           pname = "goose-cli";
           version = "1.37.0";
 
+          meta = with pkgs.lib; {
+            description = "Open-source AI agent for software development";
+            homepage = "https://github.com/block/goose";
+            license = licenses.asl20;
+            platforms = platforms.unix;
+            mainProgram = "goose";
+          };
+
           src = pkgs.fetchFromGitHub {
             owner = "block";
             repo = "goose";
@@ -85,13 +93,6 @@
             export RUSTY_V8_ARCHIVE="${rustyV8Archive}"
           '';
 
-          meta = with pkgs.lib; {
-            description = "Open-source AI agent for software development";
-            homepage = "https://github.com/block/goose";
-            license = licenses.asl20;
-            platforms = platforms.unix;
-            mainProgram = "goose";
-          };
         };
 
       in

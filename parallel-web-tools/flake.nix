@@ -37,6 +37,13 @@
           pname = "parallel-cli";
           inherit version;
 
+          meta = with pkgs.lib; {
+            description = "CLI for web search, content extraction, and deep research via the Parallel API";
+            homepage = "https://github.com/parallel-web/parallel-web-tools";
+            platforms = [ "aarch64-linux" "x86_64-linux" ];
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchzip {
             url = "https://github.com/parallel-web/parallel-web-tools/releases/download/v${version}/parallel-cli-${currentArch.arch}.zip";
             sha256 = currentArch.sha256;
@@ -68,12 +75,6 @@
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "CLI for web search, content extraction, and deep research via the Parallel API";
-            homepage = "https://github.com/parallel-web/parallel-web-tools";
-            platforms = [ "aarch64-linux" "x86_64-linux" ];
-            maintainers = [ ];
-          };
         };
 
       in

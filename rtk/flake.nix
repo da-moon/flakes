@@ -46,6 +46,15 @@
           pname = "rtk";
           inherit version;
 
+          meta = with lib; {
+            description = "High-performance CLI proxy that reduces LLM token consumption";
+            homepage = "https://github.com/rtk-ai/rtk";
+            license = licenses.mit;
+            mainProgram = "rtk";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/rtk-ai/rtk/releases/download/v${version}/rtk-${currentRelease.target}.tar.gz";
             hash = currentRelease.sha256;
@@ -70,14 +79,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "High-performance CLI proxy that reduces LLM token consumption";
-            homepage = "https://github.com/rtk-ai/rtk";
-            license = licenses.mit;
-            mainProgram = "rtk";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

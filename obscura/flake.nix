@@ -26,6 +26,15 @@
           pname = "obscura";
           inherit version;
 
+          meta = with lib; {
+            description = "Lightweight headless browser for web scraping and automation";
+            homepage = "https://github.com/h4ckf0r0day/obscura";
+            license = licenses.asl20;
+            mainProgram = "obscura";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/h4ckf0r0day/obscura/releases/download/v${version}/obscura-x86_64-linux.tar.gz";
             hash = "sha256-uHA2wqFiuSfrDSLKdnH5xTxbveJX3cR+OnKBQKd3KG4=";
@@ -45,14 +54,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Lightweight headless browser for web scraping and automation";
-            homepage = "https://github.com/h4ckf0r0day/obscura";
-            license = licenses.asl20;
-            mainProgram = "obscura";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

@@ -105,6 +105,14 @@
 
         firecrawl-cli = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Firecrawl CLI - scrape, crawl, and extract data from any website.";
+            homepage = "https://docs.firecrawl.dev/cli";
+            platforms = platforms.unix;
+            mainProgram = "firecrawl";
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -125,12 +133,6 @@
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Firecrawl CLI - scrape, crawl, and extract data from any website.";
-            homepage = "https://docs.firecrawl.dev/cli";
-            platforms = platforms.unix;
-            mainProgram = "firecrawl";
-          };
         };
       in
       {

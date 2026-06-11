@@ -26,7 +26,22 @@
 
         tradingview-mcp = pkgs.buildNpmPackage rec {
           pname = "tradingview-mcp";
-          version = "1.0.0-unstable-2026-06-09";
+          version = "1.0.0-unstable-2026-06-11";
+
+          meta = with pkgs.lib; {
+            description = "MCP bridge for TradingView Desktop via Chrome DevTools Protocol";
+            longDescription = ''
+              This package installs only the MCP bridge and tv CLI. It does not
+              package TradingView Desktop itself; the external TradingView
+              Desktop runtime must be installed and launched separately with a
+              Chrome DevTools Protocol port such as --remote-debugging-port=9222.
+            '';
+            homepage = "https://github.com/tradesdontlie/tradingview-mcp";
+            license = licenses.mit;
+            mainProgram = "tradingview-mcp";
+            platforms = linuxSystems;
+          };
+
           rev = "4795784a19dd64ff4e2649d2499a536b01bd2d68";
 
           src = pkgs.fetchFromGitHub {
@@ -107,19 +122,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "MCP bridge for TradingView Desktop via Chrome DevTools Protocol";
-            longDescription = ''
-              This package installs only the MCP bridge and tv CLI. It does not
-              package TradingView Desktop itself; the external TradingView
-              Desktop runtime must be installed and launched separately with a
-              Chrome DevTools Protocol port such as --remote-debugging-port=9222.
-            '';
-            homepage = "https://github.com/tradesdontlie/tradingview-mcp";
-            license = licenses.mit;
-            mainProgram = "tradingview-mcp";
-            platforms = linuxSystems;
-          };
         };
       in
       {

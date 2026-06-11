@@ -24,19 +24,19 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "career-ops";
-        version = "1.8.0";
-        rev = "career-ops-v1.8.0";
+        version = "1.9.0";
+        rev = "career-ops-v1.9.0";
 
         src = pkgs.fetchFromGitHub {
           owner = "santifer";
           repo = "career-ops";
           inherit rev;
-          hash = "sha256-a3LHn0UJUfeE80SsJWoAktYcxtvli/qIn9U9yyoaH/E=";
+          hash = "sha256-uzV6BUIJ3p91CaoPtQhWunMkrCv2pEt2gRmj83QG4Ck=";
         };
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-hpLCn35lUTFADEwvvduNAb5BgMiYw7MZ5QWHU8hL+7o=";
+          "x86_64-linux" = "sha256-5KLSlXoM68z3WkRUk5hoimy81z1E70zADzmC9ETliFo=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -115,6 +115,15 @@ NODE
 
         career-ops = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "AI-powered job search pipeline built on Claude Code";
+            homepage = "https://github.com/santifer/career-ops";
+            license = licenses.mit;
+            mainProgram = "career-ops";
+            platforms = linuxSystems;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -195,13 +204,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "AI-powered job search pipeline built on Claude Code";
-            homepage = "https://github.com/santifer/career-ops";
-            license = licenses.mit;
-            mainProgram = "career-ops";
-            platforms = linuxSystems;
-          };
         };
       in
       {

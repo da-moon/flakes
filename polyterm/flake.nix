@@ -27,6 +27,15 @@
         polyterm = python.pkgs.buildPythonApplication rec {
           pname = "polyterm";
           version = "0.10.0";
+
+          meta = with pkgs.lib; {
+            description = "Terminal-based monitoring app for Polymarket shifts";
+            homepage = "https://github.com/NYTEMODEONLY/polyterm";
+            license = licenses.mit;
+            mainProgram = "polyterm";
+            platforms = linuxSystems;
+          };
+
           format = "setuptools";
 
           src = pkgs.fetchFromGitHub {
@@ -58,13 +67,6 @@
           pythonImportsCheck = [ "polyterm" ];
           doCheck = false;
 
-          meta = with pkgs.lib; {
-            description = "Terminal-based monitoring app for Polymarket shifts";
-            homepage = "https://github.com/NYTEMODEONLY/polyterm";
-            license = licenses.mit;
-            mainProgram = "polyterm";
-            platforms = linuxSystems;
-          };
         };
       in
       {

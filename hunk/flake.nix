@@ -46,6 +46,14 @@
           pname = "hunk";
           inherit version;
 
+          meta = with lib; {
+            description = "AI-friendly diff review CLI";
+            homepage = "https://github.com/modem-dev/hunk";
+            mainProgram = "hunk";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/modem-dev/hunk/releases/download/v${version}/${release.asset}";
             inherit (release) hash;
@@ -65,13 +73,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "AI-friendly diff review CLI";
-            homepage = "https://github.com/modem-dev/hunk";
-            mainProgram = "hunk";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

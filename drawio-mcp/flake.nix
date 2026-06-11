@@ -109,6 +109,16 @@
 
         drawio-mcp = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Official draw.io MCP server for opening and editing diagrams";
+            homepage = "https://github.com/jgraph/drawio-mcp";
+            license = licenses.asl20;
+            mainProgram = "drawio-mcp";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -130,14 +140,6 @@
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Official draw.io MCP server for opening and editing diagrams";
-            homepage = "https://github.com/jgraph/drawio-mcp";
-            license = licenses.asl20;
-            mainProgram = "drawio-mcp";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

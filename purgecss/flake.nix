@@ -91,6 +91,14 @@ NODE
 
         purgecss = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Remove unused CSS via PurgeCSS CLI";
+            homepage = "https://purgecss.com/";
+            license = licenses.mit;
+            platforms = platforms.unix;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -108,12 +116,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Remove unused CSS via PurgeCSS CLI";
-            homepage = "https://purgecss.com/";
-            license = licenses.mit;
-            platforms = platforms.unix;
-          };
         };
       in
       {

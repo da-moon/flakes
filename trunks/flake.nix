@@ -31,6 +31,16 @@
 
         trunks = py.buildPythonApplication {
           inherit pname version;
+
+          meta = with lib; {
+            description = "Git repositories backed by user-owned storage";
+            homepage = "https://layerbrain.com/trunks";
+            license = licenses.mit;
+            mainProgram = "trunks";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           format = "wheel";
 
           src = pkgs.fetchurl {
@@ -53,14 +63,6 @@
           doCheck = false;
           pythonImportsCheck = [ "trunks" ];
 
-          meta = with lib; {
-            description = "Git repositories backed by user-owned storage";
-            homepage = "https://layerbrain.com/trunks";
-            license = licenses.mit;
-            mainProgram = "trunks";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

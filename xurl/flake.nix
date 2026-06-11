@@ -44,6 +44,15 @@
           pname = "xurl";
           inherit version;
 
+          meta = with lib; {
+            description = "ngrok-enhanced curl replacement for API and webhook testing";
+            homepage = "https://github.com/xdevplatform/xurl";
+            license = licenses.mit;
+            mainProgram = "xurl";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/xdevplatform/xurl/releases/download/v${version}/${currentRelease.asset}";
             hash = currentRelease.sha256;
@@ -61,14 +70,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "ngrok-enhanced curl replacement for API and webhook testing";
-            homepage = "https://github.com/xdevplatform/xurl";
-            license = licenses.mit;
-            mainProgram = "xurl";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

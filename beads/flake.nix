@@ -37,6 +37,19 @@
           pname = "beads";
           inherit version;
 
+          meta = with pkgs.lib; {
+            description = "Beads - A lightweight memory system for AI coding agents";
+            longDescription = ''
+              Beads is a graph-based issue tracker designed as a memory system
+              for AI coding agents. It enables agents to manage complex work
+              across extended sessions and multiple machines with dependency
+              tracking, ready work detection, and git-based distribution.
+            '';
+            homepage = "https://github.com/steveyegge/beads";
+            platforms = [ "aarch64-linux" "x86_64-linux" ];
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/steveyegge/beads/releases/download/v${version}/beads_${version}_linux_${currentArch.arch}.tar.gz";
             sha256 = currentArch.sha256;
@@ -65,18 +78,6 @@
           # Don't strip but do patch ELF
           dontStrip = true;
 
-          meta = with pkgs.lib; {
-            description = "Beads - A lightweight memory system for AI coding agents";
-            longDescription = ''
-              Beads is a graph-based issue tracker designed as a memory system
-              for AI coding agents. It enables agents to manage complex work
-              across extended sessions and multiple machines with dependency
-              tracking, ready work detection, and git-based distribution.
-            '';
-            homepage = "https://github.com/steveyegge/beads";
-            platforms = [ "aarch64-linux" "x86_64-linux" ];
-            maintainers = [ ];
-          };
         };
 
       in

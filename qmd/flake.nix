@@ -101,6 +101,17 @@ NODE
         qmd = pkgs.stdenv.mkDerivation {
           inherit pname version;
 
+          meta = with pkgs.lib; {
+            description = "On-device search engine for markdown notes with markdown knowledge extraction";
+            homepage = "https://github.com/tobi/qmd";
+            license = licenses.mit;
+            platforms = [
+              "aarch64-linux"
+              "x86_64-linux"
+            ];
+            mainProgram = "qmd";
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -131,16 +142,6 @@ NODE
               ]}"
           '';
 
-          meta = with pkgs.lib; {
-            description = "On-device search engine for markdown notes with markdown knowledge extraction";
-            homepage = "https://github.com/tobi/qmd";
-            license = licenses.mit;
-            platforms = [
-              "aarch64-linux"
-              "x86_64-linux"
-            ];
-            mainProgram = "qmd";
-          };
         };
 
       in

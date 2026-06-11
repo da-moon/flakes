@@ -46,6 +46,14 @@
           pname = "hoangsa";
           inherit version;
 
+          meta = with lib; {
+            description = "Hoangsa workflow and memory CLI";
+            homepage = "https://github.com/unknown-studio-dev/hoangsa";
+            mainProgram = "hoangsa-cli";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/unknown-studio-dev/hoangsa/releases/download/v${version}/${release.asset}";
             inherit (release) hash;
@@ -76,13 +84,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Hoangsa workflow and memory CLI";
-            homepage = "https://github.com/unknown-studio-dev/hoangsa";
-            mainProgram = "hoangsa-cli";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

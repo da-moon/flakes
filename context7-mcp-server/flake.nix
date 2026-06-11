@@ -120,6 +120,12 @@ NODE
         context7-mcp = pkgs.stdenv.mkDerivation {
           inherit pname version;
 
+          meta = with pkgs.lib; {
+            description = "Context7 MCP Server - up-to-date documentation for LLMs";
+            homepage = "https://github.com/upstash/context7";
+            platforms = platforms.unix;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -143,11 +149,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Context7 MCP Server - up-to-date documentation for LLMs";
-            homepage = "https://github.com/upstash/context7";
-            platforms = platforms.unix;
-          };
         };
 
       in

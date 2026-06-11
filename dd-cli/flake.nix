@@ -160,6 +160,15 @@ NODE
 
         dd-cli = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "CLI tool for working with Datadog logs";
+            homepage = "https://github.com/nimbushq/dd-cli";
+            license = licenses.asl20;
+            mainProgram = "dd-cli";
+            platforms = platforms.unix;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [
@@ -192,13 +201,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "CLI tool for working with Datadog logs";
-            homepage = "https://github.com/nimbushq/dd-cli";
-            license = licenses.asl20;
-            mainProgram = "dd-cli";
-            platforms = platforms.unix;
-          };
         };
       in
       {

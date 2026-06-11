@@ -37,6 +37,18 @@
           pname = "codex";
           inherit version;
 
+          meta = with pkgs.lib; {
+            description = "OpenAI Codex CLI - AI coding assistant for terminal";
+            longDescription = ''
+              Codex is a lightweight coding agent that runs in your terminal.
+              It can read and modify files, execute commands, search the web,
+              and help you with various coding tasks through natural language.
+            '';
+            homepage = "https://github.com/openai/codex";
+            platforms = [ "aarch64-linux" "x86_64-linux" ];
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${currentArch.arch}-unknown-linux-musl.tar.gz";
             sha256 = currentArch.sha256;
@@ -58,17 +70,6 @@
           dontStrip = true;
           dontPatchELF = true;
 
-          meta = with pkgs.lib; {
-            description = "OpenAI Codex CLI - AI coding assistant for terminal";
-            longDescription = ''
-              Codex is a lightweight coding agent that runs in your terminal.
-              It can read and modify files, execute commands, search the web,
-              and help you with various coding tasks through natural language.
-            '';
-            homepage = "https://github.com/openai/codex";
-            platforms = [ "aarch64-linux" "x86_64-linux" ];
-            maintainers = [ ];
-          };
         };
 
       in

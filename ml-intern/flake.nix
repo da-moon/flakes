@@ -60,6 +60,15 @@
 
         ml-intern = py.buildPythonApplication {
           inherit pname version;
+
+          meta = with lib; {
+            description = "ml-intern command-line agent";
+            homepage = "https://pypi.org/project/ml-intern/";
+            mainProgram = "ml-intern";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           format = "wheel";
           dontCheckRuntimeDeps = true;
 
@@ -93,13 +102,6 @@
           doCheck = false;
           pythonImportsCheck = [ "agent" ];
 
-          meta = with lib; {
-            description = "ml-intern command-line agent";
-            homepage = "https://pypi.org/project/ml-intern/";
-            mainProgram = "ml-intern";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

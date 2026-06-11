@@ -100,6 +100,16 @@
 
         evolver = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with lib; {
+            description = "Self-evolution engine for AI agents";
+            homepage = "https://github.com/EvoMap/evolver";
+            license = licenses.gpl3Plus;
+            mainProgram = "evolver";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -146,14 +156,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Self-evolution engine for AI agents";
-            homepage = "https://github.com/EvoMap/evolver";
-            license = licenses.gpl3Plus;
-            mainProgram = "evolver";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

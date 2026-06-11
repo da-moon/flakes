@@ -39,14 +39,23 @@
 
         reddit-universal-scraper = pkgs.stdenv.mkDerivation rec {
           pname = "reddit-universal-scraper";
-          version = "unstable-2026-05-25";
-          rev = "09929b19997253cf214e0de1a3232b8cf7d24ecf";
+          version = "unstable-2026-06-11";
+
+          meta = with lib; {
+            description = "Reddit scraper with dashboard, REST API, scheduled scraping, and exports";
+            homepage = "https://github.com/ksanjeev284/reddit-universal-scraper";
+            mainProgram = "reddit-universal-scraper";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
+          rev = "1a537ff3b1306c0d414a277f4720fe21e09737a4";
 
           src = pkgs.fetchFromGitHub {
             owner = "ksanjeev284";
             repo = "reddit-universal-scraper";
             inherit rev;
-            hash = "sha256-oDgHrutII8GcfCU8eaO5+e5LH5hhRaItiRLe7gPXn/k=";
+            hash = "sha256-SIL7+CIwWuMZi1uIjRydMyMsvN9NJO+GJT3eyhXA/f4=";
           };
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -75,13 +84,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Reddit scraper with dashboard, REST API, scheduled scraping, and exports";
-            homepage = "https://github.com/ksanjeev284/reddit-universal-scraper";
-            mainProgram = "reddit-universal-scraper";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

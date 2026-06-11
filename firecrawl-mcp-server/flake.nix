@@ -104,6 +104,12 @@ NODE
         firecrawl-mcp = pkgs.stdenv.mkDerivation {
           inherit pname version;
 
+          meta = with pkgs.lib; {
+            description = "Firecrawl MCP Server - web scraping and crawling";
+            homepage = "https://github.com/mendableai/firecrawl-mcp-server";
+            platforms = platforms.unix;
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -126,11 +132,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Firecrawl MCP Server - web scraping and crawling";
-            homepage = "https://github.com/mendableai/firecrawl-mcp-server";
-            platforms = platforms.unix;
-          };
         };
 
       in

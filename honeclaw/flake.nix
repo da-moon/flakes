@@ -26,6 +26,14 @@
           pname = "honeclaw";
           inherit version;
 
+          meta = with lib; {
+            description = "HoneClaw (Hone-Financial) is dedicated to being a professional investment assistant that truly understands you.";
+            homepage = "https://github.com/B-M-Capital-Research/honeclaw";
+            mainProgram = "hone-cli";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/B-M-Capital-Research/honeclaw/releases/download/v${version}/honeclaw-linux-x86_64.tar.gz";
             hash = "sha256-oeNA+gnQa7XYtvam0GhrJln/HhVLm8hG37sXvxfCiQs=";
@@ -61,13 +69,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "HoneClaw (Hone-Financial) is dedicated to being a professional investment assistant that truly understands you.";
-            homepage = "https://github.com/B-M-Capital-Research/honeclaw";
-            mainProgram = "hone-cli";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

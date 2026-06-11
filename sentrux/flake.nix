@@ -53,6 +53,14 @@
           pname = "sentrux";
           inherit version;
 
+          meta = with lib; {
+            description = "Code intelligence and repository visualization tool";
+            homepage = "https://github.com/sentrux/sentrux";
+            mainProgram = "sentrux";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/sentrux/sentrux/releases/download/v${version}/${release.binaryAsset}";
             hash = release.binaryHash;
@@ -111,13 +119,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Code intelligence and repository visualization tool";
-            homepage = "https://github.com/sentrux/sentrux";
-            mainProgram = "sentrux";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

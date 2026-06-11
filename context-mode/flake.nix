@@ -107,6 +107,16 @@
 
         contextMode = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with lib; {
+            description = "MCP plugin for context-efficient AI coding workflows";
+            homepage = "https://github.com/mksglu/context-mode";
+            license = licenses.elastic20;
+            mainProgram = "context-mode";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -166,14 +176,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "MCP plugin for context-efficient AI coding workflows";
-            homepage = "https://github.com/mksglu/context-mode";
-            license = licenses.elastic20;
-            mainProgram = "context-mode";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

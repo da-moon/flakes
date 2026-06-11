@@ -94,6 +94,16 @@ NODE
 
         markdownMagic = pkgs.stdenv.mkDerivation {
           inherit pname version;
+
+          meta = with pkgs.lib; {
+            description = "Automatically update markdown files with content from external sources";
+            homepage = "https://github.com/DavidWells/markdown-magic";
+            license = licenses.mit;
+            mainProgram = "md-magic";
+            platforms = platforms.unix;
+            maintainers = [ ];
+          };
+
           src = npmDeps;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -118,14 +128,6 @@ NODE
             runHook postInstall
           '';
 
-          meta = with pkgs.lib; {
-            description = "Automatically update markdown files with content from external sources";
-            homepage = "https://github.com/DavidWells/markdown-magic";
-            license = licenses.mit;
-            mainProgram = "md-magic";
-            platforms = platforms.unix;
-            maintainers = [ ];
-          };
         };
       in
       {

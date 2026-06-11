@@ -26,6 +26,15 @@
           pname = "askii";
           inherit version;
 
+          meta = with lib; {
+            description = "ASCII art editor for terminals";
+            homepage = "https://github.com/nytopop/askii";
+            license = licenses.mit;
+            mainProgram = "askii";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/nytopop/askii/releases/download/v${version}/askii";
             hash = "sha256-J5pIr+qUA/M0h4FPgUOX9R9ocdJtL8PVoolh+xFnJmA=";
@@ -52,14 +61,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "ASCII art editor for terminals";
-            homepage = "https://github.com/nytopop/askii";
-            license = licenses.mit;
-            mainProgram = "askii";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

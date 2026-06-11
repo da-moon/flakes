@@ -31,6 +31,16 @@
 
         superclaude = py.buildPythonApplication {
           inherit pname version;
+
+          meta = with lib; {
+            description = "AI-enhanced development framework for Claude Code";
+            homepage = "https://github.com/SuperClaude-Org/SuperClaude_Framework";
+            license = licenses.mit;
+            mainProgram = "superclaude";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           format = "wheel";
 
           src = pkgs.fetchurl {
@@ -47,14 +57,6 @@
           doCheck = false;
           pythonImportsCheck = [ "superclaude" ];
 
-          meta = with lib; {
-            description = "AI-enhanced development framework for Claude Code";
-            homepage = "https://github.com/SuperClaude-Org/SuperClaude_Framework";
-            license = licenses.mit;
-            mainProgram = "superclaude";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

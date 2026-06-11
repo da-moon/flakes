@@ -44,6 +44,14 @@
           pname = "openfang";
           inherit version;
 
+          meta = with lib; {
+            description = "OpenFang CLI";
+            homepage = "https://github.com/RightNow-AI/openfang";
+            mainProgram = "openfang";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/RightNow-AI/openfang/releases/download/v${version}/openfang-${release.target}.tar.gz";
             inherit (release) hash;
@@ -63,13 +71,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "OpenFang CLI";
-            homepage = "https://github.com/RightNow-AI/openfang";
-            mainProgram = "openfang";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

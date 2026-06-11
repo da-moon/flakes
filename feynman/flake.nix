@@ -26,6 +26,14 @@
           pname = "feynman";
           inherit version;
 
+          meta = with lib; {
+            description = "Companion AI CLI";
+            homepage = "https://github.com/getcompanion-ai/feynman";
+            mainProgram = "feynman";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/getcompanion-ai/feynman/releases/download/v${version}/feynman-${version}-linux-x64.tar.gz";
             hash = "sha256-5mt7c1Q1onE/GGLPCCXRf1A/UVtZu7Jc/PWlK4BUuQY=";
@@ -55,13 +63,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Companion AI CLI";
-            homepage = "https://github.com/getcompanion-ai/feynman";
-            mainProgram = "feynman";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {

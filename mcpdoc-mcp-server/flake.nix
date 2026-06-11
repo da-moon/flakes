@@ -23,6 +23,14 @@
         mcpdoc = pkgs.python3Packages.buildPythonApplication {
           inherit pname version;
 
+          meta = with pkgs.lib; {
+            description = "Server llms-txt documentation over MCP";
+            homepage = "https://github.com/langchain-ai/mcpdoc";
+            license = licenses.mit;
+            platforms = [ "aarch64-linux" "x86_64-linux" ];
+            mainProgram = pname;
+          };
+
           pyproject = true;
 
           nativeBuildInputs = with pkgs.python3Packages; [ hatchling ];
@@ -41,13 +49,6 @@
 
           doCheck = false;
 
-          meta = with pkgs.lib; {
-            description = "Server llms-txt documentation over MCP";
-            homepage = "https://github.com/langchain-ai/mcpdoc";
-            license = licenses.mit;
-            platforms = [ "aarch64-linux" "x86_64-linux" ];
-            mainProgram = pname;
-          };
         };
       in
       {

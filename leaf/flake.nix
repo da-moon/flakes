@@ -44,6 +44,14 @@
           pname = "leaf";
           inherit version;
 
+          meta = with lib; {
+            description = "Leaf terminal AI client";
+            homepage = "https://github.com/RivoLink/leaf";
+            mainProgram = "leaf";
+            platforms = linuxSystems;
+            maintainers = [ ];
+          };
+
           src = pkgs.fetchurl {
             url = "https://github.com/RivoLink/leaf/releases/download/${version}/${release.asset}";
             inherit (release) hash;
@@ -63,13 +71,6 @@
             runHook postInstall
           '';
 
-          meta = with lib; {
-            description = "Leaf terminal AI client";
-            homepage = "https://github.com/RivoLink/leaf";
-            mainProgram = "leaf";
-            platforms = linuxSystems;
-            maintainers = [ ];
-          };
         };
       in
       {
