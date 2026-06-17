@@ -16,7 +16,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
         pname = "dd-cli";
         version = "1.0.0-unstable-2024-04-05";
         rev = "8eaa668f804097221dcc6077edf155a052d1e61b";

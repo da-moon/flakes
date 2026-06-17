@@ -91,7 +91,7 @@
       },
       "locked": {
         "lastModified": 1,
-        "narHash": "sha256-Uakz9bzL15hBherCwvpAlXJQ7okCsrQhFCgvvpaLHSA=",
+        "narHash": "sha256-DJ9G9Eb6impBjh1RtQiudCqqI7mqaSXWmk1IOlsHniU=",
         "path": "./dd-cli",
         "type": "path"
       },
