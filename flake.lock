@@ -10,14 +10,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-h8PwGaB8YK0CXLQYP+AzgZIPYeT6AFWSQrTkn+j1il8=",
-        "path": "./askii",
-        "type": "path"
+        "dir": "askii",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=askii"
       },
       "original": {
-        "path": "./askii",
-        "type": "path"
+        "dir": "askii",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=askii"
       }
     },
     "beads": {
@@ -30,14 +35,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-5Snfk5K21FWsRfCjTbdD8RMWPD6kQeidI9JDh+60FiY=",
-        "path": "./beads",
-        "type": "path"
+        "dir": "beads",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=beads"
       },
       "original": {
-        "path": "./beads",
-        "type": "path"
+        "dir": "beads",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=beads"
       }
     },
     "claude-code": {
@@ -50,14 +60,44 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-UUUYUF2/AhUy8sRQ7YDdamFyb6K9Zr+r4X7WGxeJO34=",
-        "path": "./claude-code",
-        "type": "path"
+        "dir": "claude-code",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=claude-code"
       },
       "original": {
-        "path": "./claude-code",
-        "type": "path"
+        "dir": "claude-code",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=claude-code"
+      }
+    },
+    "code-review-graph": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "code-review-graph",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=code-review-graph"
+      },
+      "original": {
+        "dir": "code-review-graph",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=code-review-graph"
       }
     },
     "codex": {
@@ -70,14 +110,44 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-wSRUb/KSlrr8nYqyvWsNxaSDUvYOhoqW8zzICBUnnAc=",
-        "path": "./codex",
-        "type": "path"
+        "dir": "codex",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=codex"
       },
       "original": {
-        "path": "./codex",
-        "type": "path"
+        "dir": "codex",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=codex"
+      }
+    },
+    "context-mode": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "context-mode",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=context-mode"
+      },
+      "original": {
+        "dir": "context-mode",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=context-mode"
       }
     },
     "dd-cli": {
@@ -90,14 +160,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-DJ9G9Eb6impBjh1RtQiudCqqI7mqaSXWmk1IOlsHniU=",
-        "path": "./dd-cli",
-        "type": "path"
+        "dir": "dd-cli",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=dd-cli"
       },
       "original": {
-        "path": "./dd-cli",
-        "type": "path"
+        "dir": "dd-cli",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=dd-cli"
       }
     },
     "elio": {
@@ -110,14 +185,44 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-ka0uUo2X356VEtj+QYPgJKiZbCnJYIhsOSLogbhoKHM=",
-        "path": "./elio",
-        "type": "path"
+        "dir": "elio",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=elio"
       },
       "original": {
-        "path": "./elio",
-        "type": "path"
+        "dir": "elio",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=elio"
+      }
+    },
+    "evolver": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "evolver",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=evolver"
+      },
+      "original": {
+        "dir": "evolver",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=evolver"
       }
     },
     "flake-utils": {
@@ -138,6 +243,56 @@
         "type": "github"
       }
     },
+    "gemini-cli": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "gemini-cli",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=gemini-cli"
+      },
+      "original": {
+        "dir": "gemini-cli",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=gemini-cli"
+      }
+    },
+    "goose-cli": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "goose-cli",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=goose-cli"
+      },
+      "original": {
+        "dir": "goose-cli",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=goose-cli"
+      }
+    },
     "gsd-2": {
       "inputs": {
         "flake-utils": [
@@ -148,14 +303,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-syjvGuNuj/rBZm/OPzAg69kj+O669Gagz7cgelrMD2Y=",
-        "path": "./gsd-2",
-        "type": "path"
+        "dir": "gsd-2",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=gsd-2"
       },
       "original": {
-        "path": "./gsd-2",
-        "type": "path"
+        "dir": "gsd-2",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=gsd-2"
       }
     },
     "hunk": {
@@ -168,14 +328,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-7MTunL1Cya8fBMi/fb2wZV2eklJreE0xC8r00J6OMlE=",
-        "path": "./hunk",
-        "type": "path"
+        "dir": "hunk",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=hunk"
       },
       "original": {
-        "path": "./hunk",
-        "type": "path"
+        "dir": "hunk",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=hunk"
       }
     },
     "kimi-cli": {
@@ -188,14 +353,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-FzkY/ntotrWmBNkYXaBTd0wO0q+TnzSwuJyZh/aKx7M=",
-        "path": "./kimi-cli",
-        "type": "path"
+        "dir": "kimi-cli",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=kimi-cli"
       },
       "original": {
-        "path": "./kimi-cli",
-        "type": "path"
+        "dir": "kimi-cli",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=kimi-cli"
       }
     },
     "markdown-magic": {
@@ -208,14 +378,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-zpi30TrkRIdk2joMwWs1RbF5Ar/0otNTDypWM2Q5FP8=",
-        "path": "./markdown-magic",
-        "type": "path"
+        "dir": "markdown-magic",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=markdown-magic"
       },
       "original": {
-        "path": "./markdown-magic",
-        "type": "path"
+        "dir": "markdown-magic",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=markdown-magic"
       }
     },
     "nixpkgs": {
@@ -244,14 +419,69 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-Gfyq/gZ8k9SFgeQwK94g1TVnCBgJx2YES6MRpQ9OQnc=",
-        "path": "./nothing-ever-happens",
-        "type": "path"
+        "dir": "nothing-ever-happens",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=nothing-ever-happens"
       },
       "original": {
-        "path": "./nothing-ever-happens",
-        "type": "path"
+        "dir": "nothing-ever-happens",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=nothing-ever-happens"
+      }
+    },
+    "obscura": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "obscura",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=obscura"
+      },
+      "original": {
+        "dir": "obscura",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=obscura"
+      }
+    },
+    "opennews-mcp": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "opennews-mcp",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=opennews-mcp"
+      },
+      "original": {
+        "dir": "opennews-mcp",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=opennews-mcp"
       }
     },
     "parallel-web-tools": {
@@ -264,14 +494,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-jWyWomxnEl7z9bKZHpntizazbb9ixlZ8zgEGbB6kHbM=",
-        "path": "./parallel-web-tools",
-        "type": "path"
+        "dir": "parallel-web-tools",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=parallel-web-tools"
       },
       "original": {
-        "path": "./parallel-web-tools",
-        "type": "path"
+        "dir": "parallel-web-tools",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=parallel-web-tools"
       }
     },
     "root": {
@@ -279,16 +514,23 @@
         "askii": "askii",
         "beads": "beads",
         "claude-code": "claude-code",
+        "code-review-graph": "code-review-graph",
         "codex": "codex",
+        "context-mode": "context-mode",
         "dd-cli": "dd-cli",
         "elio": "elio",
+        "evolver": "evolver",
         "flake-utils": "flake-utils",
+        "gemini-cli": "gemini-cli",
+        "goose-cli": "goose-cli",
         "gsd-2": "gsd-2",
         "hunk": "hunk",
         "kimi-cli": "kimi-cli",
         "markdown-magic": "markdown-magic",
         "nixpkgs": "nixpkgs",
         "nothing-ever-happens": "nothing-ever-happens",
+        "obscura": "obscura",
+        "opennews-mcp": "opennews-mcp",
         "parallel-web-tools": "parallel-web-tools",
         "rtk": "rtk",
         "xurl": "xurl"
@@ -304,14 +546,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-UTAisVKPyYeC8+HG49in3u90wRPSbc1NvmFMEWIZKXA=",
-        "path": "./rtk",
-        "type": "path"
+        "dir": "rtk",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=rtk"
       },
       "original": {
-        "path": "./rtk",
-        "type": "path"
+        "dir": "rtk",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=rtk"
       }
     },
     "systems": {
@@ -339,14 +586,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-awImTcHSjnuXJ1DVz29HChjXMgnV5A2M42FP1hKFEM0=",
-        "path": "./xurl",
-        "type": "path"
+        "dir": "xurl",
+        "lastModified": 1781739011,
+        "narHash": "sha256-Vus38azqDUBUli4so+ZiXktPcak/laWQ/bwKPpFR4zk=",
+        "ref": "refs/heads/master",
+        "rev": "9d4968c27a2a440091d6e4c637fe1076fddd35f4",
+        "revCount": 598,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=xurl"
       },
       "original": {
-        "path": "./xurl",
-        "type": "path"
+        "dir": "xurl",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=xurl"
       }
     }
   },

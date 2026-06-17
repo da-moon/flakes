@@ -3,31 +3,44 @@
 
   # Each tool under this repo is its own self-contained flake (consumed
   # historically as `git+…/flakes.git?dir=<tool>`). This root flake pulls those
-  # subdir flakes in as relative `path:./<tool>` inputs and re-exports their
-  # outputs under one surface, so a downstream flake needs a SINGLE input
+  # subdir flakes in and re-exports their outputs under one surface, so a
+  # downstream flake needs a SINGLE input
   # (`url = "git+https://github.com/da-moon/flakes.git"`) instead of one per tool.
   #
+  # NOTE: inputs reference the subdirs via `git+…?dir=<tool>` (absolute, fetchable)
+  # rather than relative `path:./<tool>` — relative path inputs are not resolvable
+  # in *fetched* flakes on Nix < 2.26, which silently breaks remote consumers.
   # All subdir flakes share the same two inputs (nixpkgs-unstable + flake-utils),
-  # so we `follows` them onto this flake's copies — collapsing what used to be
-  # ~14 duplicate nixpkgs nodes in a consumer's lock down to one.
+  # so we `follows` them onto this flake's copies — collapsing what would be ~21
+  # duplicate nixpkgs nodes in a consumer's lock down to one.
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
 
-    claude-code = { url = "path:./claude-code"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    codex = { url = "path:./codex"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    dd-cli = { url = "path:./dd-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    beads = { url = "path:./beads"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    kimi-cli = { url = "path:./kimi-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    rtk = { url = "path:./rtk"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    xurl = { url = "path:./xurl"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    gsd-2 = { url = "path:./gsd-2"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    hunk = { url = "path:./hunk"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    askii = { url = "path:./askii"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    markdown-magic = { url = "path:./markdown-magic"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    parallel-web-tools = { url = "path:./parallel-web-tools"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    nothing-ever-happens = { url = "path:./nothing-ever-happens"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
-    elio = { url = "path:./elio"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    claude-code = { url = "git+https://github.com/da-moon/flakes.git?dir=claude-code"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    codex = { url = "git+https://github.com/da-moon/flakes.git?dir=codex"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    dd-cli = { url = "git+https://github.com/da-moon/flakes.git?dir=dd-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    beads = { url = "git+https://github.com/da-moon/flakes.git?dir=beads"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    kimi-cli = { url = "git+https://github.com/da-moon/flakes.git?dir=kimi-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    rtk = { url = "git+https://github.com/da-moon/flakes.git?dir=rtk"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    xurl = { url = "git+https://github.com/da-moon/flakes.git?dir=xurl"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    gsd-2 = { url = "git+https://github.com/da-moon/flakes.git?dir=gsd-2"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    hunk = { url = "git+https://github.com/da-moon/flakes.git?dir=hunk"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    askii = { url = "git+https://github.com/da-moon/flakes.git?dir=askii"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    markdown-magic = { url = "git+https://github.com/da-moon/flakes.git?dir=markdown-magic"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    parallel-web-tools = { url = "git+https://github.com/da-moon/flakes.git?dir=parallel-web-tools"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    nothing-ever-happens = { url = "git+https://github.com/da-moon/flakes.git?dir=nothing-ever-happens"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    elio = { url = "git+https://github.com/da-moon/flakes.git?dir=elio"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+
+    # Optional tools — wired through so they resolve via dm when a consumer
+    # uncomments them; not referenced by default.
+    obscura = { url = "git+https://github.com/da-moon/flakes.git?dir=obscura"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    evolver = { url = "git+https://github.com/da-moon/flakes.git?dir=evolver"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    context-mode = { url = "git+https://github.com/da-moon/flakes.git?dir=context-mode"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    code-review-graph = { url = "git+https://github.com/da-moon/flakes.git?dir=code-review-graph"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    opennews-mcp = { url = "git+https://github.com/da-moon/flakes.git?dir=opennews-mcp"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    gemini-cli = { url = "git+https://github.com/da-moon/flakes.git?dir=gemini-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    goose-cli = { url = "git+https://github.com/da-moon/flakes.git?dir=goose-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
   };
 
   outputs =
@@ -50,6 +63,13 @@
         "markdown-magic" = { flake = "markdown-magic"; attr = "markdown-magic"; };
         "parallel-cli" = { flake = "parallel-web-tools"; attr = "parallel-cli"; };
         "nothing-ever-happens" = { flake = "nothing-ever-happens"; attr = "nothing-ever-happens"; };
+        "obscura" = { flake = "obscura"; attr = "obscura"; };
+        "evolver" = { flake = "evolver"; attr = "evolver"; };
+        "context-mode" = { flake = "context-mode"; attr = "context-mode"; };
+        "code-review-graph" = { flake = "code-review-graph"; attr = "code-review-graph"; };
+        "opennews-mcp" = { flake = "opennews-mcp"; attr = "opennews-mcp"; };
+        "gemini-cli" = { flake = "gemini-cli"; attr = "gemini-cli"; };
+        "goose-cli" = { flake = "goose-cli"; attr = "goose-cli"; };
       };
 
       hasPkg = system: m:
