@@ -1,0 +1,355 @@
+{
+  "nodes": {
+    "askii": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-h8PwGaB8YK0CXLQYP+AzgZIPYeT6AFWSQrTkn+j1il8=",
+        "path": "./askii",
+        "type": "path"
+      },
+      "original": {
+        "path": "./askii",
+        "type": "path"
+      }
+    },
+    "beads": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-5Snfk5K21FWsRfCjTbdD8RMWPD6kQeidI9JDh+60FiY=",
+        "path": "./beads",
+        "type": "path"
+      },
+      "original": {
+        "path": "./beads",
+        "type": "path"
+      }
+    },
+    "claude-code": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-UUUYUF2/AhUy8sRQ7YDdamFyb6K9Zr+r4X7WGxeJO34=",
+        "path": "./claude-code",
+        "type": "path"
+      },
+      "original": {
+        "path": "./claude-code",
+        "type": "path"
+      }
+    },
+    "codex": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-wSRUb/KSlrr8nYqyvWsNxaSDUvYOhoqW8zzICBUnnAc=",
+        "path": "./codex",
+        "type": "path"
+      },
+      "original": {
+        "path": "./codex",
+        "type": "path"
+      }
+    },
+    "dd-cli": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-Uakz9bzL15hBherCwvpAlXJQ7okCsrQhFCgvvpaLHSA=",
+        "path": "./dd-cli",
+        "type": "path"
+      },
+      "original": {
+        "path": "./dd-cli",
+        "type": "path"
+      }
+    },
+    "elio": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-ka0uUo2X356VEtj+QYPgJKiZbCnJYIhsOSLogbhoKHM=",
+        "path": "./elio",
+        "type": "path"
+      },
+      "original": {
+        "path": "./elio",
+        "type": "path"
+      }
+    },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "gsd-2": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-syjvGuNuj/rBZm/OPzAg69kj+O669Gagz7cgelrMD2Y=",
+        "path": "./gsd-2",
+        "type": "path"
+      },
+      "original": {
+        "path": "./gsd-2",
+        "type": "path"
+      }
+    },
+    "hunk": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-7MTunL1Cya8fBMi/fb2wZV2eklJreE0xC8r00J6OMlE=",
+        "path": "./hunk",
+        "type": "path"
+      },
+      "original": {
+        "path": "./hunk",
+        "type": "path"
+      }
+    },
+    "kimi-cli": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-FzkY/ntotrWmBNkYXaBTd0wO0q+TnzSwuJyZh/aKx7M=",
+        "path": "./kimi-cli",
+        "type": "path"
+      },
+      "original": {
+        "path": "./kimi-cli",
+        "type": "path"
+      }
+    },
+    "markdown-magic": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-zpi30TrkRIdk2joMwWs1RbF5Ar/0otNTDypWM2Q5FP8=",
+        "path": "./markdown-magic",
+        "type": "path"
+      },
+      "original": {
+        "path": "./markdown-magic",
+        "type": "path"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1781607440,
+        "narHash": "sha256-rxO+uc/KFbSJp+pgyXRuAX6QlG9hJdnt0BXpEQRXY+U=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3e41b24abd260e8f71dbe2f5737d24122f972158",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nothing-ever-happens": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-Gfyq/gZ8k9SFgeQwK94g1TVnCBgJx2YES6MRpQ9OQnc=",
+        "path": "./nothing-ever-happens",
+        "type": "path"
+      },
+      "original": {
+        "path": "./nothing-ever-happens",
+        "type": "path"
+      }
+    },
+    "parallel-web-tools": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-jWyWomxnEl7z9bKZHpntizazbb9ixlZ8zgEGbB6kHbM=",
+        "path": "./parallel-web-tools",
+        "type": "path"
+      },
+      "original": {
+        "path": "./parallel-web-tools",
+        "type": "path"
+      }
+    },
+    "root": {
+      "inputs": {
+        "askii": "askii",
+        "beads": "beads",
+        "claude-code": "claude-code",
+        "codex": "codex",
+        "dd-cli": "dd-cli",
+        "elio": "elio",
+        "flake-utils": "flake-utils",
+        "gsd-2": "gsd-2",
+        "hunk": "hunk",
+        "kimi-cli": "kimi-cli",
+        "markdown-magic": "markdown-magic",
+        "nixpkgs": "nixpkgs",
+        "nothing-ever-happens": "nothing-ever-happens",
+        "parallel-web-tools": "parallel-web-tools",
+        "rtk": "rtk",
+        "xurl": "xurl"
+      }
+    },
+    "rtk": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-UTAisVKPyYeC8+HG49in3u90wRPSbc1NvmFMEWIZKXA=",
+        "path": "./rtk",
+        "type": "path"
+      },
+      "original": {
+        "path": "./rtk",
+        "type": "path"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "xurl": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1,
+        "narHash": "sha256-awImTcHSjnuXJ1DVz29HChjXMgnV5A2M42FP1hKFEM0=",
+        "path": "./xurl",
+        "type": "path"
+      },
+      "original": {
+        "path": "./xurl",
+        "type": "path"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
