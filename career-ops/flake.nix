@@ -24,19 +24,19 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "career-ops";
-        version = "1.9.0";
-        rev = "career-ops-v1.9.0";
+        version = "1.11.0";
+        rev = "career-ops-v1.11.0";
 
         src = pkgs.fetchFromGitHub {
           owner = "santifer";
           repo = "career-ops";
           inherit rev;
-          hash = "sha256-uzV6BUIJ3p91CaoPtQhWunMkrCv2pEt2gRmj83QG4Ck=";
+          hash = "sha256-LRK+qzvUdNfcqvMn8xVa6MJn/Qw139dUYGxTOcsatE0=";
         };
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-5KLSlXoM68z3WkRUk5hoimy81z1E70zADzmC9ETliFo=";
+          "x86_64-linux" = "sha256-tVnhg8eUsRXj1XqoZAsWM9cQrvSDJsXHzcvzoKo7Itw=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {

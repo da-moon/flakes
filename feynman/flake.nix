@@ -20,7 +20,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.2.58";
+        version = "0.3.3";
 
         feynman = pkgs.stdenv.mkDerivation rec {
           pname = "feynman";
@@ -36,7 +36,7 @@
 
           src = pkgs.fetchurl {
             url = "https://github.com/getcompanion-ai/feynman/releases/download/v${version}/feynman-${version}-linux-x64.tar.gz";
-            hash = "sha256-5mt7c1Q1onE/GGLPCCXRf1A/UVtZu7Jc/PWlK4BUuQY=";
+            hash = "sha256-LNPQrU3tz5f8ezjym0jsJF22nVBB9VJS7NXPCP70HwA=";
           };
 
           sourceRoot = "feynman-${version}-linux-x64";

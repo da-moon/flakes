@@ -34,7 +34,7 @@
 
         goose-cli = pkgs.rustPlatform.buildRustPackage rec {
           pname = "goose-cli";
-          version = "1.37.0";
+          version = "1.38.0";
 
           meta = with pkgs.lib; {
             description = "Open-source AI agent for software development";
@@ -48,7 +48,7 @@
             owner = "block";
             repo = "goose";
             rev = "v${version}";
-            sha256 = "sha256-YEK4cGcSx2ppEtR60x/4wwtJFMDO9jnK5bAo2RW3E64=";
+            sha256 = "sha256-bR38jxh379Rp9ZU6Hd+1aKDl+88UkmWF/niwp8uB3aE=";
           };
 
           cargoLock = {

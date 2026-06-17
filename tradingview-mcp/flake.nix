@@ -26,7 +26,7 @@
 
         tradingview-mcp = pkgs.buildNpmPackage rec {
           pname = "tradingview-mcp";
-          version = "1.0.0-unstable-2026-06-11";
+          version = "1.0.0-unstable-2026-06-17";
 
           meta = with pkgs.lib; {
             description = "MCP bridge for TradingView Desktop via Chrome DevTools Protocol";
