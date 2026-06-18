@@ -30,6 +30,7 @@
     markdown-magic = { url = "git+https://github.com/da-moon/flakes.git?dir=markdown-magic"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
     parallel-web-tools = { url = "git+https://github.com/da-moon/flakes.git?dir=parallel-web-tools"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
     nothing-ever-happens = { url = "git+https://github.com/da-moon/flakes.git?dir=nothing-ever-happens"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    smithers-studio = { url = "git+https://github.com/da-moon/flakes.git?dir=smithers-studio"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
     elio = { url = "git+https://github.com/da-moon/flakes.git?dir=elio"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
 
     # Optional tools — wired through so they resolve via dm when a consumer
@@ -64,6 +65,7 @@
         "markdown-magic" = { flake = "markdown-magic"; attr = "markdown-magic"; };
         "parallel-cli" = { flake = "parallel-web-tools"; attr = "parallel-cli"; };
         "nothing-ever-happens" = { flake = "nothing-ever-happens"; attr = "nothing-ever-happens"; };
+        "smithers-studio" = { flake = "smithers-studio"; attr = "smithers-studio"; };
         "obscura" = { flake = "obscura"; attr = "obscura"; };
         "evolver" = { flake = "evolver"; attr = "evolver"; };
         "context-mode" = { flake = "context-mode"; attr = "context-mode"; };
@@ -92,6 +94,7 @@
       homeManagerModules = {
         elio = inputs.elio.homeManagerModules.default;
         nothing-ever-happens = inputs.nothing-ever-happens.homeManagerModules.default;
+        smithers-studio = inputs.smithers-studio.homeManagerModules.default;
       };
     };
 }

@@ -125,6 +125,31 @@
         "url": "https://github.com/da-moon/flakes.git?dir=codex"
       }
     },
+    "command-code": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "command-code",
+        "lastModified": 1781795363,
+        "narHash": "sha256-NIUWrUAiG0ap6oHHBHE6je+b4tWLgjAYfRshZYHBYJ4=",
+        "ref": "refs/heads/master",
+        "rev": "2636924d8009738146b1e7ac6e6aa48e76f1ad39",
+        "revCount": 606,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=command-code"
+      },
+      "original": {
+        "dir": "command-code",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=command-code"
+      }
+    },
     "context-mode": {
       "inputs": {
         "flake-utils": [
@@ -516,6 +541,7 @@
         "claude-code": "claude-code",
         "code-review-graph": "code-review-graph",
         "codex": "codex",
+        "command-code": "command-code",
         "context-mode": "context-mode",
         "dd-cli": "dd-cli",
         "elio": "elio",
@@ -533,6 +559,7 @@
         "opennews-mcp": "opennews-mcp",
         "parallel-web-tools": "parallel-web-tools",
         "rtk": "rtk",
+        "smithers-studio": "smithers-studio",
         "xurl": "xurl"
       }
     },
@@ -559,6 +586,31 @@
         "dir": "rtk",
         "type": "git",
         "url": "https://github.com/da-moon/flakes.git?dir=rtk"
+      }
+    },
+    "smithers-studio": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "smithers-studio",
+        "lastModified": 1781795363,
+        "narHash": "sha256-NIUWrUAiG0ap6oHHBHE6je+b4tWLgjAYfRshZYHBYJ4=",
+        "ref": "refs/heads/master",
+        "rev": "2636924d8009738146b1e7ac6e6aa48e76f1ad39",
+        "revCount": 606,
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=smithers-studio"
+      },
+      "original": {
+        "dir": "smithers-studio",
+        "type": "git",
+        "url": "https://github.com/da-moon/flakes.git?dir=smithers-studio"
       }
     },
     "systems": {
