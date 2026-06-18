@@ -407,13 +407,30 @@
               cacheBase="''${XDG_CACHE_HOME:-$HOME/.cache}/smithers-studio"
               runRoot="$cacheBase/__VERSION__"
               appRun="$runRoot/__APP_SUBDIR__"
-              if [ ! -e "$appRun/scripts/dev.ts" ]; then
+              # Re-stage when the app is missing OR the store path changed (a
+              # package rebuild or version bump): keying the marker on the store
+              # path makes a launcher fix like this one self-apply on next start,
+              # with no manual cache wipe.
+              stageMarker="$appRun/.smithers-studio-store-rev"
+              if [ ! -e "$appRun/scripts/dev.ts" ] || [ "$(cat "$stageMarker" 2>/dev/null || true)" != "__APP_ROOT__" ]; then
                 rm -rf "$runRoot"
                 mkdir -p "$appRun"
                 cp -R "__APP_ROOT__/__APP_SUBDIR__/." "$appRun"/
                 chmod -R u+w "$appRun"
+                # node_modules as a SYMLINK FARM, not a single symlink-to-store.
+                # Vite's cacheDir defaults to <root>/node_modules/.vite; a lone
+                # node_modules -> /nix/store symlink makes that path read-only, so
+                # optimizeDeps fails EACCES, the browser 404s on every dep, and the
+                # UI never mounts. Symlinking each entry keeps the heavy deps
+                # immutable in the store while leaving the node_modules ROOT
+                # writable, so Vite creates .vite there at runtime.
                 rm -rf "$appRun/node_modules"
-                ln -s "__APP_ROOT__/__APP_SUBDIR__/node_modules" "$appRun/node_modules"
+                mkdir -p "$appRun/node_modules"
+                ( shopt -s dotglob nullglob
+                  for entry in "__APP_ROOT__/__APP_SUBDIR__/node_modules"/*; do
+                    ln -s "$entry" "$appRun/node_modules/$(basename "$entry")"
+                  done )
+                printf '%s' "__APP_ROOT__" > "$stageMarker"
               fi
 
               cd "$runRoot"
