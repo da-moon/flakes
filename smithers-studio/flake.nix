@@ -29,6 +29,7 @@
         let
           inherit (lib)
             escapeShellArg
+            getExe
             literalExpression
             mkEnableOption
             mkIf
@@ -74,6 +75,33 @@
             workspaceApiPort = mkPortOption 7410 "Workspace API port (SMITHERS_WORKSPACE_API_PORT).";
             ptyPort = mkPortOption 7342 "PTY terminal server port (SMITHERS_PTY_PORT).";
             uiPort = mkPortOption 5190 "Vite UI dev server port (SMITHERS_STUDIO_2_PORT).";
+
+            # Optional always-on background service. This is a USER-GLOBAL opt-in:
+            # a systemd user service is per-user, not per-repo, and two instances
+            # would collide on the four ports. Enable it ONLY in a user/machine
+            # home-manager config, NEVER in a repo-specific consumer flake. A
+            # repo-specific consumer should use `programs.smithers-studio.enable`
+            # (the package + command on PATH) and launch the wrapper by hand. The
+            # service reuses the port + package options above; it does not
+            # duplicate them.
+            service = {
+              enable = mkEnableOption "a background systemd user service that runs Smithers Studio on login";
+
+              workspace = mkOption {
+                type = types.str;
+                default = config.home.homeDirectory;
+                defaultText = literalExpression "config.home.homeDirectory";
+                example = "%h/projects/my-smithers-workspace";
+                description = ''
+                  Opening workspace the service launches against (passed as the
+                  wrapper's WORKSPACE argument). Studio resolves one active
+                  workspace by ascending to the nearest .smithers and the
+                  workspace is switchable in the UI, so this is only the starting
+                  point. Unlike the launch-time `workspace` option this must be a
+                  real path (no "$PWD"): a service has no interactive cwd.
+                '';
+              };
+            };
           };
 
           config = mkIf cfg.enable {
@@ -93,6 +121,30 @@
             };
 
             home.packages = [ cfg.package ];
+
+            # Optional background user service (opt-in, see service.enable above).
+            # Runs the same wrapper the package ships, against service.workspace,
+            # with the four ports exported from the existing port options.
+            systemd.user.services.smithers-studio = mkIf cfg.service.enable {
+              Unit = {
+                Description = "Smithers Studio dev UI (Gateway, Workspace API, PTY, Vite UI)";
+                After = [ "default.target" ];
+              };
+              Service = {
+                Environment = [
+                  "SMITHERS_GATEWAY_PORT=${toString cfg.gatewayPort}"
+                  "SMITHERS_WORKSPACE_API_PORT=${toString cfg.workspaceApiPort}"
+                  "SMITHERS_PTY_PORT=${toString cfg.ptyPort}"
+                  "SMITHERS_STUDIO_2_PORT=${toString cfg.uiPort}"
+                ];
+                ExecStart = "${getExe cfg.package} ${escapeShellArg cfg.service.workspace}";
+                Restart = "on-failure";
+                RestartSec = 5;
+              };
+              Install = {
+                WantedBy = [ "default.target" ];
+              };
+            };
           };
         };
 
