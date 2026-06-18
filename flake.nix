@@ -41,6 +41,7 @@
     opennews-mcp = { url = "git+https://github.com/da-moon/flakes.git?dir=opennews-mcp"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
     gemini-cli = { url = "git+https://github.com/da-moon/flakes.git?dir=gemini-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
     goose-cli = { url = "git+https://github.com/da-moon/flakes.git?dir=goose-cli"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
+    command-code = { url = "git+https://github.com/da-moon/flakes.git?dir=command-code"; inputs = { nixpkgs.follows = "nixpkgs"; flake-utils.follows = "flake-utils"; }; };
   };
 
   outputs =
@@ -70,6 +71,7 @@
         "opennews-mcp" = { flake = "opennews-mcp"; attr = "opennews-mcp"; };
         "gemini-cli" = { flake = "gemini-cli"; attr = "gemini-cli"; };
         "goose-cli" = { flake = "goose-cli"; attr = "goose-cli"; };
+        "command-code" = { flake = "command-code"; attr = "command-code"; };
       };
 
       hasPkg = system: m:
