@@ -599,11 +599,11 @@
       },
       "locked": {
         "dir": "smithers-studio",
-        "lastModified": 1781826403,
-        "narHash": "sha256-EYWrve8LIc9TgwQIWifUGZhITYZh2DrGHcnFXVaWRRg=",
+        "lastModified": 1781830176,
+        "narHash": "sha256-0lwMIwTt4LvPX1aC/u3qEeUFPzN0phq3xSH9qdFZmfI=",
         "ref": "refs/heads/master",
-        "rev": "1dfb8210a04cc07b12411756c53c73b5eca41356",
-        "revCount": 610,
+        "rev": "29d469fc702933295759a5432aa9ebe2b4e764a1",
+        "revCount": 612,
         "type": "git",
         "url": "https://github.com/da-moon/flakes.git?dir=smithers-studio"
       },
