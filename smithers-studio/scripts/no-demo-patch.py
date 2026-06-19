@@ -12,9 +12,9 @@ byte-for-byte. Applied at build time; the one anchor below is asserted to match
 exactly once, so an upstream change fails the build loudly instead of silently
 reverting to the chat shell.
 
-Note: shellMode also persists to localStorage, so even without this patch a user
-can type `/studio` once and it sticks per browser. This patch just makes the
-mock-free shell the default for every fresh browser.
+When the flag is set this FORCES the studio shell (ignores a remembered "chat"
+in localStorage), so the demo/chat shell can never resurface while hideDemoData
+is on. Turn the option off to reach the chat-shell prototype.
 """
 import sys
 from pathlib import Path
@@ -30,11 +30,9 @@ EDITS = [
         '}',
         'function readShellMode(): ShellMode {\n'
         '  const noDemo = ' + FLAG + ';\n'
-        '  if (typeof localStorage === "undefined") return noDemo ? "studio" : "chat";\n'
-        '  const stored = localStorage.getItem(SHELL_MODE_STORAGE_KEY);\n'
-        '  if (stored === "studio") return "studio";\n'
-        '  if (stored === "chat") return "chat";\n'
-        '  return noDemo ? "studio" : "chat";\n'
+        '  if (noDemo) return "studio";\n'
+        '  if (typeof localStorage === "undefined") return "chat";\n'
+        '  return localStorage.getItem(SHELL_MODE_STORAGE_KEY) === "studio" ? "studio" : "chat";\n'
         '}',
     ),
 ]
