@@ -45,6 +45,47 @@
               type = types.port;
               inherit default description;
             };
+
+          # Multi-workspace switch (launcher-only, NO app patch). The single
+          # service boots on `defaultPath`; `smithers-studio-use <name>` writes a
+          # pointer file and restarts the service so the gateway re-binds to it.
+          # One stack / one port block (RAM-efficient); one workspace viewed at a
+          # time. Parallel runs are unaffected - Studio is only a viewer.
+          hasMap = cfg.workspaces != { };
+          defaultPath =
+            if cfg.defaultWorkspace != "" && builtins.hasAttr cfg.defaultWorkspace cfg.workspaces then
+              cfg.workspaces.${cfg.defaultWorkspace}
+            else
+              cfg.service.workspace;
+          stateDir = "${config.home.homeDirectory}/.local/state/smithers-studio";
+          pointer = "${stateDir}/active-workspace";
+          serviceLauncher = pkgs.writeShellScript "smithers-studio-service" ''
+            set -euo pipefail
+            ws=""
+            if [ -f ${escapeShellArg pointer} ]; then ws="$(cat ${escapeShellArg pointer} 2>/dev/null || true)"; fi
+            if [ -z "$ws" ] || [ ! -d "$ws" ]; then ws=${escapeShellArg defaultPath}; fi
+            exec ${getExe cfg.package} "$ws"
+          '';
+          switchTool = pkgs.writeShellScriptBin "smithers-studio-use" ''
+            set -euo pipefail
+            declare -A WS=( ${lib.concatStringsSep " " (lib.mapAttrsToList (n: p: "[${escapeShellArg n}]=${escapeShellArg p}") cfg.workspaces)} )
+            name="''${1:-}"
+            if [ -z "$name" ]; then
+              echo "usage: smithers-studio-use <name>"
+              echo "configured: ''${!WS[*]:-<none>}"
+              exit 1
+            fi
+            path="''${WS[$name]:-}"
+            if [ -z "$path" ]; then
+              echo "unknown workspace: $name"
+              echo "configured: ''${!WS[*]:-<none>}"
+              exit 1
+            fi
+            mkdir -p ${escapeShellArg stateDir}
+            printf '%s' "$path" > ${escapeShellArg pointer}
+            systemctl --user restart smithers-studio.service
+            echo "studio -> $name ($path)"
+          '';
         in
         {
           options.programs.smithers-studio = {
@@ -82,6 +123,31 @@
               studio shell and shows only the connected workspace. Sets
               VITE_SMITHERS_STUDIO_NO_DEMO=1'';
 
+            workspaces = mkOption {
+              type = types.attrsOf types.str;
+              default = { };
+              example = literalExpression ''{ neh = "/home/me/code/neh"; api = "/home/me/code/api"; }'';
+              description = ''
+                Named smithers workspaces (name -> absolute repo path) the single
+                background service can switch between via `smithers-studio-use
+                <name>` (repoints the gateway + restarts, ~2s). One stack, one
+                port block (RAM-efficient); Studio binds one workspace at a time,
+                so this trades simultaneous viewing for RAM. Parallel runs are
+                unaffected (Studio is only a viewer). Leave empty for the classic
+                single `service.workspace` mode.
+              '';
+            };
+
+            defaultWorkspace = mkOption {
+              type = types.str;
+              default = "";
+              example = "neh";
+              description = ''
+                Which `workspaces` entry the service boots on. Empty falls back to
+                `service.workspace`.
+              '';
+            };
+
             # Optional always-on background service. This is a USER-GLOBAL opt-in:
             # a systemd user service is per-user, not per-repo, and two instances
             # would collide on the four ports. Enable it ONLY in a user/machine
@@ -116,7 +182,11 @@
                 assertion = pkgs.stdenv.hostPlatform.isLinux;
                 message = "programs.smithers-studio is only supported on Linux.";
               }
-            ];
+            ]
+            ++ lib.optional hasMap {
+              assertion = cfg.defaultWorkspace != "" && builtins.hasAttr cfg.defaultWorkspace cfg.workspaces;
+              message = "programs.smithers-studio.defaultWorkspace must name an entry in programs.smithers-studio.workspaces.";
+            };
 
             home.sessionVariables = {
               SMITHERS_STUDIO_DEFAULT_WORKSPACE = cfg.workspace;
@@ -128,7 +198,7 @@
               VITE_SMITHERS_STUDIO_NO_DEMO = "1";
             };
 
-            home.packages = [ cfg.package ];
+            home.packages = [ cfg.package ] ++ lib.optional (cfg.service.enable && hasMap) switchTool;
 
             # Optional background user service (opt-in, see service.enable above).
             # Runs the same wrapper the package ships, against service.workspace,
@@ -145,7 +215,7 @@
                   "SMITHERS_PTY_PORT=${toString cfg.ptyPort}"
                   "SMITHERS_STUDIO_2_PORT=${toString cfg.uiPort}"
                 ] ++ lib.optional cfg.hideDemoData "VITE_SMITHERS_STUDIO_NO_DEMO=1";
-                ExecStart = "${getExe cfg.package} ${escapeShellArg cfg.service.workspace}";
+                ExecStart = "${serviceLauncher}";
                 Restart = "on-failure";
                 RestartSec = 5;
               };
