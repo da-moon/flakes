@@ -69,16 +69,17 @@
           switchTool = pkgs.writeShellScriptBin "smithers-studio-use" ''
             set -euo pipefail
             declare -A WS=( ${lib.concatStringsSep " " (lib.mapAttrsToList (n: p: "[${escapeShellArg n}]=${escapeShellArg p}") cfg.workspaces)} )
+            keys="''${!WS[*]}"
             name="''${1:-}"
             if [ -z "$name" ]; then
               echo "usage: smithers-studio-use <name>"
-              echo "configured: ''${!WS[*]:-<none>}"
+              echo "configured: ''${keys:-<none>}"
               exit 1
             fi
             path="''${WS[$name]:-}"
             if [ -z "$path" ]; then
               echo "unknown workspace: $name"
-              echo "configured: ''${!WS[*]:-<none>}"
+              echo "configured: ''${keys:-<none>}"
               exit 1
             fi
             mkdir -p ${escapeShellArg stateDir}
