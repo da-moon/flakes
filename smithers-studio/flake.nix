@@ -76,6 +76,12 @@
             ptyPort = mkPortOption 7342 "PTY terminal server port (SMITHERS_PTY_PORT).";
             uiPort = mkPortOption 5190 "Vite UI dev server port (SMITHERS_STUDIO_2_PORT).";
 
+            hideDemoData = mkEnableOption ''
+              hiding Studio's demo/mock seed data (the mock projects, chat feed,
+              toasts, and prototype dashboards) so the UI opens on the real
+              studio shell and shows only the connected workspace. Sets
+              VITE_SMITHERS_STUDIO_NO_DEMO=1'';
+
             # Optional always-on background service. This is a USER-GLOBAL opt-in:
             # a systemd user service is per-user, not per-repo, and two instances
             # would collide on the four ports. Enable it ONLY in a user/machine
@@ -118,6 +124,8 @@
               SMITHERS_WORKSPACE_API_PORT = toString cfg.workspaceApiPort;
               SMITHERS_PTY_PORT = toString cfg.ptyPort;
               SMITHERS_STUDIO_2_PORT = toString cfg.uiPort;
+            } // lib.optionalAttrs cfg.hideDemoData {
+              VITE_SMITHERS_STUDIO_NO_DEMO = "1";
             };
 
             home.packages = [ cfg.package ];
@@ -136,7 +144,7 @@
                   "SMITHERS_WORKSPACE_API_PORT=${toString cfg.workspaceApiPort}"
                   "SMITHERS_PTY_PORT=${toString cfg.ptyPort}"
                   "SMITHERS_STUDIO_2_PORT=${toString cfg.uiPort}"
-                ];
+                ] ++ lib.optional cfg.hideDemoData "VITE_SMITHERS_STUDIO_NO_DEMO=1";
                 ExecStart = "${getExe cfg.package} ${escapeShellArg cfg.service.workspace}";
                 Restart = "on-failure";
                 RestartSec = 5;
@@ -346,6 +354,10 @@
 
               # Match the package.json the FOD resolved against.
               ( cd "$appDir" && ${patchPackageJson} )
+
+              # Gate all demo/mock seed data behind VITE_SMITHERS_STUDIO_NO_DEMO
+              # (off by default; the home-manager `hideDemoData` option flips it).
+              ${pkgs.python3}/bin/python3 ${./scripts/no-demo-patch.py} "$appDir"
 
               # Wire in the pinned, pre-resolved, self-contained node_modules.
               rm -rf "$appDir/node_modules"
