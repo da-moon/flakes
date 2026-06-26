@@ -18,14 +18,14 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_20;
         pname = "firecrawl-cli";
-        version = "1.19.17";
+        version = "1.19.19";
 
         # NOTE: npm optionalDependencies and native dependencies can be platform-specific,
         # so the fixed-output hash from "npm install" is not always portable.
         # Start from fakeHash and rehash per-system after build.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-ELeT1qT8hR7oNlN0NxvurCbYXwnkVJGsgQLx8X6Cp+Q=";
+          "x86_64-linux" = "sha256-QaDOB7j4fWrpdPJLlsYx2+MoMn2XpIIIkXh/KhIzxV0=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -33,7 +33,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-Q/rc1Iw/Sr2cIulcgTgeB3gYqG7KiYloz2W2SVB4Yrw=";
+            hash = "sha256-+QjT9c/e99niJu1zgvk3Sjp7Fptgappv+lAycTertRg=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
