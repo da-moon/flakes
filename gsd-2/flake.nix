@@ -33,7 +33,7 @@
         # so the fixed-output hash is expected to differ by Linux architecture.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-JtcCbewBjnaSC061Li2WUwXbbFS7tiNNh20lFwJAwYM=";
+          "x86_64-linux" = "sha256-ABog56zEebWy2AbgWU1dCHccP9BmRips6dv2xt1NkV0=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
