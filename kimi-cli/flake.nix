@@ -23,7 +23,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.18.0";
+        version = "0.20.1";
 
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
@@ -32,8 +32,8 @@
 
         binarySha256BySystem = {
           # update-version.sh managed hashes.
-          x86_64-linux = "sha256-5dnOiC1JCkptfP7zOjPuUNvcEW2iXWD6u1YeinOYVG0=";
-          aarch64-linux = "sha256-ILOQwY4NC1AA6YGTq7CA4iFM5IlljTbLeio/EvTx6nU=";
+          x86_64-linux = "sha256-vmi5KxmYpFob93NO3BkuZsymZPOXE/YJJ+gwb2p6OUg=";
+          aarch64-linux = "sha256-lYpeonZpUCpU9pkXstmpRYQ6ufVvBTg4pYcFIKx8DMo=";
         };
 
         releasePlatform = releasePlatformBySystem.${system};
