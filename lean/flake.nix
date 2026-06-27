@@ -24,9 +24,9 @@
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python312;
 
-        engineImageTag = "17843";
-        engineImageDigest = "sha256:49560bc8ace3ec7cc4f7aba20cacaa8e1ffa1b3a61f848b17e6f1e9734fe86eb";
-        researchImageDigest = "sha256:1bd691166a4fe6b2925194fcb0859ecbf8eafdca995979272e16bf27c1f1141f";
+        engineImageTag = "17863";
+        engineImageDigest = "sha256:707d38ff41eb29f0f96dd88e7f00d97857b78548eec8edf030ad894da04c0fe3";
+        researchImageDigest = "sha256:095cb44df81c60352c74ff14475b126a08e6cd4e327b3b8f81aaed919f46d93c";
 
         quantconnect-stubs = python.pkgs.buildPythonPackage {
           pname = "quantconnect-stubs";
