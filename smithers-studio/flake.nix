@@ -248,7 +248,7 @@
           # (Bun install of the standalone Studio app, including the natively
           # compiled node-pty). Refresh with scripts/update-version.sh --rehash
           # after changing rev/version.
-          depsHash = "sha256-VwSmSvuChW5Sf1X/QGSXd5iF9lyfhFHctxXSa9qglQg=";
+          depsHash = "sha256-z//MLp4taracuPlgOHVH8BXMe8it7WQ8KRwH5XHTm1E=";
 
           appSubdir = "apps/smithers-studio-2";
 
