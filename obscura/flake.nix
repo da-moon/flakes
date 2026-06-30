@@ -20,7 +20,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.1.8";
+        version = "0.1.9";
 
         obscura = pkgs.stdenv.mkDerivation rec {
           pname = "obscura";
@@ -37,7 +37,7 @@
 
           src = pkgs.fetchurl {
             url = "https://github.com/h4ckf0r0day/obscura/releases/download/v${version}/obscura-x86_64-linux.tar.gz";
-            hash = "sha256-5U0HBUBH1BgCR/A76gjRvXJO8YWYKTMaQz2pcvlzmIs=";
+            hash = "sha256-gVj39jB2CmKQYuyHI55vZcE784l71zLaZOisB1q0EB8=";
           };
 
           sourceRoot = ".";
