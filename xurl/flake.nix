@@ -23,16 +23,16 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "1.1.1";
+        version = "1.2.2";
 
         releaseBySystem = {
           "aarch64-linux" = {
             asset = "xurl_Linux_arm64.tar.gz";
-            sha256 = "sha256-1NJ0JDqm4+MWdO+PvAMRP9AgYs1rKCc5dsuyHz5Cjn0=";
+            sha256 = "sha256-I+Mh+44GzesUPkMTzu7UHukVEd8aX/xtYDwo+9fcFXc=";
           };
           "x86_64-linux" = {
             asset = "xurl_Linux_x86_64.tar.gz";
-            sha256 = "sha256-g3QL0nX0JDIJW0b9GAQOF/pmpOSSGha23b+o0exsvQ0=";
+            sha256 = "sha256-AADgrJ1GJb/N8UQei/EXnV+IG9lbMqz2w0is9wQHqpE=";
           };
         };
 
