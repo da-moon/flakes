@@ -26,14 +26,14 @@
         pname = "gsd-2";
         npmPackage = "@opengsd/gsd-pi";
         npmTarballName = "gsd-pi";
-        version = "1.2.0";
+        version = "1.3.0";
         nodejs = pkgs.nodejs_22;
 
         # npm optionalDependencies include native and platform-specific engine packages,
         # so the fixed-output hash is expected to differ by Linux architecture.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-ABog56zEebWy2AbgWU1dCHccP9BmRips6dv2xt1NkV0=";
+          "x86_64-linux" = "sha256-xtN4OR1v0JLGNcxLFqMGCOcH+mg8f6EnqFEi/4JcCGU=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -41,7 +41,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${npmPackage}/-/${npmTarballName}-${version}.tgz";
-            hash = "sha256-vIURB5RZbslnG8ULGb9AlcryILMejrgWYqQjEdIlSpk=";
+            hash = "sha256-0NxJFbWeUHAvBbdnCOCB4fokATLGZD4qlCAr4rzrAmM=";
           };
 
           nativeBuildInputs = [

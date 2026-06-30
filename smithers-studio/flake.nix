@@ -240,15 +240,15 @@
           # so the Studio app builds standalone once its workspace:* specs are
           # rewritten to "0.24.2". Pinning the tag keeps Studio and the
           # gateway/CLI it loads version-consistent.
-          version = "0.24.2";
-          rev = "bf77d29a8e239c5d64bd4412b63c16e75644ddf7";
-          srcHash = "sha256-doVd5k4Q3NQ/iLQ9FXQpCGQL/FTPw8Fc7etmiIDOhEU=";
+          version = "0.26.1";
+          rev = "77520aa9b3da4bbd40971f9647163e0da70f3386";
+          srcHash = "sha256-Hywg8i0I4kEVuuMmtHil5X+ThJuI1tsD/8EYK9zRl9Y=";
 
           # Fixed-output hash of the pinned, network-installed node_modules tree
           # (Bun install of the standalone Studio app, including the natively
           # compiled node-pty). Refresh with scripts/update-version.sh --rehash
           # after changing rev/version.
-          depsHash = "sha256-z//MLp4taracuPlgOHVH8BXMe8it7WQ8KRwH5XHTm1E=";
+          depsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
           appSubdir = "apps/smithers-studio-2";
 
