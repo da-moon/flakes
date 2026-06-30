@@ -66,12 +66,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "1.9.0";
+        version = "1.10.0";
 
         releaseBySystem = {
           "x86_64-linux" = {
             target = "x86_64-unknown-linux-gnu";
-            sha256 = "sha256-eX64XxJnvTjm3yRR6gf7Ym1kvUO3FCGPaB8R2LJ++AU=";
+            sha256 = "sha256-PRH/4hHe8IVkf6CRrjQaqMvw2i/SW8Cr3IhQtAF/008=";
             needsAutoPatchelf = true;
           };
         };
