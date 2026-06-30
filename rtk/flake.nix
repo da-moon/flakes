@@ -23,17 +23,17 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.42.4";
+        version = "0.43.0";
 
         releaseBySystem = {
           "aarch64-linux" = {
             target = "aarch64-unknown-linux-gnu";
-            sha256 = "sha256-zCuRwGTrZwwJfBhJE8j7yxqUPVPX/lBTdelroMW2RZ8=";
+            sha256 = "sha256-VRn3yhLlwUOmCfDSigp3uXQTqNzjHCaB8aQcJFGahzE=";
             needsAutoPatchelf = true;
           };
           "x86_64-linux" = {
             target = "x86_64-unknown-linux-musl";
-            sha256 = "sha256-NJdRFtoR4J5QJQHa91gUPgsi7TpCoQ62f7aTpicNnjY=";
+            sha256 = "sha256-/4oed2ZJbhdSkaha7KHcl8n/bfM+UeWJPR+8eP6ipgk=";
             needsAutoPatchelf = false;
           };
         };
