@@ -1,0 +1,11 @@
+{
+  "latest": "0.1.0",
+  "versions": {
+    "0.1.0": {
+      "version": "0.1.0",
+      "rev": "0.1.0",
+      "url": "https://files.pythonhosted.org/packages/c3/40/817a5dcaf2b92f4b02e74b2ae12023080411f25d5f98811ebb10bff27804/ml_intern-0.1.0-py3-none-any.whl",
+      "hash": "sha256-nnDcbkQ77DxpSKleHXms0sf+F+nfdC2tWptDZk7rwUw="
+    }
+  }
+}

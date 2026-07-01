@@ -17,6 +17,14 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -54,70 +62,84 @@
         };
         py = python.pkgs;
         pname = "ml-intern";
-        version = "0.1.0";
-        mlInternWheelUrl = "https://files.pythonhosted.org/packages/c3/40/817a5dcaf2b92f4b02e74b2ae12023080411f25d5f98811ebb10bff27804/ml_intern-0.1.0-py3-none-any.whl";
-        mlInternWheelHash = "sha256-nnDcbkQ77DxpSKleHXms0sf+F+nfdC2tWptDZk7rwUw=";
 
-        ml-intern = py.buildPythonApplication {
-          inherit pname version;
+        # Builder: derive an ml-intern package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/url/hash
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            mlInternWheelUrl = entry.url;
+            mlInternWheelHash = entry.hash;
+          in
+          py.buildPythonApplication {
+            inherit pname version;
 
-          meta = with lib; {
-            description = "ml-intern command-line agent";
-            homepage = "https://pypi.org/project/ml-intern/";
-            mainProgram = "ml-intern";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "ml-intern command-line agent";
+              homepage = "https://pypi.org/project/ml-intern/";
+              mainProgram = "ml-intern";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
+            format = "wheel";
+            dontCheckRuntimeDeps = true;
+
+            src = pkgs.fetchurl {
+              url = mlInternWheelUrl;
+              hash = mlInternWheelHash;
+            };
+
+            propagatedBuildInputs = [
+              py.datasets
+              py.pydantic
+              py."python-dotenv"
+              py.requests
+              py.litellm
+              py.boto3
+              py."huggingface-hub"
+              py.fastmcp
+              py."prompt-toolkit"
+              py.thefuzz
+              py.rich
+              py.nbconvert
+              py.nbformat
+              py.whoosh
+              py.fastapi
+              py.uvicorn
+              py.httpx
+              py.websockets
+              py.apscheduler
+            ];
+
+            doCheck = false;
+            pythonImportsCheck = [ "agent" ];
+
           };
 
-          format = "wheel";
-          dontCheckRuntimeDeps = true;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          src = pkgs.fetchurl {
-            url = mlInternWheelUrl;
-            hash = mlInternWheelHash;
-          };
-
-          propagatedBuildInputs = [
-            py.datasets
-            py.pydantic
-            py."python-dotenv"
-            py.requests
-            py.litellm
-            py.boto3
-            py."huggingface-hub"
-            py.fastmcp
-            py."prompt-toolkit"
-            py.thefuzz
-            py.rich
-            py.nbconvert
-            py.nbformat
-            py.whoosh
-            py.fastapi
-            py.uvicorn
-            py.httpx
-            py.websockets
-            py.apscheduler
-          ];
-
-          doCheck = false;
-          pythonImportsCheck = [ "agent" ];
-
-        };
+        # One `ml-intern_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "ml-intern_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = ml-intern;
-          "ml-intern" = ml-intern;
-        };
+          default = latestPkg;
+          "ml-intern" = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${ml-intern}/bin/ml-intern";
+            program = "${latestPkg}/bin/ml-intern";
           };
           "ml-intern" = {
             type = "app";
-            program = "${ml-intern}/bin/ml-intern";
+            program = "${latestPkg}/bin/ml-intern";
           };
         };
       }
