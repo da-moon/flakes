@@ -1,5 +1,5 @@
 {
-  description = "askii - terminal ASCII art editor packaged from GitHub releases";
+  description = "askii - TUI based ASCII diagram editor packaged from GitHub releases";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -27,7 +27,7 @@
           inherit version;
 
           meta = with lib; {
-            description = "ASCII art editor for terminals";
+            description = "TUI based ASCII diagram editor";
             homepage = "https://github.com/nytopop/askii";
             license = licenses.mit;
             mainProgram = "askii";
