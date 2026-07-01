@@ -2,7 +2,7 @@
   description = "fzf-tab-completion - Tab completion using fzf for bash, zsh and readline applications";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
