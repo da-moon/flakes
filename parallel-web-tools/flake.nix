@@ -2,7 +2,7 @@
   description = "Parallel Web Tools - CLI for web search, content extraction, and deep research via the Parallel API";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
