@@ -12,133 +12,154 @@
       nixpkgs,
       flake-utils,
     }:
+    let
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+      sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
+    in
     flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_22;
         pname = "firecrawl-mcp";
-        version = "3.22.2";
 
-        # NOTE: npm optionalDependencies can be platform-specific,
-        # so the fixed-output hash from "yarn install" is not portable across systems.
-        outputHashBySystem = {
-          "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-aYWiuSVZT9UbUiHSMj3GshLgYUF8b+U1yfMnu7XvqQc=";
-        };
+        # Builder: turns one releases.json entry into the firecrawl-mcp
+        # derivation. PRESERVES the original build logic exactly; only
+        # version/src/hash(es) now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
 
-        # Fixed-output derivation to fetch npm package with all dependencies
-        npmDeps = pkgs.stdenv.mkDerivation {
-          name = "${pname}-${version}-npm-deps";
+            # NOTE: npm optionalDependencies can be platform-specific,
+            # so the fixed-output hash from "yarn install" is not portable across systems.
+            outputHashBySystem = entry.outputHashBySystem;
 
-          src = pkgs.fetchurl {
-            url = "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-${version}.tgz";
-            hash = "sha256-lp37l7HOlcSdgKH6N46Z7B3baOeX3pxuP/BEHuCxSUM=";
-          };
+            # Fixed-output derivation to fetch npm package with all dependencies
+            npmDeps = pkgs.stdenv.mkDerivation {
+              name = "${pname}-${version}-npm-deps";
 
-          nativeBuildInputs = [ nodejs pkgs.cacert pkgs.yarn ];
+              src = pkgs.fetchurl {
+                url = "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-${version}.tgz";
+                hash = entry.hash;
+              };
 
-          # Don't patch shebangs in FOD - it would add store references
-          # Shebangs will be patched in the main derivation
-          dontPatchShebangs = true;
+              nativeBuildInputs = [ nodejs pkgs.cacert pkgs.yarn ];
 
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
-          outputHash = outputHashBySystem.${system}
-            or (throw "Missing outputHashBySystem entry for system: ${system}");
+              # Don't patch shebangs in FOD - it would add store references
+              # Shebangs will be patched in the main derivation
+              dontPatchShebangs = true;
 
-          buildPhase = ''
-            runHook preBuild
+              outputHashAlgo = "sha256";
+              outputHashMode = "recursive";
+              outputHash = outputHashBySystem.${system}
+                or (throw "Missing outputHashBySystem entry for system: ${system}");
 
-            export HOME=$TMPDIR
+              buildPhase = ''
+                runHook preBuild
 
-            tar -xzf $src
-            cd package
-            ${nodejs}/bin/node <<'NODE'
-            const fs = require("fs");
-            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+                export HOME=$TMPDIR
 
-            function exactSpec(spec) {
-              if (typeof spec !== "string") return spec;
-              if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-              const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-              return bare ? bare[1] : spec;
-            }
+                tar -xzf $src
+                cd package
+                ${nodejs}/bin/node <<'NODE'
+                const fs = require("fs");
+                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
-            function isExactInstallSpec(spec) {
-              return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-            }
-
-            const unresolved = [];
-            for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-              for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                const next = exactSpec(spec);
-                pkg[field][name] = next;
-                if (typeof next === "string" && !isExactInstallSpec(next)) {
-                  unresolved.push(field + "." + name + "=" + next);
+                function exactSpec(spec) {
+                  if (typeof spec !== "string") return spec;
+                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+                  return bare ? bare[1] : spec;
                 }
-              }
-            }
 
-            if (unresolved.length > 0) {
-              throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-            }
+                function isExactInstallSpec(spec) {
+                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+                }
 
-            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+                const unresolved = [];
+                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                    const next = exactSpec(spec);
+                    pkg[field][name] = next;
+                    if (typeof next === "string" && !isExactInstallSpec(next)) {
+                      unresolved.push(field + "." + name + "=" + next);
+                    }
+                  }
+                }
+
+                if (unresolved.length > 0) {
+                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+                }
+
+                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
 NODE
-            yarn install --production --ignore-scripts --non-interactive
+                yarn install --production --ignore-scripts --non-interactive
 
-            runHook postBuild
-          '';
+                runHook postBuild
+              '';
 
-          installPhase = ''
-            runHook preInstall
-            mkdir -p $out
-            cp -r . $out/
-            runHook postInstall
-          '';
-        };
+              installPhase = ''
+                runHook preInstall
+                mkdir -p $out
+                cp -r . $out/
+                runHook postInstall
+              '';
+            };
+          in
+          # Main package
+          pkgs.stdenv.mkDerivation {
+            inherit pname version;
 
-        # Main package
-        firecrawl-mcp = pkgs.stdenv.mkDerivation {
-          inherit pname version;
+            meta = with pkgs.lib; {
+              description = "Firecrawl MCP Server - web scraping and crawling";
+              homepage = "https://github.com/mendableai/firecrawl-mcp-server";
+              platforms = platforms.unix;
+            };
 
-          meta = with pkgs.lib; {
-            description = "Firecrawl MCP Server - web scraping and crawling";
-            homepage = "https://github.com/mendableai/firecrawl-mcp-server";
-            platforms = platforms.unix;
+            src = npmDeps;
+
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+
+            dontBuild = true;
+            dontConfigure = true;
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/lib/${pname}
+              mkdir -p $out/bin
+
+              cp -r $src/* $out/lib/${pname}/
+
+              makeWrapper ${nodejs}/bin/node $out/bin/firecrawl-mcp \
+                --add-flags "$out/lib/${pname}/dist/index.js" \
+                --set NODE_PATH "$out/lib/${pname}/node_modules"
+
+              runHook postInstall
+            '';
+
           };
 
-          src = npmDeps;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-
-          dontBuild = true;
-          dontConfigure = true;
-
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/lib/${pname}
-            mkdir -p $out/bin
-
-            cp -r $src/* $out/lib/${pname}/
-
-            makeWrapper ${nodejs}/bin/node $out/bin/firecrawl-mcp \
-              --add-flags "$out/lib/${pname}/dist/index.js" \
-              --set NODE_PATH "$out/lib/${pname}/node_modules"
-
-            runHook postInstall
-          '';
-
-        };
-
+        # One `firecrawl-mcp-server_<sanitized-key>` package per table entry.
+        versionedPackages = builtins.listToAttrs (
+          builtins.map (key: {
+            name = "firecrawl-mcp-server_${sanitize key}";
+            value = mk key releases.versions.${key};
+          }) (builtins.attrNames releases.versions)
+        );
       in
       {
-        packages = {
-          default = firecrawl-mcp;
-          inherit firecrawl-mcp;
+        packages = versionedPackages // {
+          default = latestPkg;
+          firecrawl-mcp-server = latestPkg;
+          firecrawl-mcp = latestPkg;
         };
       }
     );

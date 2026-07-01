@@ -1,0 +1,14 @@
+{
+  "latest": "3.22.2",
+  "versions": {
+    "3.22.2": {
+      "version": "3.22.2",
+      "rev": "3.22.2",
+      "hash": "sha256-lp37l7HOlcSdgKH6N46Z7B3baOeX3pxuP/BEHuCxSUM=",
+      "outputHashBySystem": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-aYWiuSVZT9UbUiHSMj3GshLgYUF8b+U1yfMnu7XvqQc="
+      }
+    }
+  }
+}
