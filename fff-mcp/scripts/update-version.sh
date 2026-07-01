@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# Appends the newest upstream release of dmtrKovalenko/fff.nvim (fff-mcp assets)
+# as a new entry in releases.json (the JSON version table the flake reads) and
+# sets it as .latest. fff-mcp ships TAGGED GitHub releases, so:
+#   key     = the release version (e.g. "0.9.6")
+#   version = same
+# Per-arch prebuilt-binary SRI hashes are prefetched from the raw release assets
+# named fff-mcp-<rust-target>. The version data in flake.nix is never touched.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -28,12 +35,13 @@ readonly SYSTEM_KEYS=(aarch64-linux x86_64-linux aarch64-darwin x86_64-darwin)
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
   command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  command -v jq >/dev/null 2>&1 || { log_error "jq is required but not installed."; exit 2; }
 }
 
 ensure_in_package_directory() {
@@ -41,16 +49,27 @@ ensure_in_package_directory() {
     log_error "flake.nix not found at: $flake_file"
     exit 2
   fi
+  if [ ! -f "$releases_file" ]; then
+    log_error "releases.json not found at: $releases_file"
+    exit 2
+  fi
 }
 
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_release_tag() {
   local release_json
   release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
-  printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  printf '%s\n' "$release_json" | jq -r '.tag_name // empty' | head -n1
 }
 
 tag_to_version() {
@@ -62,37 +81,42 @@ tag_to_version() {
 prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
+    | jq -r '.hash // empty' \
     | head -n1
 }
 
-update_flake_version() {
-  local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+# sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
-update_arch_sha256() {
-  local system_key="$1" # e.g. "x86_64-linux"
-  local new_sha256="$2"
-  # Replace the sha256 line inside the matching "<system-key>" = { ... }; block.
-  sed -i.bak -E "/\"${system_key}\"[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*sha256 = \")[^\"]*(\";)|\\1${new_sha256}\\2|" "$flake_file"
-}
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
 
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#fff-mcp --no-write-lock-file --no-link --print-out-paths)"; then
-    log_error "nix build failed for fff-mcp"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#fff-mcp_${sanitized_key}" --no-write-lock-file --no-link --print-out-paths)"; then
+    log_error "nix build failed for fff-mcp_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/fff-mcp" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/fff-mcp"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-write-lock-file --no-link); then
+    log_error "nix build failed for default"
     return 1
   fi
   # fff-mcp is a stdio MCP server; guard against it blocking on stdin.
@@ -103,7 +127,7 @@ verify_build() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
 }
 
@@ -167,8 +191,13 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) fff-mcp release to releases.json as a new
+version-table entry (keyed by version) and sets .latest to it. Existing entries
+are preserved so consumers can still select past versions. Per-arch prebuilt
+binary hashes are recomputed via jq — flake.nix is never touched.
+
 Options:
-  --version VERSION   Update to a specific version (default: latest)
+  --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute release asset hashes for current version
   --no-build          Skip build verification
@@ -225,34 +254,33 @@ main() {
   local current_version
   current_version="$(get_current_version)"
   if [ -z "$current_version" ]; then
-    log_error "Failed to detect current version from flake.nix"
+    log_error "Failed to detect current version from releases.json"
     exit 2
   fi
 
   local latest_tag
-  latest_tag="$(get_latest_release_tag)"
-  if [ -z "$latest_tag" ]; then
-    log_error "Failed to fetch latest release from GitHub"
-    exit 2
-  fi
-
   local latest_version
-  latest_version="$(tag_to_version "$latest_tag")"
-  if [ -z "$latest_version" ]; then
-    log_error "Failed to derive version from tag: $latest_tag"
-    exit 2
-  fi
-
   if [ -n "$target_version" ]; then
     latest_version="$target_version"
     latest_tag="v$target_version"
+  else
+    latest_tag="$(get_latest_release_tag)"
+    if [ -z "$latest_tag" ]; then
+      log_error "Failed to fetch latest release from GitHub"
+      exit 2
+    fi
+    latest_version="$(tag_to_version "$latest_tag")"
+    if [ -z "$latest_version" ]; then
+      log_error "Failed to derive version from tag: $latest_tag"
+      exit 2
+    fi
   fi
 
-  log_info "Current version: $current_version"
-  log_info "Target version:  $latest_version"
+  log_info "Current latest: $current_version"
+  log_info "Target version: $latest_version"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_version" = "$latest_version" ]; then
+    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
       log_info "Already up to date!"
       exit 0
     fi
@@ -260,13 +288,13 @@ main() {
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
     log_info "Already up to date!"
     exit 0
   fi
 
   log_info "Prefetching binary hashes..."
-  declare -A hashes=()
+  local hashes_json="{}"
   local key target url hash
   for key in "${SYSTEM_KEYS[@]}"; do
     target="${ARCH_TARGETS[$key]}"
@@ -275,25 +303,31 @@ main() {
       log_error "Failed to prefetch hash for $key ($url)"
       exit 2
     fi
-    hashes[$key]="$hash"
     log_info "$key ($target) hash: $hash"
+    hashes_json="$(jq -n --argjson h "$hashes_json" --arg s "$key" --arg v "$hash" \
+      '$h + {($s): $v}')"
   done
+
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$latest_version" \
+    --arg rev "$latest_version" \
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
 
   local backup
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  cleanup_backups
-  update_flake_version "$latest_version"
-  for key in "${SYSTEM_KEYS[@]}"; do
-    update_arch_sha256 "$key" "${hashes[$key]}"
-  done
-  cleanup_backups
+  upsert_release_entry "$latest_version" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$latest_version")"
 
   if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      log_error "Build verification failed; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
       rm -f "$backup"
       exit 1
     fi
@@ -303,9 +337,9 @@ main() {
 
   show_changes
 
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "releases.json"
 
-  log_info "Successfully updated fff-mcp from $current_version to $latest_version"
+  log_info "Successfully appended fff-mcp $latest_version (latest was $current_version)"
 }
 
 main "$@"

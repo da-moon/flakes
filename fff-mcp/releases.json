@@ -1,0 +1,15 @@
+{
+  "latest": "0.9.6",
+  "versions": {
+    "0.9.6": {
+      "version": "0.9.6",
+      "rev": "0.9.6",
+      "hashes": {
+        "aarch64-linux": "sha256-qYEMkFavptnorB56Px8V+Oy/3BalkunSbkskNO+XpnU=",
+        "x86_64-linux": "sha256-ECzq8XPvd2vsszIiFun2tcrvmXxADF0V8RLOTeQKH1o=",
+        "aarch64-darwin": "sha256-Kaf63q+wYvPllUsauMaeFNyiT14GHNjTseobqzhaN1Q=",
+        "x86_64-darwin": "sha256-WCWTJMLBOhtvJPExOMLNPq6f8g4FIBpTm+uPIESmUao="
+      }
+    }
+  }
+}
