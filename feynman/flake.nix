@@ -1,5 +1,5 @@
 {
-  description = "Feynman - Companion AI CLI packaged as a Nix flake";
+  description = "Feynman - open source AI research agent CLI, packaged as a Nix flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -27,7 +27,7 @@
           inherit version;
 
           meta = with lib; {
-            description = "Companion AI CLI";
+            description = "Open source AI research agent CLI";
             homepage = "https://github.com/getcompanion-ai/feynman";
             mainProgram = "feynman";
             platforms = linuxSystems;
