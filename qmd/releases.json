@@ -1,0 +1,14 @@
+{
+  "latest": "2.5.3",
+  "versions": {
+    "2.5.3": {
+      "version": "2.5.3",
+      "rev": "2.5.3",
+      "hash": "sha256-v1s5PPB6GwJXCR1JkQBOpJ+1r97FCkQg1EXQ/fvvZXM=",
+      "outputHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-HV999LRzcH5D6NyvocOS1Zasv+ZG6P39k+Hpw1KpOkM="
+      }
+    }
+  }
+}

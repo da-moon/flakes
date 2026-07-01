@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+# Appends the newest upstream release of tobi/qmd as a new entry in
+# releases.json (the JSON version table the flake reads). Never hand-edits the
+# version data in flake.nix.
+#
+# qmd ships tagged GitHub releases, so:
+#   key     = the release version (e.g. "2.5.3")
+#   version = the same string
+#
+# Hashes recomputed from scratch:
+#   - .hash            : fetchurl source-tarball hash (arch-agnostic, single)
+#   - .outputHashes.*  : per-system bun/npm fixed-output-derivation hash,
+#                        computed via the reliable fakeHash -> nix build ->
+#                        parse "got:" method (only for the build system; the
+#                        other arch keeps its recorded/fake hash).
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -15,56 +29,52 @@ readonly REPO_OWNER="tobi"
 readonly REPO_NAME="qmd"
 readonly PACKAGE_ATTR="qmd"
 readonly BIN_NAME="qmd"
+# lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
+readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+# Which system's outputHash to (re)compute — the host we build on.
+BUILD_SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo x86_64-linux)"
 
 ensure_required_tools_installed() {
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  for t in nix curl jq; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
 ensure_in_package_directory() {
-  if [ ! -f "$flake_file" ]; then
-    log_error "flake.nix not found at: $flake_file"
-    exit 2
-  fi
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
 }
 
-get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+sanitize_key() {
+  # mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
+  printf '%s' "$1" | tr '.+-' '___'
+}
+
+extract_got_hash() {
+  sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
+}
+
+# Current "latest" key recorded in the version table.
+get_current_key() {
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_release_tag() {
   local release_json
   release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
-  printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^\"]*\)".*/\1/p' | head -n1
-}
-
-tag_to_version() {
-  local tag="$1"
-  tag="${tag#v}"
-  printf '%s\n' "$tag"
-}
-
-get_current_system_key() {
-  nix eval --impure --raw --expr builtins.currentSystem
-}
-
-get_other_output_hash_systems() {
-  local current_system_key="$1"
-  awk -v target="$current_system_key" '
-    /outputHashBySystem[[:space:]]*=[[:space:]]*\{/ { in_map = 1; next }
-    in_map && /\};/ { in_map = 0 }
-    in_map {
-      if (match($0, /"([^"]+)"[[:space:]]*=/, a) > 0 && a[1] != target) {
-        print a[1]
-      }
-    }
-  ' "$flake_file"
+  printf '%s\n' "$release_json" | jq -r '.tag_name // empty'
 }
 
 get_source_url() {
@@ -74,166 +84,60 @@ get_source_url() {
 
 prefetch_sha256_sri() {
   local url="$1"
-  nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+  nix store prefetch-file --json --hash-type sha256 "$url" | jq -r '.hash'
 }
 
-update_flake_version() {
-  local new_version="$1"
-  sed -i.bak -E "0,/^[[:space:]]*version = \"/ s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
-  if ! grep -Fq "version = \"${new_version}\"" "$flake_file"; then
-    log_error "Failed to update version in flake.nix"
-    return 1
-  fi
-}
-
-update_source_hash() {
-  local system_key="$1"
-  local new_hash="$2"
-  sed -i.bak -E "/sourceHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s#^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)#\\1${new_hash}\\2#" "$flake_file"
-  if ! grep -Fq "\"${system_key}\" = \"${new_hash}\";" "$flake_file"; then
-    log_error "Failed to update sourceHash for system: $system_key"
-    return 1
-  fi
-}
-
-get_source_hash_for_system() {
-  local target_system="$1"
-  awk -v target="$target_system" '
-    /sourceHashBySystem[[:space:]]*= {/ { in_map = 1; next }
-    in_map && /};/ { in_map = 0 }
-    in_map && $0 ~ "\"" target "\"" { if (match($0, /"[^"]+"[[:space:]]*= "([^"]+)";/, a) > 0) print a[1] }
-  ' "$flake_file"
-}
-
-get_output_hash_for_system() {
-  local target_system="$1"
-  awk -v target="$target_system" '
-    /outputHashBySystem[[:space:]]*= {/ { in_map = 1; next }
-    in_map && /};/ { in_map = 0 }
-    in_map && $0 ~ "\"" target "\"" { if (match($0, /"[^"]+"[[:space:]]*= "([^"]+)";/, a) > 0) print a[1] }
-  ' "$flake_file"
-}
-
-set_output_hash_placeholder_for_system() {
-  local system_key="$1"
-  local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s#^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;#\\1\"${placeholder}\";#" "$flake_file"
-  if ! grep -Fq "\"${system_key}\" = \"${placeholder}\";" "$flake_file"; then
-    log_error "Failed to set outputHash placeholder for system: $system_key"
-    return 1
-  fi
-}
-
-update_output_hash() {
-  local system_key="$1"
-  local new_hash="$2"
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
-  if ! grep -Fq "\"${system_key}\" = \"${new_hash}\";" "$flake_file"; then
-    log_error "Failed to update outputHash for system: $system_key"
-    return 1
-  fi
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-}
-
-trap cleanup_backups EXIT
-
-mark_other_output_hashes_pending() {
-  local current_system_key="$1"
-  local other_system
-
-  while IFS= read -r other_system; do
-    [ -n "$other_system" ] || continue
-    sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s~^([[:space:]]*\"${other_system}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;~\\1pkgs.lib.fakeHash;~" "$flake_file"
-  done < <(get_other_output_hash_systems "$current_system_key")
-}
-
-warn_other_output_hash_systems() {
-  local current_system_key="$1"
-  local other_systems
-
-  other_systems="$(get_other_output_hash_systems "$current_system_key" | tr '\n' ' ' | sed -E 's/[[:space:]]+$//')"
-  if [ -n "$other_systems" ]; then
-    log_warn "Only ${current_system_key} outputHash was refreshed here."
-    log_warn "Re-run this script on: ${other_systems} if those package hashes drift."
-  fi
-}
-
-extract_got_hash_from_build() {
-  sed -n 's/.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | head -n1
+# Recompute a fixed-output hash by building the target attr with FAKE_HASH
+# already written into releases.json and parsing nix's "got:" line.
+build_and_get_hash() {
+  local attr="$1" out
+  out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link 2>&1 || true)"
+  printf '%s\n' "$out" | extract_got_hash
 }
 
 verify_build() {
-  log_info "Verifying build..."
+  local attr="$1"
+  log_info "Verifying build of ${attr}..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-write-lock-file --no-link --print-out-paths)"; then
-    log_error "nix build failed for ${PACKAGE_ATTR}"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths)"; then
+    log_error "nix build failed for ${attr}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-write-lock-file --no-link); then
+    log_error "nix build failed for default"
+    return 1
+  fi
   timeout 30 "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
-compute_and_update_output_hash() {
-  local system_key
-  system_key="$(get_current_system_key)"
-  if [ -z "$system_key" ]; then
-    log_error "Failed to detect current system key"
-    return 1
-  fi
+print_usage() {
+  cat <<'EOF'
+Usage: ./scripts/update-version.sh [OPTIONS]
 
-  log_info "Computing outputHash (fixed-output npm deps) for system: $system_key"
-  if ! set_output_hash_placeholder_for_system "$system_key"; then
-    return 1
-  fi
-  cleanup_backups
+Appends the newest (or an explicit) tobi/qmd release to releases.json (the JSON
+version table read by flake.nix) and sets it as .latest. Recomputes the fetchurl
+source hash and the build-system bun/npm FOD hash via jq — the version data in
+flake.nix is never touched.
 
-  local build_output
-  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-write-lock-file --no-link 2>&1 || true)"
-  local got_hash
-  got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
+Options:
+  --version VERSION   Append a specific version (default: latest release tag)
+  --check             Only check for updates (exit 1 if update available)
+  --rehash            Recompute source + outputHash for the current latest entry
+  --no-build          Skip build verification (and outputHash recompute)
+  --no-commit         Do not auto-commit (default: auto-commit is enabled)
+  --help              Show this help message
 
-  if [ -z "$got_hash" ]; then
-    log_error "Failed to parse outputHash from nix build output"
-    printf '%s\n' "$build_output" | sed -n '1,120p' >&2 || true
-    return 1
-  fi
-
-  log_info "outputHash ($system_key): $got_hash"
-  if ! update_output_hash "$system_key" "$got_hash"; then
-    log_error "Failed to update outputHash in flake.nix"
-    return 1
-  fi
-  cleanup_backups
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
+Examples:
+  ./scripts/update-version.sh
+  ./scripts/update-version.sh --check
+  ./scripts/update-version.sh --version 2.5.3
+EOF
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -271,176 +175,146 @@ maybe_git_commit() {
   ) 9>"$lock_file"
 }
 
-print_usage() {
-  cat <<'USAGE'
-Usage: ./scripts/update-version.sh [OPTIONS]
-
-Options:
-  --version VERSION   Update to a specific version (default: latest)
-  --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute source hash and outputHash for current architecture
-  --no-build          Skip build verification
-  --help              Show this help message
-
-Examples:
-  ./scripts/update-version.sh
-  ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --version 1.0.7
-USAGE
-}
-
 main() {
   ensure_required_tools_installed
   ensure_in_package_directory
-  log_info "Updating package: ${PACKAGE_DIR_NAME}"
+  log_info "Updating package: ${PACKAGE_DIR_NAME} (build system: ${BUILD_SYSTEM})"
 
-  local target_version=""
-  local check_only=false
-  local rehash=false
-  local no_build=false
-
+  local target_version="" check_only=false rehash=false no_build=false do_commit=true
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
         [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
-        target_version="$2"
-        shift 2
-        ;;
-      --check)
-        check_only=true
-        shift
-        ;;
-      --rehash)
-        rehash=true
-        shift
-        ;;
-      --no-build)
-        no_build=true
-        shift
-        ;;
-      --help)
-        print_usage
-        exit 0
-        ;;
-      *)
-        log_error "Unknown option: $1"
-        print_usage
-        exit 2
-        ;;
+        target_version="${2#v}"; shift 2 ;;
+      --check) check_only=true; shift ;;
+      --rehash) rehash=true; shift ;;
+      --no-build) no_build=true; shift ;;
+      --no-commit) do_commit=false; shift ;;
+      --help) print_usage; exit 0 ;;
+      *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
   done
 
-  local current_version
-  current_version="$(get_current_version)"
-  if [ -z "$current_version" ]; then
-    log_error "Failed to determine current version from flake.nix"
+  local current_key
+  current_key="$(get_current_key)"
+  if [ -z "$current_key" ]; then
+    log_error "Failed to detect current latest from releases.json"
     exit 2
   fi
 
-  local latest_tag
-  latest_tag="$(get_latest_release_tag)"
-  if [ -z "$latest_tag" ]; then
-    log_error "Failed to fetch latest release from GitHub"
-    exit 2
-  fi
-
-  local latest_version source_tag
-  latest_version="$(tag_to_version "$latest_tag")"
-  source_tag="$latest_tag"
-
+  local new_version
   if [ -n "$target_version" ]; then
-    latest_version="${target_version#v}"
-    source_tag="v${latest_version}"
+    new_version="$target_version"
+  else
+    local latest_tag
+    latest_tag="$(get_latest_release_tag)"
+    [ -n "$latest_tag" ] || { log_error "Failed to fetch latest release from GitHub"; exit 2; }
+    new_version="${latest_tag#v}"
   fi
 
-  log_info "Current version: $current_version"
-  log_info "Target version:  $latest_version"
+  local new_key="$new_version"
+
+  log_info "Current latest key: ${current_key}"
+  log_info "Target version:     ${new_version}"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_version" = "$latest_version" ]; then
+    if has_version_entry "$new_key" && [ "$current_key" = "$new_key" ]; then
       log_info "Already up to date!"
       exit 0
     fi
-    log_info "Update available: $current_version -> $latest_version"
+    log_info "Update available: ${current_key} -> ${new_key}"
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+  if has_version_entry "$new_key" && [ "$current_key" = "$new_key" ] && [ "$rehash" != true ]; then
     log_info "Already up to date!"
     exit 0
   fi
 
-  local source_url
-  source_url="$(get_source_url "$latest_version")"
-
-  local source_hash
+  # 1) source tarball hash (arch-agnostic single hash)
+  local source_url source_hash
+  source_url="$(get_source_url "$new_version")"
+  log_info "Prefetching source hash from: $source_url"
   source_hash="$(prefetch_sha256_sri "$source_url")"
-  if [ -z "$source_hash" ]; then
-    log_error "Failed to prefetch source hash"
-    exit 2
+  [ -n "$source_hash" ] || { log_error "Failed to prefetch source hash"; exit 2; }
+  log_info "  source hash: $source_hash"
+
+  # Preserve an existing outputHash for the other arch if present, else seed a
+  # fakeHash there (that arch is not built here; its hash stays fake until built).
+  local aarch_hash x86_hash
+  aarch_hash="$(jq -r --arg k "$new_key" '.versions[$k].outputHashes["aarch64-linux"] // empty' "$releases_file")"
+  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
+  x86_hash="$(jq -r --arg k "$new_key" '.versions[$k].outputHashes["x86_64-linux"] // empty' "$releases_file")"
+  [ -n "$x86_hash" ] || x86_hash="$FAKE_HASH"
+
+  # Build-system hash starts fake so nix reveals the real one; other arch preserved.
+  local build_hash="$FAKE_HASH" other_map
+  case "$BUILD_SYSTEM" in
+    aarch64-linux) other_map="$(jq -n --arg h "$x86_hash" '{ "x86_64-linux": $h }')" ;;
+    *)             other_map="$(jq -n --arg h "$aarch_hash" '{ "aarch64-linux": $h }')" ;;
+  esac
+
+  # 2) upsert the entry with fake build-system hash + preserved other-arch hash.
+  local attr tmp
+  attr="${PACKAGE_ATTR}_$(sanitize_key "$new_key")"
+  tmp="$(mktemp)"
+  jq --arg k "$new_key" \
+     --arg ver "$new_version" \
+     --arg rev "$new_version" \
+     --arg src "$source_hash" \
+     --arg build "$build_hash" \
+     --arg bsys "$BUILD_SYSTEM" \
+     --argjson other "$other_map" '
+       .versions[$k] = {
+         version: $ver,
+         rev: $rev,
+         hash: $src,
+         outputHashes: ($other + { ($bsys): $build })
+       }
+       | .latest = $k
+     ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
+
+  if [ "$no_build" = true ]; then
+    log_warn "Skipping outputHash recompute and build verification (--no-build)."
+    if [ "$do_commit" = true ]; then
+      maybe_git_commit "chore(${PACKAGE_DIR_NAME}): bump to ${new_version}" "releases.json"
+    fi
+    exit 0
   fi
 
-  log_info "Source tarball hash: $source_hash"
-
-  local current_system_key
-  current_system_key="$(get_current_system_key)"
-  if [ -z "$current_system_key" ]; then
-    log_error "Failed to detect current system"
-    exit 2
+  # 3) outputHash FOD hash for the build system
+  log_info "Computing outputHash for ${BUILD_SYSTEM}..."
+  local out_hash
+  out_hash="$(build_and_get_hash "$attr")"
+  if [ -z "$out_hash" ]; then
+    log_info "  outputHash already correct (no rehash needed)."
+  else
+    log_info "  outputHash: $out_hash"
+    tmp="$(mktemp)"
+    jq --arg k "$new_key" --arg bsys "$BUILD_SYSTEM" --arg h "$out_hash" \
+      '.versions[$k].outputHashes[$bsys] = $h' \
+      "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
   fi
 
-  log_info "Current system: $current_system_key"
-  if [ -z "$(get_source_hash_for_system "$current_system_key")" ]; then
-    log_warn "No sourceHashBySystem entry for ${current_system_key}"
-  fi
-  if [ -z "$(get_output_hash_for_system "$current_system_key")" ]; then
-    log_warn "No outputHashBySystem entry for ${current_system_key}"
-  fi
-
-  local backup
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
-
-  cleanup_backups
-  if ! update_flake_version "$latest_version" \
-    || ! update_source_hash "aarch64-linux" "$source_hash" \
-    || ! update_source_hash "x86_64-linux" "$source_hash"; then
-    log_error "Failed to update version/source hash; restoring previous flake.nix"
-    cp "$backup" "$flake_file"
-    rm -f "$backup"
-    cleanup_backups
+  if ! verify_build "$attr"; then
+    log_error "Build verification failed."
     exit 1
   fi
-  if [ "$current_version" != "$latest_version" ]; then
-    mark_other_output_hashes_pending "$current_system_key"
-  fi
-  if [ "$no_build" != true ]; then
-    if ! compute_and_update_output_hash; then
-      log_error "Failed to update outputHash; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
-      rm -f "$backup"
-      exit 1
+
+  log_info "releases.json now contains:"
+  jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
+
+  if [ "$do_commit" = true ]; then
+    local msg
+    if [ "$current_key" = "$new_key" ]; then
+      msg="chore(${PACKAGE_DIR_NAME}): rehash ${new_version}"
+    else
+      msg="chore(${PACKAGE_DIR_NAME}): bump to ${new_version}"
     fi
-  else
-    log_warn "Skipping outputHash update because --no-build was requested"
-  fi
-  cleanup_backups
-
-  if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      log_error "Build verification failed; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
-      rm -f "$backup"
-      exit 1
-    fi
+    maybe_git_commit "$msg" "releases.json"
   fi
 
-  rm -f "$backup"
-  warn_other_output_hash_systems "$current_system_key"
-
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
-
-  log_info "Successfully updated ${PACKAGE_ATTR} from $current_version to $latest_version"
+  log_info "Successfully updated ${PACKAGE_ATTR} (latest was ${current_key}, now ${new_key})"
 }
 
 main "$@"
