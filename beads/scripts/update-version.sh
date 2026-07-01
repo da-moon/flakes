@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# Appends the newest (or an explicit) beads release to releases.json (the JSON
+# version table read by flake.nix) and sets it as .latest. Beads ships TAGGED
+# GitHub releases with per-arch prebuilt tarballs, so:
+#   key     = the upstream version (e.g. "1.0.4")
+#   version = the same version string
+# Per-arch fixed-output hashes are prefetched from the release tarballs and
+# written via jq — the version data in flake.nix is never touched.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -13,74 +20,89 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="steveyegge"
 readonly REPO_NAME="beads"
+# Upstream release-asset arch tokens keyed by nix system.
+declare -Ar SYSTEM_TO_RELEASE_ARCH=(
+  [x86_64-linux]="amd64"
+  [aarch64-linux]="arm64"
+)
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  for t in nix curl jq; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
 ensure_in_package_directory() {
-  if [ ! -f "$flake_file" ]; then
-    log_error "flake.nix not found at: $flake_file"
-    exit 2
-  fi
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
 }
 
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_release_tag() {
   local release_json
   release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
-  printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  printf '%s\n' "$release_json" | jq -r '.tag_name // empty'
 }
 
 tag_to_version() {
   local tag="$1"
-  tag="${tag#v}"
-  printf '%s\n' "$tag"
+  printf '%s\n' "${tag#v}"
 }
 
 prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+    | jq -r '.hash // empty'
 }
 
-update_flake_version() {
-  local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+# sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
-update_arch_sha256() {
-  local system_key="$1" # "aarch64-linux" or "x86_64-linux"
-  local new_sha256="$2"
-  sed -i.bak -E "/\"${system_key}\"[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*sha256 = \")[^\"]*(\";)|\\1${new_sha256}\\2|" "$flake_file"
-}
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
 
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#beads --no-link --no-write-lock-file --print-out-paths)"; then
-    log_error "nix build failed for beads"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#beads_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for beads_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/bd" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/bd"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
     return 1
   fi
   timeout 30 "$out_path/bin/bd" --help >/dev/null 2>&1 || true
@@ -90,29 +112,8 @@ verify_build() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -154,17 +155,22 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) beads release to releases.json as a new
+version-table entry (keyed by version) and sets .latest to it. Existing entries
+are preserved so consumers can still select past versions. Per-arch tarball
+hashes are prefetched and written via jq — flake.nix is never touched.
+
 Options:
-  --version VERSION   Update to a specific version (default: latest)
+  --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute release asset hashes for current version
+  --rehash            Recompute hashes even if the version is unchanged
   --no-build          Skip build verification
   --help              Show this help message
 
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --version 0.29.0
+  ./scripts/update-version.sh --version 1.0.4
 EOF
 }
 
@@ -212,34 +218,32 @@ main() {
   local current_version
   current_version="$(get_current_version)"
   if [ -z "$current_version" ]; then
-    log_error "Failed to detect current version from flake.nix"
+    log_error "Failed to detect current version from releases.json"
     exit 2
   fi
 
-  local latest_tag
-  latest_tag="$(get_latest_release_tag)"
-  if [ -z "$latest_tag" ]; then
-    log_error "Failed to fetch latest release from GitHub"
-    exit 2
-  fi
-
-  local latest_version
-  latest_version="$(tag_to_version "$latest_tag")"
-  if [ -z "$latest_version" ]; then
-    log_error "Failed to derive version from tag: $latest_tag"
-    exit 2
-  fi
-
+  local latest_tag latest_version
   if [ -n "$target_version" ]; then
     latest_version="$target_version"
     latest_tag="v$target_version"
+  else
+    latest_tag="$(get_latest_release_tag)"
+    if [ -z "$latest_tag" ]; then
+      log_error "Failed to fetch latest release from GitHub"
+      exit 2
+    fi
+    latest_version="$(tag_to_version "$latest_tag")"
+    if [ -z "$latest_version" ]; then
+      log_error "Failed to derive version from tag: $latest_tag"
+      exit 2
+    fi
   fi
 
-  log_info "Current version: $current_version"
+  log_info "Current latest: $current_version"
   log_info "Target version:  $latest_version"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_version" = "$latest_version" ]; then
+    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
       log_info "Already up to date!"
       exit 0
     fi
@@ -247,42 +251,48 @@ main() {
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
     log_info "Already up to date!"
     exit 0
   fi
 
-  local url_aarch64 url_x86_64
-  url_aarch64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/beads_${latest_version}_linux_arm64.tar.gz"
-  url_x86_64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/beads_${latest_version}_linux_amd64.tar.gz"
-
+  # Prefetch per-arch tarball hashes from the release assets.
   log_info "Prefetching tarball hashes..."
-  local hash_aarch64 hash_x86_64
-  hash_aarch64="$(prefetch_sha256_sri "$url_aarch64")"
-  hash_x86_64="$(prefetch_sha256_sri "$url_x86_64")"
+  local system arch url sri_hash
+  local hashes_json="{}"
+  for system in "${!SYSTEM_TO_RELEASE_ARCH[@]}"; do
+    arch="${SYSTEM_TO_RELEASE_ARCH[$system]}"
+    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/beads_${latest_version}_linux_${arch}.tar.gz"
+    sri_hash="$(prefetch_sha256_sri "$url")"
+    if [ -z "$sri_hash" ]; then
+      log_error "Failed to prefetch hash for $arch ($system): $url"
+      exit 2
+    fi
+    log_info "$system hash: $sri_hash"
+    hashes_json="$(jq -n --argjson h "$hashes_json" --arg s "$system" --arg v "$sri_hash" \
+      '$h + {($s): $v}')"
+  done
 
-  if [ -z "$hash_aarch64" ] || [ -z "$hash_x86_64" ]; then
-    log_error "Failed to prefetch one or more tarball hashes"
-    exit 2
-  fi
-
-  log_info "aarch64 hash: $hash_aarch64"
-  log_info "x86_64 hash:  $hash_x86_64"
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$latest_version" \
+    --arg rev "$latest_version" \
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
 
   local backup
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  cleanup_backups
-  update_flake_version "$latest_version"
-  update_arch_sha256 "aarch64-linux" "$hash_aarch64"
-  update_arch_sha256 "x86_64-linux" "$hash_x86_64"
-  cleanup_backups
+  upsert_release_entry "$latest_version" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$latest_version")"
 
   if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      log_error "Build verification failed; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
       rm -f "$backup"
       exit 1
     fi
@@ -292,9 +302,16 @@ main() {
 
   show_changes
 
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
+  local scope msg
+  scope="$(basename "$pkg_dir")"
+  if [ "$current_version" = "$latest_version" ]; then
+    msg="chore(${scope}): rehash ${latest_version}"
+  else
+    msg="chore(${scope}): bump to ${latest_version}"
+  fi
+  maybe_git_commit "$msg" "releases.json"
 
-  log_info "Successfully updated beads from $current_version to $latest_version"
+  log_info "Successfully appended beads $latest_version (latest was $current_version)"
 }
 
 main "$@"
