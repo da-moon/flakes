@@ -23,23 +23,27 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "2.1.197";
+
+        # Version table: consumers select the latest OR any past version.
+        # New entries are appended by scripts/update-version.sh via jq — do
+        # NOT hand-edit the version data in this file.
+        releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
           aarch64-linux = "linux-arm64";
         };
 
-        binarySha256BySystem = {
-          # update-version.sh managed hashes.
-          x86_64-linux = "sha256-9U5py8ibLaYaQVcAr3/1KhR+hiUX1PGw7s92hEjPf4M=";
-          aarch64-linux = "sha256-+0hHPEZ8J2Fax5mnVPTvC2jDY+RZbO+7WcOBXVGgzIo=";
-        };
-
         releasePlatform = releasePlatformBySystem.${system};
-        binarySha256 = binarySha256BySystem.${system};
 
-        claude-code = pkgs.stdenv.mkDerivation rec {
+        # Builder: derive a claude-code package from one releases.json entry.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            binarySha256 = entry.hashes.${system};
+          in
+          pkgs.stdenv.mkDerivation rec {
           pname = "claude-code";
           inherit version;
 
@@ -108,12 +112,22 @@
 
         };
 
+        # Sanitize a JSON key into a valid attribute-name suffix.
+        sanitizeKey = key: builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ] key;
+
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+        # One `claude-code_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "claude-code_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
+
       in
       {
         packages = {
-          default = claude-code;
-          claude-code = claude-code;
-        };
+          default = latestPkg;
+          claude-code = latestPkg;
+        } // versionPackages;
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
@@ -149,15 +163,15 @@
         apps = {
           default = {
             type = "app";
-            program = "${claude-code}/bin/claude";
+            program = "${latestPkg}/bin/claude";
           };
           claude = {
             type = "app";
-            program = "${claude-code}/bin/claude";
+            program = "${latestPkg}/bin/claude";
           };
           claude-direct = {
             type = "app";
-            program = "${claude-code}/bin/claude-direct";
+            program = "${latestPkg}/bin/claude-direct";
           };
         };
       }

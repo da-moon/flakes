@@ -1,0 +1,21 @@
+{
+  "latest": "2.1.197",
+  "versions": {
+    "2.1.197": {
+      "version": "2.1.197",
+      "rev": "2.1.197",
+      "hashes": {
+        "x86_64-linux": "sha256-9U5py8ibLaYaQVcAr3/1KhR+hiUX1PGw7s92hEjPf4M=",
+        "aarch64-linux": "sha256-+0hHPEZ8J2Fax5mnVPTvC2jDY+RZbO+7WcOBXVGgzIo="
+      }
+    },
+    "2.1.114": {
+      "version": "2.1.114",
+      "rev": "2.1.114",
+      "hashes": {
+        "aarch64-linux": "sha256-lVa3TiyRLn3K75DJH9DdUJU2T4qdcTmN48XGaWErgoo=",
+        "x86_64-linux": "sha256-Er1LCRbesGvhf/x7LwSF4UC/ALLbPct4Rp1mcj1zwn8="
+      }
+    }
+  }
+}
