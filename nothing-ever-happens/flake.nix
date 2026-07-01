@@ -19,6 +19,12 @@
         "aarch64-linux"
       ];
 
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+      sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
+
       homeManagerModule =
         {
           config,
@@ -352,16 +358,6 @@
           lib = pkgs.lib;
           py = pkgs.python3Packages;
           pname = "nothing-ever-happens";
-          rev = "930e18050e7b40658ab503d17c15ddc75a09e897";
-          version = "unstable-2026-04-13-930e180";
-          srcHash = "sha256-lx+hNGv/XTkCbd1117jNsCJ5vocLdG/FtXipjvk/D7I=";
-
-          src = pkgs.fetchFromGitHub {
-            owner = "sterlingcrispin";
-            repo = "nothing-ever-happens";
-            inherit rev;
-            hash = srcHash;
-          };
 
           polyEip712Structs = py.buildPythonPackage rec {
             pname = "poly-eip712-structs";
@@ -462,7 +458,22 @@
             pyClobClient
           ]);
 
-          nothingEverHappens = pkgs.stdenv.mkDerivation {
+          # Builder: turns one releases.json entry into the nothing-ever-happens
+          # derivation. PRESERVES the original build logic exactly; only
+          # version/rev/src-hash now come from `entry` instead of let-bindings.
+          mk =
+            key: entry:
+            let
+              version = entry.version;
+              rev = entry.rev;
+              src = pkgs.fetchFromGitHub {
+                owner = "sterlingcrispin";
+                repo = "nothing-ever-happens";
+                inherit rev;
+                hash = entry.hash;
+              };
+            in
+            pkgs.stdenv.mkDerivation {
             inherit pname version src;
 
             meta = with lib; {
@@ -564,21 +575,30 @@
             '';
 
           };
+          latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+          # One `nothing-ever-happens_<sanitized-key>` package per table entry.
+          versionPackages = builtins.listToAttrs (
+            builtins.map (key: {
+              name = "${pname}_${sanitize key}";
+              value = mk key releases.versions.${key};
+            }) (builtins.attrNames releases.versions)
+          );
         in
         {
-          packages = {
-            default = nothingEverHappens;
-            "nothing-ever-happens" = nothingEverHappens;
+          packages = versionPackages // {
+            default = latestPkg;
+            "nothing-ever-happens" = latestPkg;
           };
 
           apps = {
             default = {
               type = "app";
-              program = "${nothingEverHappens}/bin/nothing-ever-happens";
+              program = "${latestPkg}/bin/nothing-ever-happens";
             };
             "nothing-ever-happens" = {
               type = "app";
-              program = "${nothingEverHappens}/bin/nothing-ever-happens";
+              program = "${latestPkg}/bin/nothing-ever-happens";
             };
           };
         }

@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# Appends the newest upstream commit of sterlingcrispin/nothing-ever-happens as a
+# new entry in releases.json (the JSON version table the flake reads). Never
+# hand-edits the version data in flake.nix.
+#
+# nothing-ever-happens has NO release tags, so:
+#   key     = short (7-char) upstream commit hash
+#   version = "<base>-unstable-<commit-date>" (base taken from the current latest
+#             entry; nixpkgs uses "0" when a project has no tagged release)
+#
+# The single fetchFromGitHub source hash is recomputed from scratch via
+# nix-prefetch-url and stored on the entry as ".hash".
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -12,55 +23,49 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 readonly OWNER="sterlingcrispin"
 readonly REPO="nothing-ever-happens"
-readonly PACKAGE_ATTR="nothing-ever-happens"
 readonly BIN_NAME="nothing-ever-happens"
+readonly REPO_URL="https://github.com/${OWNER}/${REPO}.git"
+readonly GITHUB_API_BASE="https://api.github.com"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
-# Pristine copy of flake.nix taken before mutation, restored on build failure.
-FLAKE_BACKUP=""
-
 ensure_required_tools_installed() {
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v git >/dev/null 2>&1 || { log_error "git is required but not installed."; exit 2; }
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v nix-prefetch-url >/dev/null 2>&1 || { log_error "nix-prefetch-url is required but not installed."; exit 2; }
-  command -v python3 >/dev/null 2>&1 || { log_error "python3 is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  for t in curl git nix nix-prefetch-url jq python3; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
 ensure_in_package_directory() {
-  if [ ! -f "$flake_file" ]; then
-    log_error "flake.nix not found at: $flake_file"
-    exit 2
-  fi
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
 }
 
-get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
-}
-
-get_current_rev() {
-  sed -n 's/^[[:space:]]*rev = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+# mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
 get_latest_commit_sha() {
-  git ls-remote "https://github.com/${OWNER}/${REPO}.git" HEAD | awk '{print $1}'
+  git ls-remote "$REPO_URL" HEAD | awk 'NR==1{print $1}'
+}
+
+# Resolve a ref/rev to its full 40-char sha via the commits API (also validates).
+resolve_full_sha() {
+  local ref="$1" sha
+  sha="$(git ls-remote "$REPO_URL" "$ref" | awk 'NR==1{print $1}')"
+  [ -n "$sha" ] || sha="$ref"  # allow a raw (possibly short) rev
+  curl -fsSL "$GITHUB_API_BASE/repos/$OWNER/$REPO/commits/$sha" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])'
 }
 
 get_commit_date() {
   local sha="$1"
-  curl -fsSL "https://api.github.com/repos/${OWNER}/${REPO}/commits/${sha}" \
+  curl -fsSL "$GITHUB_API_BASE/repos/$OWNER/$REPO/commits/${sha}" \
     | python3 -c 'import json, sys; print(json.load(sys.stdin)["commit"]["committer"]["date"][:10])'
-}
-
-build_version_string() {
-  local commit_date="$1"
-  local sha="$2"
-  printf 'unstable-%s-%s\n' "$commit_date" "${sha:0:7}"
 }
 
 prefetch_source_hash_sri() {
@@ -71,46 +76,32 @@ prefetch_source_hash_sri() {
   nix hash to-sri --type sha256 "$hash"
 }
 
-update_flake_version() {
-  local new_version="$1"
-  # Anchor to the main package's `version = "unstable-…"` line only; the flake
-  # also declares four Python wheel sub-packages with their own semver
-  # `version = "0.x.y"` lines that must not be rewritten.
-  sed -i.bak -E "s/(^[[:space:]]*version = \")unstable-[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+# Append/upsert an entry into releases.json and set .latest (atomic tmp+mv).
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-update_rev() {
-  local new_rev="$1"
-  sed -i.bak -E "s/^([[:space:]]*rev = \")[^\"]*(\";)/\\1${new_rev}\\2/" "$flake_file"
-}
-
-update_src_hash() {
-  local new_hash="$1"
-  sed -i.bak -E "s~^([[:space:]]*srcHash = \")[^\"]*(\";)~\\1${new_hash}\\2~" "$flake_file"
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-}
-
-on_exit() {
-  cleanup_backups
-  if [ -n "${FLAKE_BACKUP:-}" ]; then
-    rm -f "$FLAKE_BACKUP" 2>/dev/null || true
-  fi
-}
-
-trap on_exit EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --print-out-paths --no-write-lock-file)"; then
-    log_error "nix build failed for ${PACKAGE_ATTR}"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${BIN_NAME}_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for ${BIN_NAME}_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
     return 1
   fi
   timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
@@ -120,29 +111,8 @@ verify_build() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -184,17 +154,23 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest upstream commit of sterlingcrispin/nothing-ever-happens to
+releases.json (the JSON version table read by flake.nix) and sets it as .latest.
+Recomputes the fetchFromGitHub source hash and upserts via jq — the version data
+in flake.nix is never touched.
+
 Options:
-  --version VERSION   Set an explicit version string (advanced use)
+  --rev VALUE         Pin to a specific git ref/branch/rev instead of HEAD
+                        (aliases: --revision, --version)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute the source hash for the current revision
   --no-build          Skip build verification
+  --no-commit         Do not auto-commit (default: auto-commit is enabled)
   --help              Show this help message
 
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --rehash
+  ./scripts/update-version.sh --rev main
 EOF
 }
 
@@ -203,113 +179,107 @@ main() {
   ensure_in_package_directory
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
-  local explicit_version=""
-  local check_only=false
-  local rehash=false
-  local no_build=false
-
+  local check_only=false no_build=false do_commit=true target_ref=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version)
-        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
-        explicit_version="$2"
-        shift 2
-        ;;
-      --check)
-        check_only=true
-        shift
-        ;;
-      --rehash)
-        rehash=true
-        shift
-        ;;
-      --no-build)
-        no_build=true
-        shift
-        ;;
-      --help)
-        print_usage
-        exit 0
-        ;;
-      *)
-        log_error "Unknown option: $1"
-        print_usage
-        exit 2
-        ;;
+      --check) check_only=true; shift ;;
+      --no-build) no_build=true; shift ;;
+      --no-commit) do_commit=false; shift ;;
+      --rev|--revision|--version)
+        [ $# -ge 2 ] || { log_error "$1 requires an argument"; exit 2; }
+        target_ref="$2"; shift 2 ;;
+      --help) print_usage; exit 0 ;;
+      *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
   done
 
-  local current_version current_rev
-  current_version="$(get_current_version)"
-  current_rev="$(get_current_rev)"
-
-  if [ -z "$current_version" ] || [ -z "$current_rev" ]; then
-    log_error "Failed to determine current package metadata from flake.nix"
-    exit 1
+  local cur_latest_key cur_latest_ver base
+  cur_latest_key="$(jq -r '.latest' "$releases_file")"
+  cur_latest_ver="$(jq -r --arg k "$cur_latest_key" '.versions[$k].version' "$releases_file")"
+  if [ -z "$cur_latest_key" ] || [ "$cur_latest_key" = "null" ]; then
+    log_error "Failed to detect current latest key from releases.json"
+    exit 2
   fi
+  # Base = version part before "-unstable-" (e.g. "0"); the project has no tags,
+  # so we preserve whatever base the current latest entry already uses.
+  base="${cur_latest_ver%%-unstable-*}"
+  [ -n "$base" ] || base="0"
 
-  local target_rev target_date target_version
-  target_rev="$(get_latest_commit_sha)"
-  target_date="$(get_commit_date "$target_rev")"
-  target_version="$(build_version_string "$target_date" "$target_rev")"
-
-  if [ -n "$explicit_version" ]; then
-    target_version="$explicit_version"
+  local rev date short_key new_version
+  if [ -n "$target_ref" ]; then
+    rev="$(resolve_full_sha "$target_ref")"
+  else
+    rev="$(get_latest_commit_sha)"
   fi
+  [ -n "$rev" ] && [ "$rev" != "null" ] || { log_error "could not resolve upstream rev"; exit 2; }
+  date="$(get_commit_date "$rev")"
+  [ -n "$date" ] || { log_error "could not resolve commit date for $rev"; exit 2; }
+  short_key="${rev:0:7}"
+  new_version="${base}-unstable-${date}"
 
-  log_info "Current version:      $current_version"
-  log_info "Current revision:     $current_rev"
-  log_info "Target version:       $target_version"
-  log_info "Target revision:      $target_rev"
+  log_info "Current latest key: ${cur_latest_key} (${cur_latest_ver})"
+  log_info "Resolved upstream:  ${rev}"
+  log_info "New key:            ${short_key}"
+  log_info "New version:        ${new_version}"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_rev" = "$target_rev" ] && [ "$current_version" = "$target_version" ]; then
-      log_info "Package is up to date."
+    if [ "$short_key" = "$cur_latest_key" ]; then
+      log_info "Already up to date (latest is ${cur_latest_key})."
       exit 0
     fi
-    log_warn "Update available: $current_version -> $target_version"
+    log_info "Update available: ${cur_latest_key} -> ${short_key}"
     exit 1
   fi
 
-  local commit_message
-  commit_message="$(build_commit_message "$current_version" "$target_version" "$rehash")"
+  log_info "Computing fetchFromGitHub source hash..."
+  local src_hash
+  src_hash="$(prefetch_source_hash_sri "$rev")"
+  [ -n "$src_hash" ] || { log_error "Failed to prefetch source hash for ${rev}"; exit 1; }
+  log_info "  src hash: $src_hash"
 
-  FLAKE_BACKUP="$(mktemp)"
-  cp -- "$flake_file" "$FLAKE_BACKUP"
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$new_version" \
+    --arg rev "$rev" \
+    --arg hash "$src_hash" \
+    '{version: $v, rev: $rev, hash: $hash}')"
 
-  if [ "$current_rev" != "$target_rev" ]; then
-    update_rev "$target_rev"
-    update_flake_version "$target_version"
-    cleanup_backups
-  elif [ -n "$explicit_version" ]; then
-    # Rev unchanged but the user pinned an explicit version label: still write it.
-    update_flake_version "$target_version"
-    cleanup_backups
-  fi
+  local backup
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  if [ "$rehash" = true ] || [ "$current_rev" != "$target_rev" ]; then
-    local source_hash
-    source_hash="$(prefetch_source_hash_sri "$target_rev")"
-    if [ -z "$source_hash" ]; then
-      log_error "Failed to prefetch source hash for ${target_rev}"
+  upsert_release_entry "$short_key" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$short_key")"
+
+  if [ "$no_build" != true ]; then
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
       exit 1
     fi
-    log_info "Source hash: $source_hash"
-    update_src_hash "$source_hash"
-    cleanup_backups
   fi
+
+  rm -f "$backup"
 
   show_changes
 
-  if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      log_error "Build failed; restoring ${flake_file}"
-      cp -- "$FLAKE_BACKUP" "$flake_file"
-      exit 1
+  log_info "releases.json now contains:"
+  jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
+
+  if [ "$do_commit" = true ]; then
+    local scope msg
+    scope="$(basename "$pkg_dir")"
+    if [ "$short_key" = "$cur_latest_key" ]; then
+      msg="chore(${scope}): rehash ${new_version} (${short_key})"
+    else
+      msg="chore(${scope}): add ${new_version} (${short_key}) to version table"
     fi
+    maybe_git_commit "$msg" "releases.json"
   fi
 
-  maybe_git_commit "$commit_message" flake.nix
   log_info "Done."
 }
 
