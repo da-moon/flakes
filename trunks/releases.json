@@ -1,0 +1,10 @@
+{
+  "latest": "1.2.14",
+  "versions": {
+    "1.2.14": {
+      "version": "1.2.14",
+      "url": "https://files.pythonhosted.org/packages/38/07/cbf08831906c5cbd1d4fe1aefb2883f99d3a887df4e73e5ccc62fe3a8c37/trunks-1.2.14-py3-none-any.whl",
+      "hash": "sha256-4RMVsCZzR/Iy33kMDT6QttS2F5xrH+BUKSv1Z0Zo9eY="
+    }
+  }
+}

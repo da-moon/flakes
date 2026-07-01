@@ -17,6 +17,14 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -25,64 +33,76 @@
         lib = pkgs.lib;
         py = pkgs.python3Packages;
         pname = "trunks";
-        version = "1.2.14";
-        trunksWheelUrl = "https://files.pythonhosted.org/packages/38/07/cbf08831906c5cbd1d4fe1aefb2883f99d3a887df4e73e5ccc62fe3a8c37/trunks-1.2.14-py3-none-any.whl";
-        trunksWheelHash = "sha256-4RMVsCZzR/Iy33kMDT6QttS2F5xrH+BUKSv1Z0Zo9eY=";
 
-        trunks = py.buildPythonApplication {
-          inherit pname version;
+        # Builder: derive a trunks package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/url/hash
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+          in
+          py.buildPythonApplication {
+            inherit pname version;
 
-          meta = with lib; {
-            description = "Git repositories backed by user-owned storage";
-            homepage = "https://layerbrain.com/trunks";
-            license = licenses.mit;
-            mainProgram = "trunks";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "Git repositories backed by user-owned storage";
+              homepage = "https://layerbrain.com/trunks";
+              license = licenses.mit;
+              mainProgram = "trunks";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
+            format = "wheel";
+
+            src = pkgs.fetchurl {
+              url = entry.url;
+              hash = entry.hash;
+            };
+
+            propagatedBuildInputs = [
+              py.aiohttp
+              py.asyncpg
+              py.asyncssh
+              py."azure-storage-blob"
+              py."google-cloud-storage"
+              py.httpx
+              py.orjson
+              py.pyyaml
+              py.uvloop
+            ];
+
+            doCheck = false;
+            pythonImportsCheck = [ "trunks" ];
+
           };
 
-          format = "wheel";
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          src = pkgs.fetchurl {
-            url = trunksWheelUrl;
-            hash = trunksWheelHash;
-          };
-
-          propagatedBuildInputs = [
-            py.aiohttp
-            py.asyncpg
-            py.asyncssh
-            py."azure-storage-blob"
-            py."google-cloud-storage"
-            py.httpx
-            py.orjson
-            py.pyyaml
-            py.uvloop
-          ];
-
-          doCheck = false;
-          pythonImportsCheck = [ "trunks" ];
-
-        };
+        # One `trunks_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "trunks_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = trunks;
-          inherit trunks;
-        };
+          default = latestPkg;
+          trunks = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${trunks}/bin/trunks";
+            program = "${latestPkg}/bin/trunks";
           };
           trunks = {
             type = "app";
-            program = "${trunks}/bin/trunks";
+            program = "${latestPkg}/bin/trunks";
           };
           "git-remote-trunks" = {
             type = "app";
-            program = "${trunks}/bin/git-remote-trunks";
+            program = "${latestPkg}/bin/git-remote-trunks";
           };
         };
       }
