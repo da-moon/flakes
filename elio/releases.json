@@ -1,0 +1,12 @@
+{
+  "latest": "1.10.0",
+  "versions": {
+    "1.10.0": {
+      "version": "1.10.0",
+      "rev": "1.10.0",
+      "hashes": {
+        "x86_64-linux": "sha256-PRH/4hHe8IVkf6CRrjQaqMvw2i/SW8Cr3IhQtAF/008="
+      }
+    }
+  }
+}

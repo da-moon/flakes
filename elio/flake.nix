@@ -19,6 +19,14 @@
         "aarch64-linux"
       ];
 
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
+
       homeManagerModule =
         { config, lib, pkgs, ... }:
         let
@@ -66,12 +74,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "1.10.0";
 
+        # Per-system release-asset metadata (arch target + autopatchelf need).
+        # The version-specific hash comes from releases.json, not here.
         releaseBySystem = {
           "x86_64-linux" = {
             target = "x86_64-unknown-linux-gnu";
-            sha256 = "sha256-PRH/4hHe8IVkf6CRrjQaqMvw2i/SW8Cr3IhQtAF/008=";
             needsAutoPatchelf = true;
           };
         };
@@ -80,7 +88,16 @@
           releaseBySystem.${system}
             or (throw "Unsupported system for elio flake: ${system}");
 
-        elio = pkgs.stdenv.mkDerivation rec {
+        # Builder: derive an elio package from one releases.json entry.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            binarySha256 =
+              entry.hashes.${system}
+                or (throw "Missing hashes entry for system: ${system}");
+          in
+          pkgs.stdenv.mkDerivation rec {
           pname = "elio";
           inherit version;
 
@@ -95,7 +112,7 @@
 
           src = pkgs.fetchurl {
             url = "https://github.com/elio-fm/elio/releases/download/v${version}/elio-${version}-${currentRelease.target}.tar.gz";
-            hash = currentRelease.sha256;
+            hash = binarySha256;
           };
 
           sourceRoot = "elio-${version}-${currentRelease.target}";
@@ -128,21 +145,28 @@
           '';
 
         };
+
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+        # One `elio_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "elio_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = elio;
-          inherit elio;
-        };
+          default = latestPkg;
+          elio = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${elio}/bin/elio";
+            program = "${latestPkg}/bin/elio";
           };
           elio = {
             type = "app";
-            program = "${elio}/bin/elio";
+            program = "${latestPkg}/bin/elio";
           };
         };
       }
