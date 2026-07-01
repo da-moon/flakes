@@ -56,22 +56,6 @@ tag_to_version() {
   printf '%s\n' "$tag"
 }
 
-nix_build_source_placeholder_args() {
-  # Build the source attr with placeholder hashes so the fixed-output derivations
-  # (src fetchFromGitHub, cudaforge git dep) fail fast with the real "got:" hash
-  # BEFORE any Rust compilation. Host-independent, so this refreshes the aarch64
-  # source hashes even when running on x86_64.
-  local -a args=(nix build ".#${PACKAGE_ATTR}-source" --no-link --no-write-lock-file)
-  if [ -n "$BUILD_SYSTEM" ]; then
-    args+=(--system "$BUILD_SYSTEM")
-  fi
-  printf '%s\n' "${args[@]}"
-}
-
-extract_got_hash_from_build() {
-  sed -n 's/.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | head -n1
-}
-
 prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
@@ -101,18 +85,49 @@ update_src_sha256() {
   grep -Fq "sha256 = \"${new_sha256}\";" "$flake_file"
 }
 
-set_cudaforge_placeholder() {
-  sed -i.bak -E "s|(\"cudaforge-[0-9.]+\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${PLACEHOLDER_HASH}\\2|" "$flake_file"
+# Emit "<name>-<version><TAB><rev>" for every git dependency in Cargo.lock.
+# The key "<name>-<version>" is exactly what cargoLock.outputHashes expects.
+list_git_deps() {
+  [ -f "$cargo_lock_file" ] || return 0
+  python3 - "$cargo_lock_file" <<'PY'
+import sys, re
+txt = open(sys.argv[1]).read()
+for blk in txt.split('[[package]]'):
+    name = re.search(r'^name = "([^"]+)"', blk, re.M)
+    ver  = re.search(r'^version = "([^"]+)"', blk, re.M)
+    src  = re.search(r'^source = "git\+[^"]*#([0-9a-fA-F]+)"', blk, re.M)
+    if name and ver and src:
+        print(f"{name.group(1)}-{ver.group(1)}\t{src.group(1)}")
+PY
 }
 
-update_cudaforge_hash() {
-  local new_hash="$1"
-  sed -i.bak -E "s|(\"cudaforge-[0-9.]+\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
-  grep -Fq "= \"${new_hash}\";" "$flake_file"
+# Insert a placeholder outputHashes entry for a git-dep key that importCargoLock demands.
+add_outputhash_placeholder() {
+  local key="$1"
+  grep -qF "\"${key}\" =" "$flake_file" && return 0
+  log_info "Adding outputHashes placeholder for git dep: ${key}"
+  sed -i.bak -E "/outputHashes[[:space:]]*=[[:space:]]*\{/a\\              \"${key}\" = \"${PLACEHOLDER_HASH}\";" "$flake_file"
+  cleanup_backups
 }
 
-has_cudaforge_outputhash() {
-  grep -qE '"cudaforge-[0-9.]+"[[:space:]]*=' "$flake_file"
+# Find the outputHashes key currently set to a placeholder whose Cargo.lock rev
+# starts with the given short rev (git-fetch FODs are named "<name>-<shortrev>").
+placeholder_key_for_shortrev() {
+  local shortrev="$1" k r
+  while IFS=$'\t' read -r k r; do
+    [ -n "$k" ] || continue
+    if [[ "$r" == "${shortrev}"* ]] && grep -qF "\"${k}\" = \"${PLACEHOLDER_HASH}\";" "$flake_file"; then
+      printf '%s\n' "$k"; return 0
+    fi
+  done < <(list_git_deps)
+  return 1
+}
+
+update_outputhash_key() {
+  local key="$1" hash="$2"
+  sed -i.bak -E "s|(\"${key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${hash}\\2|" "$flake_file"
+  cleanup_backups
+  grep -qF "\"${key}\" = \"${hash}\";" "$flake_file"
 }
 
 fetch_cargo_lock() {
@@ -166,47 +181,69 @@ discard_repo_state_backup() {
 
 trap 'cleanup_backups; discard_repo_state_backup' EXIT
 
-# Compute a source fixed-output-derivation hash by building the source attr with a
-# placeholder and parsing the "got:" line. Does NOT compile Rust (FOD fails first).
-compute_source_fod_hash() {
-  local -a build_cmd
-  mapfile -t build_cmd < <(nix_build_source_placeholder_args)
-  local build_output
-  build_output="$(cd "$pkg_dir" && "${build_cmd[@]}" 2>&1 || true)"
-  printf '%s\n' "$build_output" | extract_got_hash_from_build
-}
-
-compute_and_update_src_sha256() {
-  log_info "Computing fetchFromGitHub src sha256 (fast, no compile)..."
+# Resolve the source-build hashes (fetchFromGitHub src + every cargoLock git dep)
+# WITHOUT compiling Rust. We set the src and any new git-dep hashes to a placeholder,
+# then build the source attr with --keep-going: the fixed-output derivations fail with
+# their real "got:" hash (before any compile), and --keep-going surfaces all of them in
+# one pass. Each got is mapped back to its flake field by the derivation's short rev.
+# Host-independent, so this refreshes the aarch64 source hashes even from x86_64.
+resolve_source_hashes() {
+  log_info "Resolving source (fetchFromGitHub + cargo git deps) hashes; no Rust compile..."
   set_src_sha256_placeholder
   cleanup_backups
-  local got_hash
-  got_hash="$(compute_source_fod_hash)"
-  if [ -z "$got_hash" ]; then
-    log_error "Failed to parse src sha256 from nix build output"
+
+  local -a build_cmd
+  local pass output changed demanded drv got shortrev mapped
+  for pass in $(seq 1 15); do
+    grep -qF "$PLACEHOLDER_HASH" "$flake_file" || { log_info "All source hashes resolved."; return 0; }
+
+    build_cmd=(nix build ".#${PACKAGE_ATTR}-source" --no-link --no-write-lock-file --keep-going)
+    [ -n "$BUILD_SYSTEM" ] && build_cmd+=(--system "$BUILD_SYSTEM")
+    output="$(cd "$pkg_dir" && "${build_cmd[@]}" 2>&1 || true)"
+
+    changed=0
+
+    # (1) Satisfy eval-time demands for a missing git-dep outputHash (one per repo).
+    while IFS= read -r demanded; do
+      [ -n "$demanded" ] || continue
+      if ! grep -qF "\"${demanded}\" =" "$flake_file"; then
+        add_outputhash_placeholder "$demanded"
+        changed=1
+      fi
+    done < <(printf '%s\n' "$output" \
+      | sed -n 's/.*vendoring the git dependency \(.*\)\. You can.*/\1/p' | sort -u)
+    if [ "$changed" -eq 1 ]; then continue; fi
+
+    # (2) Apply the "got:" hashes reported by the failing fixed-output derivations.
+    while IFS=$'\t' read -r drv got; do
+      [ -n "$got" ] || continue
+      if [ "$drv" = source ] || [[ "$drv" == *-source ]]; then
+        log_info "src sha256: $got"
+        update_src_sha256 "$got" && changed=1
+      else
+        shortrev="${drv##*-}"
+        if mapped="$(placeholder_key_for_shortrev "$shortrev")"; then
+          log_info "git dep ${mapped}: $got"
+          update_outputhash_key "$mapped" "$got" && changed=1
+        else
+          log_warn "Unmapped fixed-output derivation '${drv}' (got: ${got}); skipping"
+        fi
+      fi
+    done < <(printf '%s\n' "$output" | awk '
+      /hash mismatch in fixed-output derivation/ {
+        d=$0; sub(/.*derivation .\/nix\/store\/[a-z0-9]+-/,"",d); sub(/\.drv.*/,"",d); pend=d; next
+      }
+      /got:/ && pend!="" {
+        if (match($0, /sha256-[A-Za-z0-9+\/=]+/)) { print pend"\t"substr($0,RSTART,RLENGTH); pend="" }
+      }')
+
+    [ "$changed" -eq 1 ] || break
+  done
+
+  if grep -qF "$PLACEHOLDER_HASH" "$flake_file"; then
+    log_error "Could not resolve all source hashes (placeholders remain)."
     return 1
   fi
-  log_info "src sha256: $got_hash"
-  update_src_sha256 "$got_hash" || { log_error "Failed to write src sha256"; return 1; }
-  cleanup_backups
-}
-
-compute_and_update_cudaforge_hash() {
-  has_cudaforge_outputhash || { log_info "No cudaforge git-dep outputHash present; skipping"; return 0; }
-  log_info "Computing cudaforge git-dep outputHash (fast, no compile)..."
-  set_cudaforge_placeholder
-  cleanup_backups
-  local got_hash
-  got_hash="$(compute_source_fod_hash)"
-  if [ -z "$got_hash" ]; then
-    log_warn "Could not compute cudaforge outputHash (dep may be unchanged/absent in this build path)."
-    log_warn "Leaving placeholder; it will resolve on first source (aarch64) build."
-    cleanup_backups
-    return 0
-  fi
-  log_info "cudaforge outputHash: $got_hash"
-  update_cudaforge_hash "$got_hash" || { log_error "Failed to write cudaforge outputHash"; return 1; }
-  cleanup_backups
 }
 
 verify_build() {
@@ -432,13 +469,8 @@ main() {
     restore_repo_state; discard_repo_state_backup; exit 1
   fi
 
-  if ! compute_and_update_src_sha256; then
-    log_error "Failed to compute source src sha256; restoring."
-    restore_repo_state; discard_repo_state_backup; exit 1
-  fi
-
-  if ! compute_and_update_cudaforge_hash; then
-    log_error "Failed to compute cudaforge outputHash; restoring."
+  if ! resolve_source_hashes; then
+    log_error "Failed to resolve source hashes; restoring."
     restore_repo_state; discard_repo_state_backup; exit 1
   fi
 

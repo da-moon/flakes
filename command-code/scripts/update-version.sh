@@ -16,6 +16,9 @@ readonly TARBALL_NAME="command-code"
 readonly PACKAGE_ATTR="command-code"
 readonly BIN_NAME="command-code"
 
+# command-code declares an unfree license; allow it for local build verification.
+export NIXPKGS_ALLOW_UNFREE=1
+
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
@@ -165,7 +168,7 @@ warn_other_output_hash_systems() {
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-write-lock-file --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --impure --no-write-lock-file --no-link --print-out-paths)"; then
     log_error "nix build failed for ${PACKAGE_ATTR}"
     return 1
   fi
@@ -192,7 +195,7 @@ compute_and_update_output_hash() {
   cleanup_backups
 
   local build_output
-  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-write-lock-file --no-link 2>&1 || true)"
+  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --impure --no-write-lock-file --no-link 2>&1 || true)"
   local got_hash
   got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
 

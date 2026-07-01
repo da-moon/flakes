@@ -33,7 +33,7 @@ ensure_required_tools_installed() {
 }
 
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/{p;q}' "$flake_file"
+  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
 }
 
 get_latest_release_tag() {
@@ -56,7 +56,8 @@ asset_url() {
 
 prefetch_sha256_sri() {
   nix store prefetch-file --json --hash-type sha256 "$1" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/{p;q}'
+    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
+    | head -n1
 }
 
 update_flake_version() {
