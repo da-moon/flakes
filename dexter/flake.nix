@@ -35,7 +35,7 @@
 
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-rY18AoNRxS8ju6UPzBCf4nW87HN89nQMiuUN1YebYZ0=";
+          "x86_64-linux" = "sha256-Kkpga37g2x8SKPOpsCFUnNE9fzAS09ZEfjgsi3NwK08=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
@@ -43,7 +43,7 @@
           inherit src;
 
           nativeBuildInputs = with pkgs; [
-            nodejs_20
+            nodejs_22
             cacert
           ];
 
@@ -65,7 +65,7 @@
             cp -r $src/. .
             chmod -R u+w .
 
-            ${pkgs.nodejs_20}/bin/node <<'NODE'
+            ${pkgs.nodejs_22}/bin/node <<'NODE'
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
@@ -131,7 +131,7 @@ NODE
           nativeBuildInputs = with pkgs; [
             gcc
             makeWrapper
-            nodejs_20
+            nodejs_22
             pkg-config
             python3
           ];
@@ -143,7 +143,7 @@ NODE
 
             export HOME=$TMPDIR
             export npm_config_build_from_source=true
-            export npm_config_nodedir=${pkgs.nodejs_20}
+            export npm_config_nodedir=${pkgs.nodejs_22}
             export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
             export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
 
