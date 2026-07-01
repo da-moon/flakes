@@ -56,7 +56,7 @@
 
             tar -xzf $src
             cd qmd-${version}
-            ${pkgs.nodejs_20}/bin/node <<'NODE'
+            ${pkgs.nodejs_22}/bin/node <<'NODE'
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
