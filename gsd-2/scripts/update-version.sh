@@ -1,4 +1,17 @@
 #!/usr/bin/env bash
+# Appends the newest @opengsd/gsd-pi npm release to releases.json (the JSON
+# version table read by flake.nix) and sets it as .latest. Never hand-edits the
+# version data in flake.nix.
+#
+# gsd-pi ships tagged npm releases, so:
+#   key     = the npm version (e.g. "1.4.0")
+#   version = the same npm version
+#
+# Two kinds of hashes are recomputed via jq:
+#   - .hash            : the npm tarball fetchurl hash (single, arch-agnostic)
+#   - .npmDepsHashes.* : per-system pnpm/npm fixed-output-derivation hash
+#     (recomputed from the fakeHash -> nix build -> parse "got:" method for the
+#      build host; other arches keep their existing hash or a fakeHash sentinel).
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -15,30 +28,52 @@ readonly NPM_PACKAGE="@opengsd/gsd-pi"
 readonly TARBALL_NAME="gsd-pi"
 readonly PACKAGE_ATTR="gsd-2"
 readonly BIN_NAME="gsd"
+# lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
+readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
+readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+# Which system's npmDeps hash to (re)compute — the host we build on.
+BUILD_SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo x86_64-linux)"
 
 ensure_required_tools_installed() {
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
-  command -v awk >/dev/null 2>&1 || { log_error "awk is required but not installed."; exit 2; }
+  for t in nix curl jq; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
+ensure_in_package_directory() {
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
+}
+
+# mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
+}
+
+extract_got_hash() {
+  sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
+}
+
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_version_from_npm() {
   curl -fsSL "$NPM_REGISTRY_URL/$NPM_PACKAGE/latest" \
     | sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
     | head -n1
-}
-
-get_current_system_key() {
-  nix eval --impure --raw --expr builtins.currentSystem
 }
 
 prefetch_sha256_sri() {
@@ -48,127 +83,40 @@ prefetch_sha256_sri() {
     | head -n1
 }
 
-extract_got_hash_from_build() {
-  sed -n 's/.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | head -n1
+# Recompute a fixed-output hash by building the target attr with a fake hash
+# already written into releases.json and parsing nix's "got:" line.
+build_and_get_hash() {
+  local attr="$1" out
+  out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link 2>&1 || true)"
+  printf '%s\n' "$out" | extract_got_hash
 }
 
-get_other_output_hash_systems() {
-  local current_system_key="$1"
-  awk -v target="$current_system_key" '
-    /outputHashBySystem[[:space:]]*=[[:space:]]*\{/ { in_map = 1; next }
-    in_map && /\};/ { in_map = 0 }
-    in_map {
-      if (match($0, /"([^"]+)"[[:space:]]*=/, a) > 0 && a[1] != target) {
-        print a[1]
-      }
-    }
-  ' "$flake_file"
+# Is the build-host's npmDeps hash currently a fakeHash sentinel?
+current_hash_is_fake() {
+  local key="$1"
+  local h
+  h="$(jq -r --arg k "$key" --arg s "$BUILD_SYSTEM" \
+    '.versions[$k].npmDepsHashes[$s] // empty' "$releases_file")"
+  [ -z "$h" ] || [ "$h" = "$FAKE_HASH" ]
 }
 
-has_fake_hash() {
-  local current_system_key
-  current_system_key="$(get_current_system_key)"
-  awk -v target="$current_system_key" '
-    /outputHashBySystem[[:space:]]*=[[:space:]]*\{/ { in_map = 1; next }
-    in_map && /\};/ { in_map = 0 }
-    in_map && $0 ~ "\"" target "\"" { print $0 }
-  ' "$flake_file" | grep -Eq 'fakeHash|sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
-}
+print_usage() {
+  cat <<'EOF'
+Usage: ./scripts/update-version.sh [OPTIONS]
 
-update_flake_version() {
-  local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
-}
+Appends the newest (or an explicit) @opengsd/gsd-pi npm release to releases.json
+(the JSON version table read by flake.nix) and sets it as .latest. Recomputes the
+npm tarball hash and the build-host npmDeps FOD hash via jq — the version data in
+flake.nix is never touched.
 
-update_tarball_hash() {
-  local new_hash="$1"
-  sed -i.bak -E "s|^([[:space:]]*hash = \")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
-}
-
-set_output_hash_placeholder_for_system() {
-  local system_key="$1"
-  local placeholder="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s~^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;~\\1\"${placeholder}\";~" "$flake_file"
-}
-
-update_output_hash_for_system() {
-  local system_key="$1"
-  local new_hash_value="$2"
-  sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash_value}\\2|" "$flake_file"
-}
-
-mark_other_output_hashes_pending() {
-  local current_system_key="$1"
-  local other_system
-  while IFS= read -r other_system; do
-    [ -n "$other_system" ] || continue
-    sed -i.bak -E "/outputHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s~^([[:space:]]*\"${other_system}\"[[:space:]]*=[[:space:]]*)(pkgs\\.lib\\.fakeHash|\"[^\"]*\")[[:space:]]*;~\\1pkgs.lib.fakeHash;~" "$flake_file"
-  done < <(get_other_output_hash_systems "$current_system_key")
-}
-
-restore_backup=""
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-}
-
-on_exit() {
-  cleanup_backups
-  [ -n "$restore_backup" ] && rm -f "$restore_backup" 2>/dev/null || true
-}
-trap on_exit EXIT
-
-compute_and_update_output_hash() {
-  local system_key
-  system_key="$(get_current_system_key)"
-  log_info "Computing npm dependency hash for ${system_key}..."
-  set_output_hash_placeholder_for_system "$system_key"
-  cleanup_backups
-
-  local build_output got_hash
-  build_output="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --no-write-lock-file 2>&1 || true)"
-  got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
-  if [ -z "$got_hash" ]; then
-    log_error "Failed to parse outputHash from nix build output"
-    printf '%s\n' "$build_output" | sed -n '1,160p' >&2
-    return 1
-  fi
-
-  log_info "outputHash (${system_key}): ${got_hash}"
-  update_output_hash_for_system "$system_key" "$got_hash"
-  cleanup_backups
-}
-
-verify_build() {
-  log_info "Verifying build..."
-  local out_path
-  out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --print-out-paths --no-write-lock-file)"
-  if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
-    log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
-    return 1
-  fi
-  log_info "Build successful."
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
+Options:
+  --version VERSION   Append a specific version (default: latest npm)
+  --check             Only check for updates (exit 1 if update available)
+  --rehash            Recompute tarball + current-system npmDeps hash for latest
+  --no-build          Skip final build verification
+  --no-commit         Do not auto-commit (default: auto-commit is enabled)
+  --help              Show this help message
+EOF
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -206,24 +154,12 @@ maybe_git_commit() {
   ) 9>"$lock_file"
 }
 
-print_usage() {
-  cat <<'USAGE'
-Usage: ./scripts/update-version.sh [OPTIONS]
-
-Options:
-  --version VERSION   Update to a specific version (default: latest)
-  --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute tarball hash and current-system npm dependency hash
-  --no-build          Skip final build verification
-  --help              Show this help message
-USAGE
-}
-
 main() {
   ensure_required_tools_installed
-  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  ensure_in_package_directory
+  log_info "Updating package: ${PACKAGE_DIR_NAME} (build system: ${BUILD_SYSTEM})"
 
-  local target_version="" check_only=false rehash=false no_build=false
+  local target_version="" check_only=false rehash=false no_build=false do_commit=true
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
@@ -234,69 +170,150 @@ main() {
       --check) check_only=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
+      --no-commit) do_commit=false; shift ;;
       --help) print_usage; exit 0 ;;
       *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
   done
 
-  local current_version latest_version current_system_key tarball_url tarball_hash backup
+  local current_version latest_version
   current_version="$(get_current_version)"
+  if [ -z "$current_version" ]; then
+    log_error "Failed to detect current version from releases.json"
+    exit 2
+  fi
   latest_version="${target_version:-$(get_latest_version_from_npm)}"
-  current_system_key="$(get_current_system_key)"
+  if [ -z "$latest_version" ]; then
+    log_error "Failed to fetch latest version"
+    exit 2
+  fi
 
-  log_info "Current version: $current_version"
+  log_info "Current latest: $current_version"
   log_info "Target version:  $latest_version"
 
-  if [ "$check_only" = true ]; then
-    [ "$current_version" = "$latest_version" ] && exit 0
-    log_warn "Update available: $current_version -> $latest_version"
-    exit 1
+  # Treat as "up to date" when the entry already exists, is the latest, and its
+  # build-host hash is real (unless --rehash was requested).
+  local up_to_date=false
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] \
+    && ! current_hash_is_fake "$latest_version"; then
+    up_to_date=true
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
-    if has_fake_hash; then
-      rehash=true
-    else
-      log_info "Already up to date."
+  if [ "$check_only" = true ]; then
+    if [ "$up_to_date" = true ]; then
+      log_info "Already up to date!"
       exit 0
     fi
+    log_info "Update available: $current_version -> $latest_version"
+    exit 1
   fi
 
+  if [ "$up_to_date" = true ] && [ "$rehash" != true ]; then
+    log_info "Already up to date!"
+    exit 0
+  fi
+
+  local sanitized_key attr
+  sanitized_key="$(sanitize_key "$latest_version")"
+  attr="${PACKAGE_ATTR}_${sanitized_key}"
+
+  # 1) npm tarball hash (arch-agnostic).
+  local tarball_url tarball_hash
   tarball_url="$NPM_REGISTRY_URL/$NPM_PACKAGE/-/$TARBALL_NAME-$latest_version.tgz"
+  log_info "Prefetching npm tarball hash..."
   tarball_hash="$(prefetch_sha256_sri "$tarball_url")"
   [ -n "$tarball_hash" ] || { log_error "Failed to prefetch tarball hash"; exit 1; }
+  log_info "  tarball hash: $tarball_hash"
 
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
-  restore_backup="$backup"
+  # Preserve an existing aarch64 hash if present, else seed a fakeHash there
+  # (that arch is not built here; its hash stays fake until built on aarch64).
+  local aarch_hash
+  aarch_hash="$(jq -r --arg k "$latest_version" \
+    '.versions[$k].npmDepsHashes["aarch64-linux"] // empty' "$releases_file")"
+  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
 
-  update_flake_version "$latest_version"
-  update_tarball_hash "$tarball_hash"
-  [ "$current_version" != "$latest_version" ] && mark_other_output_hashes_pending "$current_system_key"
-  cleanup_backups
+  local backup tmp
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  if ! compute_and_update_output_hash; then
-    cp "$backup" "$flake_file"
-    rm -f "$backup"
-    restore_backup=""
-    exit 1
+  # Seed/upsert the entry with the real tarball hash but a fake build-host FOD
+  # hash so nix reveals the real one on build. Set it as .latest.
+  tmp="$(mktemp)"
+  jq --arg k "$latest_version" \
+     --arg ver "$latest_version" \
+     --arg rev "$latest_version" \
+     --arg hash "$tarball_hash" \
+     --arg fake "$FAKE_HASH" \
+     --arg bsys "$BUILD_SYSTEM" \
+     --arg aarch "$aarch_hash" '
+       .versions[$k] = {
+         version: $ver,
+         rev: $rev,
+         hash: $hash,
+         npmDepsHashes: ({ "aarch64-linux": $aarch } + { ($bsys): $fake })
+       }
+       | .latest = $k
+     ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
+
+  # 2) npmDeps FOD hash for the build system.
+  log_info "Computing npmDeps hash for ${BUILD_SYSTEM}..."
+  local npm_hash
+  npm_hash="$(build_and_get_hash "$attr")"
+  if [ -z "$npm_hash" ]; then
+    # No mismatch printed => build already succeeded (hash was correct).
+    log_info "  npmDeps hash already correct (no rehash needed)."
+  else
+    log_info "  npmDeps hash: $npm_hash"
+    tmp="$(mktemp)"
+    jq --arg k "$latest_version" --arg bsys "$BUILD_SYSTEM" --arg h "$npm_hash" \
+      '.versions[$k].npmDepsHashes[$bsys] = $h' \
+      "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
   fi
 
   if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      cp "$backup" "$flake_file"
+    log_info "Verifying build of ${attr}..."
+    local out_path
+    if ! out_path="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
+      log_error "verification build failed; restoring previous releases.json"
+      printf '%s\n' "$out_path" | tail -n 40 >&2
+      cp "$backup" "$releases_file"
       rm -f "$backup"
-      restore_backup=""
       exit 1
     fi
+    out_path="$(printf '%s\n' "$out_path" | tail -n1)"
+    if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
+      log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
+      exit 1
+    fi
+    # default must also resolve (it points at the new .latest).
+    if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+      log_error "nix build failed for default; restoring previous releases.json"
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
+      exit 1
+    fi
+    log_info "Build OK: $out_path"
   fi
 
   rm -f "$backup"
-  restore_backup=""
 
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
+  log_info "releases.json now contains:"
+  jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
 
-  log_warn "Only ${current_system_key} outputHash was refreshed; re-run on other Linux architectures if needed."
+  if [ "$do_commit" = true ]; then
+    local scope msg
+    scope="$(basename "$pkg_dir")"
+    if [ "$current_version" != "$latest_version" ]; then
+      msg="chore(${scope}): bump to ${latest_version}"
+    else
+      msg="chore(${scope}): rehash ${latest_version}"
+    fi
+    maybe_git_commit "$msg" "releases.json"
+  fi
+
+  log_warn "Only ${BUILD_SYSTEM} npmDeps hash was refreshed; re-run on other Linux architectures if needed."
 }
 
 main "$@"
