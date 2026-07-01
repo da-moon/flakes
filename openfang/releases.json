@@ -1,0 +1,13 @@
+{
+  "latest": "0.6.9",
+  "versions": {
+    "0.6.9": {
+      "version": "0.6.9",
+      "rev": "0.6.9",
+      "hashes": {
+        "x86_64-linux": "sha256-QwmwvPKtxdrEV3biAICHqK0HKTPxrmmP+NTgb7a4dgI=",
+        "aarch64-linux": "sha256-jquFK6eJg8PPM0uBJwoUwRfIyxTMgkE0P9G0V222SuA="
+      }
+    }
+  }
+}
