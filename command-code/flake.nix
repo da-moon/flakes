@@ -12,14 +12,14 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_22;
         pname = "command-code";
-        version = "0.38.6";
+        version = "0.40.17";
 
         # NOTE: npm optionalDependencies can be platform-specific,
         # so the fixed-output hash from "npm install" is not portable across systems.
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-zw8X+q2kooRAzDMK8attYsoeX9hj5Kys+5iy68TcapE=";
+          "x86_64-linux" = "sha256-L9G7CzLgEsBZrOPTXB5mT84NsthBOmzMYxxNAEL1S0Q=";
         };
 
         # Fixed-output derivation to fetch npm package with prod dependencies
@@ -28,7 +28,7 @@
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-            hash = "sha256-b1w6JBPRLIai0NAV0RPdSQWvEovaNlloKqmLVKVyms0=";
+            hash = "sha256-7XP43YTXBWiaSF4oFVL0AGJJFDOrTR3ltUxjotLOYHw=";
           };
 
           nativeBuildInputs = [ nodejs pkgs.cacert ];
