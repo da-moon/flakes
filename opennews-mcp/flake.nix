@@ -17,25 +17,21 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        py = pkgs.python3Packages;
         pname = "opennews-mcp";
-        baseVersion = "0.1.0";
-        rev = "9c6b508c23f9e855177ecf330e273651b0e5d6fb";
-        version = "0.1.0-unstable-2026-06-15-9c6b508";
-        srcHash = "sha256-Itstuf+xz5dx23sr41icBvz+SuFCdI5yTGsCbFwWcQQ=";
-
-        src = pkgs.fetchFromGitHub {
-          owner = "6551Team";
-          repo = "opennews-mcp";
-          inherit rev;
-          hash = srcHash;
-        };
 
         pythonEnv = pkgs.python3.withPackages (
           ps: [
@@ -45,85 +41,108 @@
           ]
         );
 
-        opennewsMcp = pkgs.stdenv.mkDerivation {
-          inherit pname version src;
+        # Builder: derive an opennews-mcp package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/rev/hash now
+        # come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            rev = entry.rev;
 
-          meta = with lib; {
-            description = "MCP server for crypto news via 6551 REST and WebSocket APIs";
-            homepage = "https://github.com/6551Team/opennews-mcp";
-            license = licenses.mit;
-            mainProgram = "opennews-mcp";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            src = pkgs.fetchFromGitHub {
+              owner = "6551Team";
+              repo = "opennews-mcp";
+              inherit rev;
+              hash = entry.hash;
+            };
+          in
+          pkgs.stdenv.mkDerivation {
+            inherit pname version src;
+
+            meta = with lib; {
+              description = "MCP server for crypto news via 6551 REST and WebSocket APIs";
+              homepage = "https://github.com/6551Team/opennews-mcp";
+              license = licenses.mit;
+              mainProgram = "opennews-mcp";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            dontBuild = true;
+            dontConfigure = true;
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/lib/${pname}
+              mkdir -p $out/bin
+              cp -r $src/* $out/lib/${pname}/
+
+              cat > $out/bin/opennews-mcp <<'EOF'
+              #!/usr/bin/env bash
+              set -euo pipefail
+
+              case "''${1:-}" in
+                --version|-V)
+                  echo "opennews-mcp __VERSION__"
+                  exit 0
+                  ;;
+                --help|-h)
+                  cat <<'USAGE'
+              opennews-mcp
+
+              Starts the OpenNews MCP server on stdio.
+
+              Safe commands:
+                opennews-mcp --version
+                opennews-mcp --help
+
+              Runtime configuration:
+                OPENNEWS_TOKEN
+                OPENNEWS_API_BASE
+                OPENNEWS_WSS_URL
+              USAGE
+                  exit 0
+                  ;;
+              esac
+
+              export PYTHONPATH="__PKG_ROOT__/src''${PYTHONPATH:+:$PYTHONPATH}"
+              exec "__PYTHON__" -m opennews_mcp.server "$@"
+              EOF
+              substituteInPlace $out/bin/opennews-mcp \
+                --replace-fail "__VERSION__" "${version}" \
+                --replace-fail "__PKG_ROOT__" "$out/lib/${pname}" \
+                --replace-fail "__PYTHON__" "${pythonEnv}/bin/python"
+              chmod +x $out/bin/opennews-mcp
+
+              runHook postInstall
+            '';
+
           };
 
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-          dontBuild = true;
-          dontConfigure = true;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/lib/${pname}
-            mkdir -p $out/bin
-            cp -r $src/* $out/lib/${pname}/
-
-            cat > $out/bin/opennews-mcp <<'EOF'
-            #!/usr/bin/env bash
-            set -euo pipefail
-
-            case "''${1:-}" in
-              --version|-V)
-                echo "opennews-mcp __VERSION__"
-                exit 0
-                ;;
-              --help|-h)
-                cat <<'USAGE'
-            opennews-mcp
-
-            Starts the OpenNews MCP server on stdio.
-
-            Safe commands:
-              opennews-mcp --version
-              opennews-mcp --help
-
-            Runtime configuration:
-              OPENNEWS_TOKEN
-              OPENNEWS_API_BASE
-              OPENNEWS_WSS_URL
-            USAGE
-                exit 0
-                ;;
-            esac
-
-            export PYTHONPATH="__PKG_ROOT__/src''${PYTHONPATH:+:$PYTHONPATH}"
-            exec "__PYTHON__" -m opennews_mcp.server "$@"
-            EOF
-            substituteInPlace $out/bin/opennews-mcp \
-              --replace-fail "__VERSION__" "${version}" \
-              --replace-fail "__PKG_ROOT__" "$out/lib/${pname}" \
-              --replace-fail "__PYTHON__" "${pythonEnv}/bin/python"
-            chmod +x $out/bin/opennews-mcp
-
-            runHook postInstall
-          '';
-
-        };
+        # One `opennews-mcp_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "${pname}_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = opennewsMcp;
-          "opennews-mcp" = opennewsMcp;
-        };
+          default = latestPkg;
+          "opennews-mcp" = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${opennewsMcp}/bin/opennews-mcp";
+            program = "${latestPkg}/bin/opennews-mcp";
           };
           "opennews-mcp" = {
             type = "app";
-            program = "${opennewsMcp}/bin/opennews-mcp";
+            program = "${latestPkg}/bin/opennews-mcp";
           };
         };
       }

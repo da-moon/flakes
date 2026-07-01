@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+# Appends the newest upstream commit of 6551Team/opennews-mcp as a new entry in
+# releases.json (the JSON version table the flake reads). Never hand-edits the
+# version data in flake.nix.
+#
+# opennews-mcp has NO release tags, so:
+#   key     = short (7-char) upstream commit hash
+#   version = "<base>-unstable-<commit-date>" (base taken from pyproject.toml at
+#             the resolved rev, e.g. "0.1.0"; "0" if none is present). The rev
+#             lives in the entry, so no trailing short-hash is kept in version.
+#
+# The single fetchFromGitHub source hash is recomputed from scratch via
+# nix-prefetch-url on the archive tarball, then written back with jq.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -18,6 +30,7 @@ readonly BIN_NAME="opennews-mcp"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
@@ -25,30 +38,36 @@ ensure_required_tools_installed() {
   command -v git >/dev/null 2>&1 || { log_error "git is required but not installed."; exit 2; }
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
   command -v nix-prefetch-url >/dev/null 2>&1 || { log_error "nix-prefetch-url is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  command -v jq >/dev/null 2>&1 || { log_error "jq is required but not installed."; exit 2; }
 }
 
 ensure_in_package_directory() {
-  if [ ! -f "$flake_file" ]; then
-    log_error "flake.nix not found at: $flake_file"
-    exit 2
-  fi
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
+}
+
+# mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
+}
+
+# Current "latest" key recorded in the version table.
+get_current_key() {
+  jq -r '.latest // empty' "$releases_file"
 }
 
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  local key="$1"
+  jq -r --arg k "$key" '.versions[$k].version // empty' "$releases_file"
 }
 
-get_current_base_version() {
-  sed -n 's/^[[:space:]]*baseVersion = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
-}
-
-get_current_rev() {
-  sed -n 's/^[[:space:]]*rev = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_commit_sha() {
-  git ls-remote "https://github.com/${OWNER}/${REPO}.git" HEAD | awk '{print $1}'
+  git ls-remote "https://github.com/${OWNER}/${REPO}.git" HEAD | awk 'NR==1{print $1}'
 }
 
 get_commit_date() {
@@ -65,11 +84,12 @@ get_base_version_for_rev() {
     | head -n1
 }
 
+# Canonical no-tag version: "<base>-unstable-<commit-date>" (no trailing hash;
+# the rev already lives in the entry).
 build_version_string() {
   local base_version="$1"
   local commit_date="$2"
-  local sha="$3"
-  printf '%s-unstable-%s-%s\n' "$base_version" "$commit_date" "${sha:0:7}"
+  printf '%s-unstable-%s\n' "$base_version" "$commit_date"
 }
 
 prefetch_source_hash_sri() {
@@ -80,41 +100,32 @@ prefetch_source_hash_sri() {
   nix hash to-sri --type sha256 "$hash"
 }
 
-update_base_version() {
-  local new_base_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*baseVersion = \")[^\"]*(\";)/\\1${new_base_version}\\2/" "$flake_file"
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-update_flake_version() {
-  local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
-}
-
-update_rev() {
-  local new_rev="$1"
-  sed -i.bak -E "s/^([[:space:]]*rev = \")[^\"]*(\";)/\\1${new_rev}\\2/" "$flake_file"
-}
-
-update_src_hash() {
-  local new_hash="$1"
-  sed -i.bak -E "s~^([[:space:]]*srcHash = \")[^\"]*(\";)~\\1${new_hash}\\2~" "$flake_file"
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-}
-
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --print-out-paths --no-write-lock-file)"; then
-    log_error "nix build failed for ${PACKAGE_ATTR}"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for ${PACKAGE_ATTR}_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
     return 1
   fi
   timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
@@ -124,29 +135,8 @@ verify_build() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -188,12 +178,19 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) upstream commit of 6551Team/opennews-mcp to
+releases.json (the JSON version table read by flake.nix) as a new entry keyed by
+the short commit hash and sets .latest to it. Recomputes the fetchFromGitHub
+source hash via jq — the version data in flake.nix is never touched.
+
 Options:
-  --version VERSION   Set an explicit version string (advanced use)
-  --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute the source hash for the current revision
-  --no-build          Skip build verification
-  --help              Show this help message
+  --rev VALUE        Pin to a specific git ref/branch/rev instead of HEAD
+                       (aliases: --revision, --version)
+  --check            Only check for updates (exit 1 if update available)
+  --rehash           Recompute the source hash for the current latest entry
+  --no-build         Skip build verification
+  --no-commit        Do not auto-commit (default: auto-commit is enabled)
+  --help             Show this help message
 
 Examples:
   ./scripts/update-version.sh
@@ -207,16 +204,13 @@ main() {
   ensure_in_package_directory
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
-  local explicit_version=""
-  local check_only=false
-  local rehash=false
-  local no_build=false
+  local target_ref="" check_only=false rehash=false no_build=false do_commit=true
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version)
-        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
-        explicit_version="$2"
+      --rev|--revision|--version)
+        [ $# -ge 2 ] || { log_error "$1 requires an argument"; exit 2; }
+        target_ref="$2"
         shift 2
         ;;
       --check)
@@ -231,6 +225,10 @@ main() {
         no_build=true
         shift
         ;;
+      --no-commit)
+        do_commit=false
+        shift
+        ;;
       --help)
         print_usage
         exit 0
@@ -243,75 +241,99 @@ main() {
     esac
   done
 
-  local current_version current_base_version current_rev
-  current_version="$(get_current_version)"
-  current_base_version="$(get_current_base_version)"
-  current_rev="$(get_current_rev)"
-
-  if [ -z "$current_version" ] || [ -z "$current_base_version" ] || [ -z "$current_rev" ]; then
-    log_error "Failed to determine current package metadata from flake.nix"
+  local cur_key cur_version
+  cur_key="$(get_current_key)"
+  if [ -z "$cur_key" ]; then
+    log_error "Failed to detect current latest key from releases.json"
     exit 1
   fi
+  cur_version="$(get_current_version "$cur_key")"
 
-  local target_rev target_base_version target_date target_version
-  target_rev="$(get_latest_commit_sha)"
-  target_base_version="$(get_base_version_for_rev "$target_rev")"
+  # Resolve the target rev (HEAD unless a ref was pinned).
+  local target_rev
+  if [ -n "$target_ref" ]; then
+    target_rev="$(git ls-remote "https://github.com/${OWNER}/${REPO}.git" "$target_ref" | awk 'NR==1{print $1}')"
+    [ -n "$target_rev" ] || target_rev="$target_ref"  # allow a raw rev
+  else
+    target_rev="$(get_latest_commit_sha)"
+  fi
+  [ -n "$target_rev" ] || { log_error "Failed to resolve upstream rev"; exit 1; }
+
+  local target_base target_date target_version short_key
+  target_base="$(get_base_version_for_rev "$target_rev")"
+  [ -n "$target_base" ] || target_base="0"
   target_date="$(get_commit_date "$target_rev")"
+  [ -n "$target_date" ] || { log_error "Failed to resolve commit date for $target_rev"; exit 1; }
 
-  if [ -z "$target_rev" ] || [ -z "$target_base_version" ] || [ -z "$target_date" ]; then
-    log_error "Failed to determine target metadata from upstream (rev/base version/date)"
-    exit 1
-  fi
+  target_version="$(build_version_string "$target_base" "$target_date")"
+  short_key="${target_rev:0:7}"
 
-  target_version="$(build_version_string "$target_base_version" "$target_date" "$target_rev")"
-
-  if [ -n "$explicit_version" ]; then
-    target_version="$explicit_version"
-  fi
-
-  log_info "Current version:      $current_version"
-  log_info "Current revision:     $current_rev"
-  log_info "Target version:       $target_version"
-  log_info "Target revision:      $target_rev"
+  log_info "Current latest key:  $cur_key ($cur_version)"
+  log_info "Resolved upstream:   $target_rev"
+  log_info "New key:             $short_key"
+  log_info "New version:         $target_version"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_rev" = "$target_rev" ] && [ "$current_version" = "$target_version" ]; then
-      log_info "Package is up to date."
+    if has_version_entry "$short_key" && [ "$cur_key" = "$short_key" ] && [ "$rehash" != true ]; then
+      log_info "Already up to date!"
       exit 0
     fi
-    log_warn "Update available: $current_version -> $target_version"
+    log_info "Update available: $cur_key -> $short_key"
     exit 1
   fi
 
-  local commit_message
-  commit_message="$(build_commit_message "$current_version" "$target_version" "$rehash")"
-
-  if [ "$current_rev" != "$target_rev" ] || [ "$current_base_version" != "$target_base_version" ]; then
-    update_base_version "$target_base_version"
-    update_flake_version "$target_version"
-    update_rev "$target_rev"
-    cleanup_backups
+  if has_version_entry "$short_key" && [ "$cur_key" = "$short_key" ] && [ "$rehash" != true ]; then
+    log_info "Already up to date!"
+    exit 0
   fi
 
-  if [ "$rehash" = true ] || [ "$current_rev" != "$target_rev" ]; then
-    local source_hash
-    source_hash="$(prefetch_source_hash_sri "$target_rev")"
-    if [ -z "$source_hash" ]; then
-      log_error "Failed to prefetch source hash for ${target_rev}"
+  log_info "Computing fetchFromGitHub source hash..."
+  local source_hash
+  source_hash="$(prefetch_source_hash_sri "$target_rev")"
+  [ -n "$source_hash" ] || { log_error "Failed to prefetch source hash for ${target_rev}"; exit 1; }
+  log_info "Source hash: $source_hash"
+
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$target_version" \
+    --arg rev "$target_rev" \
+    --arg hash "$source_hash" \
+    '{version: $v, rev: $rev, hash: $hash}')"
+
+  local backup
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
+
+  upsert_release_entry "$short_key" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$short_key")"
+
+  if [ "$no_build" != true ]; then
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
       exit 1
     fi
-    log_info "Source hash: $source_hash"
-    update_src_hash "$source_hash"
-    cleanup_backups
   fi
+
+  rm -f "$backup"
 
   show_changes
 
-  if [ "$no_build" != true ]; then
-    verify_build
+  local scope msg
+  scope="$(basename "$pkg_dir")"
+  if [ "$cur_key" = "$short_key" ]; then
+    msg="chore(${scope}): rehash ${target_version} (${short_key})"
+  else
+    msg="chore(${scope}): add ${target_version} (${short_key}) to version table"
   fi
 
-  maybe_git_commit "$commit_message" flake.nix
+  if [ "$do_commit" = true ]; then
+    maybe_git_commit "$msg" "releases.json"
+  fi
+
   log_info "Done."
 }
 
