@@ -1,0 +1,14 @@
+{
+  "latest": "1.15.0",
+  "versions": {
+    "1.15.0": {
+      "version": "1.15.0",
+      "rev": "career-ops-v1.15.0",
+      "hash": "sha256-smKUbY81gOrzZj5BlZcidUiPOE2wYUaF38F8iRtytdw=",
+      "npmDepsHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-JoL2u/YBvzqwPJgqpzqTmyIcfjf8c68XggCmvaZlbww="
+      }
+    }
+  }
+}
