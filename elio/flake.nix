@@ -1,5 +1,5 @@
 {
-  description = "Elio - Terminal music player packaged as a Nix flake";
+  description = "Elio - Snappy, batteries-included terminal file manager packaged as a Nix flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -85,7 +85,7 @@
           inherit version;
 
           meta = with lib; {
-            description = "Elio - Terminal music player";
+            description = "Elio - Snappy, batteries-included terminal file manager with rich previews, inline images, bulk actions, and trash support";
             homepage = "https://github.com/elio-fm/elio";
             license = licenses.mit;
             mainProgram = "elio";
