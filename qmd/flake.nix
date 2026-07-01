@@ -1,5 +1,5 @@
 {
-  description = "QMD - Quick Markdown Search";
+  description = "QMD (Query Markup Documents) - on-device search engine for markdown notes";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
