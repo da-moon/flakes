@@ -1,0 +1,14 @@
+{
+  "latest": "1.19.23",
+  "versions": {
+    "1.19.23": {
+      "version": "1.19.23",
+      "rev": "1.19.23",
+      "hash": "sha256-ZZL+puOl9CLM13Ncu0lrs6zsfCmcgK9YvZfH/UXqJqo=",
+      "outputHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-gKpHNKYYo7JF/V0OIb4aPbnGpatJi5ASDTqwboIJb4w="
+      }
+    }
+  }
+}
