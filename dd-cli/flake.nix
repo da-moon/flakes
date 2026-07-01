@@ -12,14 +12,16 @@
       flake-utils,
       ...
     }:
+    let
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+      sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
+    in
     flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_22;
         pname = "dd-cli";
-        version = "1.0.0-unstable-2024-04-05";
-        rev = "8eaa668f804097221dcc6077edf155a052d1e61b";
         patchPackageJsonExactVersions =
           node:
           ''
@@ -103,120 +105,133 @@
 NODE
           '';
 
-        src = pkgs.fetchFromGitHub {
-          owner = "nimbushq";
-          repo = "dd-cli";
-          inherit rev;
-          hash = "sha256-s0ZOaDZIhExGh2g+gQzhbQAU6+0+V3iQAKOM9vrNM6k=";
-        };
+        # Builder: turns one releases.json entry into the dd-cli derivation.
+        # PRESERVES the original build logic exactly; only version/src/hash(es)
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            rev = entry.rev;
 
-        outputHashBySystem = {
-          "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-dxYGqQkayBb6ZM1uI2gGH0EqotBBNeN4ThjlBDqGNvk=";
-        };
+            src = pkgs.fetchFromGitHub {
+              owner = "nimbushq";
+              repo = "dd-cli";
+              inherit rev;
+              hash = entry.hash;
+            };
 
-        npmDeps = pkgs.stdenv.mkDerivation {
-          name = "${pname}-${version}-npm-deps";
-          inherit src;
+            npmDeps = pkgs.stdenv.mkDerivation {
+              name = "${pname}-${version}-npm-deps";
+              inherit src;
 
-          nativeBuildInputs = [
-            nodejs
-            pkgs.cacert
-            pkgs.yarn
-          ];
+              nativeBuildInputs = [
+                nodejs
+                pkgs.cacert
+                pkgs.yarn
+              ];
 
-          dontPatchShebangs = true;
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
-          outputHash =
-            outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
+              dontPatchShebangs = true;
+              outputHashAlgo = "sha256";
+              outputHashMode = "recursive";
+              outputHash =
+                entry.npmDepsHashes.${system}
+                  or (throw "Missing npmDepsHashes entry for system: ${system}");
 
-          buildPhase = ''
-            runHook preBuild
+              buildPhase = ''
+                runHook preBuild
 
-            export HOME=$TMPDIR
-            export XDG_CACHE_HOME=$TMPDIR/.cache
-            export YARN_CACHE_FOLDER=$TMPDIR/.yarn-cache
+                export HOME=$TMPDIR
+                export XDG_CACHE_HOME=$TMPDIR/.cache
+                export YARN_CACHE_FOLDER=$TMPDIR/.yarn-cache
 
-            cp -r $src/. .
-            chmod -R u+w .
+                cp -r $src/. .
+                chmod -R u+w .
 
-            # Upstream's yarn.lock omits the direct typescript devDependency.
-            ${patchPackageJsonExactVersions nodejs}
-            yarn install --ignore-scripts --non-interactive
+                # Upstream's yarn.lock omits the direct typescript devDependency.
+                ${patchPackageJsonExactVersions nodejs}
+                yarn install --ignore-scripts --non-interactive
 
-            runHook postBuild
-          '';
+                runHook postBuild
+              '';
 
-          installPhase = ''
-            runHook preInstall
-            mkdir -p $out
-            shopt -s dotglob
-            cp -r ./* $out/
-            shopt -u dotglob
-            runHook postInstall
-          '';
-        };
+              installPhase = ''
+                runHook preInstall
+                mkdir -p $out
+                shopt -s dotglob
+                cp -r ./* $out/
+                shopt -u dotglob
+                runHook postInstall
+              '';
+            };
+          in
+          pkgs.stdenv.mkDerivation {
+            inherit pname version;
 
-        dd-cli = pkgs.stdenv.mkDerivation {
-          inherit pname version;
+            meta = with pkgs.lib; {
+              description = "CLI tool for working with Datadog logs";
+              homepage = "https://github.com/nimbushq/dd-cli";
+              license = licenses.asl20;
+              mainProgram = "dd-cli";
+              platforms = platforms.unix;
+            };
 
-          meta = with pkgs.lib; {
-            description = "CLI tool for working with Datadog logs";
-            homepage = "https://github.com/nimbushq/dd-cli";
-            license = licenses.asl20;
-            mainProgram = "dd-cli";
-            platforms = platforms.unix;
+            src = npmDeps;
+
+            nativeBuildInputs = [
+              nodejs
+              pkgs.makeWrapper
+            ];
+
+            dontConfigure = true;
+
+            buildPhase = ''
+              runHook preBuild
+
+              chmod -R u+w .
+              ${nodejs}/bin/node ./node_modules/typescript/bin/tsc
+
+              runHook postBuild
+            '';
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/lib/${pname} $out/bin
+              cp -r package.json lib node_modules $out/lib/${pname}/
+
+              makeWrapper ${nodejs}/bin/node $out/bin/dd-cli \
+                --add-flags "$out/lib/${pname}/lib/bin/dd-cli.js" \
+                --set NODE_PATH "$out/lib/${pname}/node_modules" \
+                --set NODE_ENV "production"
+
+              runHook postInstall
+            '';
           };
 
-          src = npmDeps;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          nativeBuildInputs = [
-            nodejs
-            pkgs.makeWrapper
-          ];
-
-          dontConfigure = true;
-
-          buildPhase = ''
-            runHook preBuild
-
-            chmod -R u+w .
-            ${nodejs}/bin/node ./node_modules/typescript/bin/tsc
-
-            runHook postBuild
-          '';
-
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/lib/${pname} $out/bin
-            cp -r package.json lib node_modules $out/lib/${pname}/
-
-            makeWrapper ${nodejs}/bin/node $out/bin/dd-cli \
-              --add-flags "$out/lib/${pname}/lib/bin/dd-cli.js" \
-              --set NODE_PATH "$out/lib/${pname}/node_modules" \
-              --set NODE_ENV "production"
-
-            runHook postInstall
-          '';
-
-        };
+        versionedPackages = builtins.listToAttrs (
+          builtins.map (key: {
+            name = "${pname}_${sanitize key}";
+            value = mk key releases.versions.${key};
+          }) (builtins.attrNames releases.versions)
+        );
       in
       {
-        packages = {
-          default = dd-cli;
-          inherit dd-cli;
+        packages = versionedPackages // {
+          default = latestPkg;
+          dd-cli = latestPkg;
         };
 
         apps = {
           default = {
             type = "app";
-            program = "${dd-cli}/bin/dd-cli";
+            program = "${latestPkg}/bin/dd-cli";
           };
           dd-cli = {
             type = "app";
-            program = "${dd-cli}/bin/dd-cli";
+            program = "${latestPkg}/bin/dd-cli";
           };
         };
       }
