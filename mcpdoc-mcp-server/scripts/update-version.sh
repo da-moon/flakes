@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# Appends the newest (or an explicit) mcpdoc PyPI release to releases.json (the
+# JSON version table read by flake.nix) and sets it as .latest. mcpdoc is a
+# TAGGED upstream (PyPI versions), so:
+#   key     = the PyPI version (e.g. "0.0.10")
+#   version = the same PyPI version
+# The fetchPypi source tarball is architecture-independent, so a single .hash is
+# stored per entry. The version data in flake.nix is never hand-edited.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -12,85 +19,45 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 readonly PYPI_API_URL="https://pypi.org/pypi/mcpdoc/json"
 readonly PACKAGE_NAME="mcpdoc"
-readonly PACKAGE_ATTR="mcpdoc"
 readonly BIN_NAME="mcpdoc"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  for t in nix curl jq; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
 ensure_in_package_directory() {
-  if [ ! -f "$flake_file" ]; then
-    log_error "flake.nix not found at: $flake_file"
-    exit 2
-  fi
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
 }
 
+# mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
+}
+
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)";/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_version_from_pypi() {
   local latest_json
   latest_json="$(curl -fsSL "$PYPI_API_URL")"
-  printf '%s\n' "$latest_json" \
-    | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' \
-    | head -n1 \
-    | sed -n 's/.*"\([^"]*\)"[[:space:]]*$/\1/p'
-}
-
-get_source_hash_for_system() {
-  local target_system="$1"
-  awk -v target="$target_system" '
-    /sourceHashBySystem = {/ { in_map = 1; next }
-    in_map && /};/ { in_map = 0 }
-    in_map && $0 ~ "\"" target "\"" {
-      line = $0
-      sub(/^[^=]*=[[:space:]]*"/, "", line)
-      sub(/".*/, "", line)
-      print line
-    }
-  ' "$flake_file"
-}
-
-get_current_system_key() {
-  nix eval --impure --raw --expr builtins.currentSystem
-}
-
-has_fake_hash() {
-  local current_system_key
-  local source_hash_line
-
-  current_system_key="$(get_current_system_key)"
-  if [ -z "$current_system_key" ]; then
-    log_error "Failed to detect current system key"
-    return 1
-  fi
-
-  source_hash_line="$(awk -v target="$current_system_key" '
-    /sourceHashBySystem[[:space:]]*=/ { in_map = 1; next }
-    in_map && /};/ { in_map = 0 }
-    in_map && $0 ~ ("\"" target "\"") { print $0 }
-  ' "$flake_file" | grep -v '^[[:space:]]*#' | head -n1)"
-
-  if [ -z "$source_hash_line" ]; then
-    return 1
-  fi
-
-  if printf '%s\n' "$source_hash_line" | grep -q 'fakeHash'; then
-    return 0
-  fi
-  if printf '%s\n' "$source_hash_line" | grep -q 'sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='; then
-    return 0
-  fi
-  return 1
+  printf '%s\n' "$latest_json" | jq -r '.info.version // empty'
 }
 
 get_package_url() {
@@ -102,77 +69,48 @@ get_package_url() {
 prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
+    | jq -r '.hash // empty' \
     | head -n1
 }
 
-set_version() {
-  local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
+
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-set_source_hash_map() {
-  local new_hash="$1"
-  sed -i.bak -E "s@(\"aarch64-linux\"[[:space:]]*= \")[^\"]*(\";)@\1${new_hash}\2@" "$flake_file"
-  sed -i.bak -E "s@(\"x86_64-linux\"[[:space:]]*= \")[^\"]*(\";)@\1${new_hash}\2@" "$flake_file"
-}
-
-flake_backup=""
-
-create_backup() {
-  flake_backup="$(mktemp)"
-  cp "$flake_file" "$flake_backup"
-}
-
-restore_backup() {
-  if [ -n "$flake_backup" ] && [ -f "$flake_backup" ]; then
-    cp "$flake_backup" "$flake_file"
-  fi
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-  if [ -n "$flake_backup" ]; then
-    rm -f "$flake_backup" 2>/dev/null || true
-  fi
-}
-
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --no-write-lock-file --print-out-paths)"; then
-    log_error "nix build failed for ${PACKAGE_ATTR}"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_DIR_NAME}_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for ${PACKAGE_DIR_NAME}_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
+    return 1
+  fi
   timeout 30 "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
   log_info "Build successful."
 }
 
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
+show_changes() {
+  if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_info "Changes made:"
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -214,10 +152,15 @@ print_usage() {
   cat <<'USAGE'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) mcpdoc PyPI release to releases.json as a new
+version-table entry (keyed by version) and sets .latest to it. Existing entries
+are preserved so consumers can still select past versions. The version data in
+flake.nix is never touched.
+
 Options:
-  --version VERSION   Update to a specific version (default: latest)
+  --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute source hash for current version
+  --rehash            Recompute the source hash for the current latest version
   --no-build          Skip build verification
   --help              Show this help message
 
@@ -273,7 +216,7 @@ main() {
   local current_version
   current_version="$(get_current_version)"
   if [ -z "$current_version" ]; then
-    log_error "Could not determine current version from flake.nix"
+    log_error "Failed to detect current version from releases.json"
     exit 2
   fi
 
@@ -285,11 +228,11 @@ main() {
   fi
 
   local new_version="${target_version:-$latest_version}"
-  log_info "Current version: $current_version"
+  log_info "Current latest: $current_version"
   log_info "Target version:  $new_version"
 
   local needs_update=false
-  if [ "$current_version" != "$new_version" ]; then
+  if ! has_version_entry "$new_version" || [ "$current_version" != "$new_version" ]; then
     needs_update=true
   fi
 
@@ -303,88 +246,61 @@ main() {
   fi
 
   if [ "$needs_update" = false ] && [ "$rehash" != true ]; then
-    local current_system_key=""
-    local current_system_hash=""
-    local package_url=""
-    local drift_hash=""
-
-    current_system_key="$(get_current_system_key)"
-    if [ -z "$current_system_key" ]; then
-      log_error "Failed to detect current system key"
-      exit 2
-    fi
-
-    if has_fake_hash; then
-      log_info "Detected placeholder source hash for current system; proceeding with rehash..."
-      rehash=true
-    else
-      current_system_hash="$(get_source_hash_for_system "$current_system_key" | head -n1)"
-      if [ -z "$current_system_hash" ]; then
-        log_error "Could not detect source hash for system ${current_system_key}"
-        exit 2
-      fi
-
-      package_url="$(get_package_url "$new_version")"
-      drift_hash="$(prefetch_sha256_sri "$package_url")"
-      if [ -z "$drift_hash" ]; then
-        log_error "Failed to compute source hash for $new_version"
-        exit 1
-      fi
-
-      if [ "$current_system_hash" != "$drift_hash" ]; then
-        log_info "Detected source hash drift for $current_system_key; proceeding with rehash..."
-        rehash=true
-      else
-        log_info "Already up to date!"
-        exit 0
-      fi
-    fi
+    log_info "Already up to date!"
+    exit 0
   fi
 
-  local current_aarch_hash
-  local current_x86_hash
-  current_aarch_hash="$(get_source_hash_for_system aarch64-linux | head -n1)"
-  current_x86_hash="$(get_source_hash_for_system x86_64-linux | head -n1)"
-
-  create_backup
-
-  if [ "$needs_update" = true ]; then
-    set_version "$new_version"
-  fi
-
-  local package_url
-  local new_hash
-  if [ -z "${package_url:-}" ]; then
-    package_url="$(get_package_url "$new_version")"
-  fi
-
-  if [ -z "${drift_hash:-}" ]; then
-    drift_hash="$(prefetch_sha256_sri "$package_url")"
-  fi
-
-  new_hash="$drift_hash"
+  log_info "Computing source hash for $new_version..."
+  local package_url new_hash
+  package_url="$(get_package_url "$new_version")"
+  new_hash="$(prefetch_sha256_sri "$package_url")"
   if [ -z "$new_hash" ]; then
     log_error "Failed to compute source hash for $new_version"
     exit 1
   fi
+  log_info "  source hash: $new_hash"
 
-  if [ "$needs_update" = true ] || [ "$rehash" = true ] || [ "$current_aarch_hash" != "$new_hash" ] || [ "$current_x86_hash" != "$new_hash" ]; then
-    set_source_hash_map "$new_hash"
-  fi
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$new_version" \
+    --arg rev "$new_version" \
+    --arg hash "$new_hash" \
+    '{version: $v, rev: $rev, hash: $hash}')"
 
-  rm -f "${flake_file}.bak" 2>/dev/null || true
+  local backup
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  if [ "$no_build" = false ]; then
-    if ! verify_build; then
-      log_error "Build failed; restoring original flake.nix"
-      restore_backup
+  upsert_release_entry "$new_version" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$new_version")"
+
+  if [ "$no_build" != true ]; then
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
       exit 1
     fi
   fi
 
-  local commit_message
-  commit_message="$(build_commit_message "$current_version" "$new_version" "$rehash")"
-  maybe_git_commit "$commit_message" flake.nix
+  rm -f "$backup"
+
+  show_changes
+
+  local scope msg
+  scope="$(basename "$pkg_dir")"
+  if [ "$current_version" != "$new_version" ]; then
+    msg="chore(${scope}): bump to ${new_version}"
+  elif [ "$rehash" = true ]; then
+    msg="chore(${scope}): rehash ${new_version}"
+  else
+    msg="chore(${scope}): update version"
+  fi
+  maybe_git_commit "$msg" "releases.json"
+
+  log_info "Successfully appended mcpdoc $new_version (latest was $current_version)"
 }
 
 main "$@"

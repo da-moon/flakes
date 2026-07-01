@@ -8,62 +8,82 @@
 
   outputs =
     { self, nixpkgs, flake-utils }:
+    let
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+      sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
+    in
     flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "mcpdoc";
-        version = "0.0.10";
 
-        sourceHashBySystem = {
-          "aarch64-linux" = "sha256-f+jj7R28CIY3imxwBNbLHmt5Vz7RvhU3Tx4aH8BfMKk=";
-          "x86_64-linux" = "sha256-f+jj7R28CIY3imxwBNbLHmt5Vz7RvhU3Tx4aH8BfMKk=";
-        };
-
-        mcpdoc = pkgs.python3Packages.buildPythonApplication {
-          inherit pname version;
-
-          meta = with pkgs.lib; {
-            description = "Server llms-txt documentation over MCP";
-            homepage = "https://github.com/langchain-ai/mcpdoc";
-            license = licenses.mit;
-            platforms = [ "aarch64-linux" "x86_64-linux" ];
-            mainProgram = pname;
-          };
-
-          pyproject = true;
-
-          nativeBuildInputs = with pkgs.python3Packages; [ hatchling ];
-
-          src = pkgs.fetchPypi {
+        # Builder: derive an mcpdoc package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version and the
+        # source hash now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+          in
+          pkgs.python3Packages.buildPythonApplication {
             inherit pname version;
-            hash = sourceHashBySystem.${system} or (throw "Missing sourceHashBySystem entry for system: ${system}");
+
+            meta = with pkgs.lib; {
+              description = "Server llms-txt documentation over MCP";
+              homepage = "https://github.com/langchain-ai/mcpdoc";
+              license = licenses.mit;
+              platforms = [ "aarch64-linux" "x86_64-linux" ];
+              mainProgram = pname;
+            };
+
+            pyproject = true;
+
+            nativeBuildInputs = with pkgs.python3Packages; [ hatchling ];
+
+            src = pkgs.fetchPypi {
+              inherit pname version;
+              hash = entry.hash;
+            };
+
+            propagatedBuildInputs = with pkgs.python3Packages; [
+              httpx
+              markdownify
+              mcp
+              pyyaml
+            ];
+
+            doCheck = false;
+
           };
 
-          propagatedBuildInputs = with pkgs.python3Packages; [
-            httpx
-            markdownify
-            mcp
-            pyyaml
-          ];
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          doCheck = false;
-
-        };
+        # One `mcpdoc-mcp-server_<sanitized-key>` package per entry in the table.
+        versionedPackages = builtins.listToAttrs (
+          builtins.map (key: {
+            name = "mcpdoc-mcp-server_${sanitize key}";
+            value = mk key releases.versions.${key};
+          }) (builtins.attrNames releases.versions)
+        );
       in
       {
-        packages = {
-          default = mcpdoc;
-          inherit mcpdoc;
+        packages = versionedPackages // {
+          default = latestPkg;
+          mcpdoc = latestPkg;
+          mcpdoc-mcp-server = latestPkg;
         };
 
         apps.default = {
           type = "app";
-          program = "${mcpdoc}/bin/mcpdoc";
+          program = "${latestPkg}/bin/mcpdoc";
         };
         apps.mcpdoc = {
           type = "app";
-          program = "${mcpdoc}/bin/mcpdoc";
+          program = "${latestPkg}/bin/mcpdoc";
         };
       }
     );
