@@ -23,18 +23,21 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.2.5";
 
+        # Version table: consumers select the latest OR any past version.
+        # New entries are appended by scripts/update-version.sh via jq — do
+        # NOT hand-edit the version data in this file.
+        releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+        # Per-arch asset naming is a property of the system, not the version.
         releaseBySystem = {
           "x86_64-linux" = {
             asset = "hoangsa-linux-x64.tar.gz";
             sourceRoot = "hoangsa-linux-x64";
-            hash = "sha256-ejh0qfE900uaUlL2KuhbkCdFL5ZlYXEokpl48hJmkb8=";
           };
           "aarch64-linux" = {
             asset = "hoangsa-linux-arm64.tar.gz";
             sourceRoot = "hoangsa-linux-arm64";
-            hash = "sha256-84NahoIkdFL1es2HLnmsQfr7ZyZG5YKRqNrY1tVEtgw=";
           };
         };
 
@@ -42,68 +45,87 @@
           releaseBySystem.${system}
             or (throw "Unsupported system for hoangsa: ${system}");
 
-        hoangsa = pkgs.stdenv.mkDerivation rec {
-          pname = "hoangsa";
-          inherit version;
+        # Builder: derive a hoangsa package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/src-url/hash
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            hash = entry.hashes.${system};
+          in
+          pkgs.stdenv.mkDerivation rec {
+            pname = "hoangsa";
+            inherit version;
 
-          meta = with lib; {
-            description = "Hoangsa workflow and memory CLI";
-            homepage = "https://github.com/unknown-studio-dev/hoangsa";
-            mainProgram = "hoangsa-cli";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "Hoangsa workflow and memory CLI";
+              homepage = "https://github.com/unknown-studio-dev/hoangsa";
+              mainProgram = "hoangsa-cli";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
+            src = pkgs.fetchurl {
+              url = "https://github.com/unknown-studio-dev/hoangsa/releases/download/v${version}/${release.asset}";
+              inherit hash;
+            };
+
+            sourceRoot = release.sourceRoot;
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+
+            nativeBuildInputs = [
+              pkgs.autoPatchelfHook
+              pkgs.makeWrapper
+            ];
+            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/lib/hoangsa $out/bin $out/share/hoangsa
+              cp -R . $out/lib/hoangsa/
+              cp -R templates $out/share/hoangsa/
+
+              for bin in hoangsa-cli hsp hoangsa-memory hoangsa-memory-mcp; do
+                makeWrapper "$out/lib/hoangsa/bin/$bin" "$out/bin/$bin"
+              done
+
+              runHook postInstall
+            '';
+
           };
 
-          src = pkgs.fetchurl {
-            url = "https://github.com/unknown-studio-dev/hoangsa/releases/download/v${version}/${release.asset}";
-            inherit (release) hash;
-          };
+        # Sanitize a JSON key into a valid attribute-name suffix.
+        sanitizeKey = key: builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ] key;
 
-          sourceRoot = release.sourceRoot;
-          dontBuild = true;
-          dontConfigure = true;
-          dontStrip = true;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          nativeBuildInputs = [
-            pkgs.autoPatchelfHook
-            pkgs.makeWrapper
-          ];
-          buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
-
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/lib/hoangsa $out/bin $out/share/hoangsa
-            cp -R . $out/lib/hoangsa/
-            cp -R templates $out/share/hoangsa/
-
-            for bin in hoangsa-cli hsp hoangsa-memory hoangsa-memory-mcp; do
-              makeWrapper "$out/lib/hoangsa/bin/$bin" "$out/bin/$bin"
-            done
-
-            runHook postInstall
-          '';
-
-        };
+        # One `hoangsa_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "hoangsa_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = hoangsa;
-          inherit hoangsa;
-        };
+          default = latestPkg;
+          hoangsa = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${hoangsa}/bin/hoangsa-cli";
+            program = "${latestPkg}/bin/hoangsa-cli";
           };
           hoangsa-cli = {
             type = "app";
-            program = "${hoangsa}/bin/hoangsa-cli";
+            program = "${latestPkg}/bin/hoangsa-cli";
           };
           hoangsa-memory-mcp = {
             type = "app";
-            program = "${hoangsa}/bin/hoangsa-memory-mcp";
+            program = "${latestPkg}/bin/hoangsa-memory-mcp";
           };
         };
       }
