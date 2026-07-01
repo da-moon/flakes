@@ -45,7 +45,7 @@
           inherit version;
 
           meta = with lib; {
-            description = "Leaf terminal AI client";
+            description = "Terminal Markdown previewer with a GUI-like experience";
             homepage = "https://github.com/RivoLink/leaf";
             mainProgram = "leaf";
             platforms = linuxSystems;
