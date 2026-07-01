@@ -17,6 +17,14 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -25,9 +33,6 @@
         lib = pkgs.lib;
         py = pkgs.python3Packages;
         pname = "code-review-graph";
-        version = "2.3.6";
-        codeReviewGraphWheelUrl = "https://files.pythonhosted.org/packages/66/c7/01cc7fa8cc574f26118ce3050d8e01d4303d673bf439b1d8d3e009287605/code_review_graph-2.3.6-py3-none-any.whl";
-        codeReviewGraphWheelHash = "sha256-AByGBNDiKhuKphokgkqyXvLbgdXvjTdwo94PYnBIRcc=";
 
         pyKeyValueAio = py.buildPythonPackage rec {
           pname = "py-key-value-aio";
@@ -92,7 +97,17 @@
           pythonImportsCheck = [ "fastmcp" ];
         };
 
-        codeReviewGraph = py.buildPythonApplication rec {
+        # Builder: derive a code-review-graph package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/wheel-url/hash
+        # now come from `entry` instead of top-level let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            codeReviewGraphWheelUrl = entry.url;
+            codeReviewGraphWheelHash = entry.hash;
+          in
+          py.buildPythonApplication rec {
           inherit pname version;
 
           meta = with lib; {
@@ -127,25 +142,32 @@
           pythonImportsCheck = [ "code_review_graph" ];
 
         };
+
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+        # One `code-review-graph_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "code-review-graph_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = codeReviewGraph;
-          "code-review-graph" = codeReviewGraph;
-        };
+          default = latestPkg;
+          "code-review-graph" = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${codeReviewGraph}/bin/code-review-graph";
+            program = "${latestPkg}/bin/code-review-graph";
           };
           "code-review-graph" = {
             type = "app";
-            program = "${codeReviewGraph}/bin/code-review-graph";
+            program = "${latestPkg}/bin/code-review-graph";
           };
           "crg-daemon" = {
             type = "app";
-            program = "${codeReviewGraph}/bin/crg-daemon";
+            program = "${latestPkg}/bin/crg-daemon";
           };
         };
       }
