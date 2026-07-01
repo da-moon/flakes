@@ -1,4 +1,17 @@
 #!/usr/bin/env bash
+# Appends the newest (or an explicit) QuantConnect Lean CLI release to
+# releases.json (the JSON version table read by flake.nix) and sets it as
+# .latest. The version data in flake.nix is never touched.
+#
+# lean is PyPI-tagged, so:
+#   key     = the Lean CLI version (e.g. "1.0.227")
+#
+# Each entry records everything the flake needs to build reproducibly:
+#   - version / hash                : lean sdist from PyPI
+#   - stubsVersion / stubsHash      : quantconnect-stubs wheel from PyPI
+#   - engineImageTag                : pinned quantconnect/lean + research tag
+#   - engineImageDigest             : quantconnect/lean:<tag> image digest
+#   - researchImageDigest           : quantconnect/research:<tag> image digest
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -13,11 +26,34 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
+readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_tools() {
-  for tool in curl nix python3 sed; do
+  for tool in curl nix jq python3; do
     command -v "$tool" >/dev/null 2>&1 || { log_error "$tool is required"; exit 2; }
   done
+}
+
+ensure_in_package_directory() {
+  [ -f "$flake_file" ] || { log_error "flake.nix not found in ${pkg_dir}"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at $releases_file"; exit 2; }
+}
+
+# Current "latest" key recorded in the version table.
+current_version() {
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
+}
+
+# sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
 read_metadata() {
@@ -67,58 +103,52 @@ print(research["digest"])
 PY
 }
 
-current_version() {
-  sed -n '/pname = "lean";/,/format = "setuptools";/ s/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+sha256_hex_to_sri() {
+  nix hash to-sri --type sha256 "$1"
 }
 
-update_flake() {
-  local cli_version="$1" lean_hash="$2" stubs_version="$3" stubs_hash="$4" engine_tag="$5" engine_digest="$6" research_digest="$7"
-  local lean_sri stubs_sri
-  lean_sri="$(nix hash to-sri --type sha256 "$lean_hash")"
-  stubs_sri="$(nix hash to-sri --type sha256 "$stubs_hash")"
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
 
-  python3 - "$flake_file" "$cli_version" "$lean_sri" "$stubs_version" "$stubs_sri" "$engine_tag" "$engine_digest" "$research_digest" <<'PY'
-import re
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-cli_version, lean_hash, stubs_version, stubs_hash, engine_tag, engine_digest, research_digest = sys.argv[2:]
-text = path.read_text()
-
-text = re.sub(r'(engineImageTag = ")[^"]+(";)', rf'\g<1>{engine_tag}\2', text)
-text = re.sub(r'(engineImageDigest = ")[^"]+(";)', rf'\g<1>{engine_digest}\2', text)
-text = re.sub(r'(researchImageDigest = ")[^"]+(";)', rf'\g<1>{research_digest}\2', text)
-text = re.sub(r'(pname = "quantconnect-stubs";\n\s*version = ")[^"]+(";)', rf'\g<1>{stubs_version}\2', text)
-text = re.sub(r'(pname = "quantconnect_stubs";\n\s*version = ")[^"]+(";)', rf'\g<1>{stubs_version}\2', text)
-text = re.sub(r'(pname = "quantconnect_stubs";(?:.|\n)*?hash = ")[^"]+(";)', rf'\g<1>{stubs_hash}\2', text, count=1)
-text = re.sub(r'(pname = "lean";\n\s*version = ")[^"]+(";)', rf'\g<1>{cli_version}\2', text)
-text = re.sub(r'(inherit pname version;\n\s*hash = ")[^"]+(";)', rf'\g<1>{lean_hash}\2', text, count=1)
-
-path.write_text(text)
-PY
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
-  (cd "$pkg_dir" && nix build .#lean --no-link --no-write-lock-file)
+  if ! (cd "$pkg_dir" && nix build ".#lean_${sanitized_key}" --no-link --no-write-lock-file); then
+    log_error "nix build failed for lean_${sanitized_key}"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
+    return 1
+  fi
+  log_info "Build successful!"
 }
 
 build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
+  local previous_key="$1"
+  local new_key="$2"
   local rehash="${3:-false}"
 
   local scope
   scope="$(basename "$pkg_dir")"
 
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+  if [ "$previous_key" != "$new_key" ]; then
+    printf 'chore(%s): add %s to version table\n' "$scope" "$new_key"
     return 0
   fi
 
   if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_key"
     return 0
   fi
 
@@ -162,12 +192,28 @@ maybe_git_commit() {
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/update-version.sh [--version LEAN_CLI_VERSION] [--engine-tag TAG] [--rehash] [--check] [--no-build] [--help]
+Usage: ./scripts/update-version.sh [OPTIONS]
+
+Appends the newest (or an explicit) Lean CLI release to releases.json as a new
+version-table entry (keyed by Lean CLI version) and sets .latest to it. Existing
+entries are preserved so consumers can still select past versions. Recomputes the
+lean sdist hash, quantconnect-stubs wheel hash, and pinned Docker image digests.
+
+Options:
+  --version VERSION   Append a specific Lean CLI version (default: latest)
+  --engine-tag TAG    Pin a specific quantconnect/lean engine tag (default: latest)
+  --rehash            Force a rehash commit message when the key is unchanged
+  --check             Only check for updates (exit 1 if update available)
+  --no-build          Skip build verification
+  --help              Show this help message
 EOF
 }
 
 main() {
   ensure_tools
+  ensure_in_package_directory
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
+
   local requested_cli="" requested_engine="" check=false no_build=false rehash=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -187,6 +233,10 @@ main() {
 
   local current
   current="$(current_version)"
+  if [ -z "$current" ]; then
+    log_error "Failed to detect current version from releases.json"
+    exit 2
+  fi
 
   local metadata
   if ! metadata="$(read_metadata "$requested_cli" "$requested_engine")"; then
@@ -199,27 +249,65 @@ main() {
     exit 1
   fi
 
+  local cli_version="${fields[0]}" lean_hash_hex="${fields[1]}" \
+    stubs_version="${fields[2]}" stubs_hash_hex="${fields[3]}" \
+    engine_tag="${fields[4]}" engine_digest="${fields[5]}" research_digest="${fields[6]}"
+
   log_info "Current Lean CLI: $current"
-  log_info "Target Lean CLI:  ${fields[0]}"
-  log_info "Target engine:    quantconnect/lean:${fields[4]}@${fields[5]}"
+  log_info "Target Lean CLI:  ${cli_version}"
+  log_info "Target engine:    quantconnect/lean:${engine_tag}@${engine_digest}"
+
   if [ "$check" = true ]; then
-    [ "$current" = "${fields[0]}" ] && exit 0 || exit 1
+    if has_version_entry "$cli_version" && [ "$current" = "$cli_version" ]; then
+      log_info "Already up to date!"
+      exit 0
+    fi
+    log_info "Update available: $current -> $cli_version"
+    exit 1
   fi
+
+  local lean_sri stubs_sri
+  lean_sri="$(sha256_hex_to_sri "$lean_hash_hex")"
+  stubs_sri="$(sha256_hex_to_sri "$stubs_hash_hex")"
+
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$cli_version" \
+    --arg hash "$lean_sri" \
+    --arg sv "$stubs_version" \
+    --arg sh "$stubs_sri" \
+    --arg et "$engine_tag" \
+    --arg ed "$engine_digest" \
+    --arg rd "$research_digest" \
+    '{version: $v, hash: $hash, stubsVersion: $sv, stubsHash: $sh,
+      engineImageTag: $et, engineImageDigest: $ed, researchImageDigest: $rd}')"
 
   local backup
   backup="$(mktemp)"
-  cp -- "$flake_file" "$backup"
-  # shellcheck disable=SC2064
-  trap "cp -- '$backup' '$flake_file'; rm -f -- '$backup'" ERR
+  cp -- "$releases_file" "$backup"
 
-  update_flake "${fields[@]}"
-  [ "$no_build" = true ] || verify_build
+  upsert_release_entry "$cli_version" "$entry_json"
 
-  trap - ERR
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$cli_version")"
+
+  if [ "$no_build" != true ]; then
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp -- "$backup" "$releases_file"
+      rm -f -- "$backup"
+      exit 1
+    fi
+  fi
+
   rm -f -- "$backup"
 
-  log_info "Updated lean CLI to ${fields[0]} with engine tag ${fields[4]}"
-  maybe_git_commit "$(build_commit_message "$current" "${fields[0]}" "$rehash")" "flake.nix"
+  log_info "releases.json now contains:"
+  jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
+
+  maybe_git_commit "$(build_commit_message "$current" "$cli_version" "$rehash")" "releases.json"
+
+  log_info "Updated lean CLI to ${cli_version} with engine tag ${engine_tag}"
 }
 
 main "$@"
