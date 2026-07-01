@@ -1,0 +1,11 @@
+{
+  "latest": "1.89.20",
+  "versions": {
+    "1.89.20": {
+      "version": "1.89.20",
+      "rev": "1.89.20",
+      "hash": "sha256-wZdDiJ4it1xDrj5+yjz0SGFbojYm/+9/b1AVCb2OwYU=",
+      "npmDepsHash": "sha256-Gn3ty2UI9yr5JL78nai/yTg8uT3eTH3jrI1dTeyEXDk="
+    }
+  }
+}

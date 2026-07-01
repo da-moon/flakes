@@ -25,14 +25,29 @@
         lib = pkgs.lib;
         nodejs = pkgs.nodejs_22;
         pname = "evolver";
-        version = "1.89.20";
 
-        npmDeps = pkgs.stdenv.mkDerivation {
+        # Version table: consumers select the latest OR any past version.
+        # New entries are appended by scripts/update-version.sh via jq — do
+        # NOT hand-edit the version data in this file.
+        releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+        # Sanitize a JSON key into a valid attribute-name suffix.
+        sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
+
+        # Builder: derive an evolver package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/src/hash(es)
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+
+            npmDeps = pkgs.stdenv.mkDerivation {
           name = "${pname}-${version}-npm-deps";
 
           src = pkgs.fetchurl {
             url = "https://registry.npmjs.org/@evomap/evolver/-/evolver-${version}.tgz";
-            hash = "sha256-wZdDiJ4it1xDrj5+yjz0SGFbojYm/+9/b1AVCb2OwYU=";
+            hash = entry.hash;
           };
 
           nativeBuildInputs = [
@@ -45,7 +60,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-Gn3ty2UI9yr5JL78nai/yTg8uT3eTH3jrI1dTeyEXDk=";
+          outputHash = entry.npmDepsHash;
 
           buildPhase = ''
             runHook preBuild
@@ -97,8 +112,8 @@
             runHook postInstall
           '';
         };
-
-        evolver = pkgs.stdenv.mkDerivation {
+          in
+          pkgs.stdenv.mkDerivation {
           inherit pname version;
 
           meta = with lib; {
@@ -157,21 +172,28 @@
           '';
 
         };
+
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+        # One `evolver_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "evolver_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = evolver;
-          inherit evolver;
-        };
+          default = latestPkg;
+          evolver = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${evolver}/bin/evolver";
+            program = "${latestPkg}/bin/evolver";
           };
           evolver = {
             type = "app";
-            program = "${evolver}/bin/evolver";
+            program = "${latestPkg}/bin/evolver";
           };
         };
       }
