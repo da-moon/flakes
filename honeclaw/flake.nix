@@ -14,15 +14,30 @@
     }:
     let
       linuxSystems = [ "x86_64-linux" ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.12.4";
 
-        honeclaw = pkgs.stdenv.mkDerivation rec {
+        # Builder: derive a honeclaw package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/src-url/hash
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+          in
+          pkgs.stdenv.mkDerivation rec {
           pname = "honeclaw";
           inherit version;
 
@@ -36,7 +51,7 @@
 
           src = pkgs.fetchurl {
             url = "https://github.com/B-M-Capital-Research/honeclaw/releases/download/v${version}/honeclaw-linux-x86_64.tar.gz";
-            hash = "sha256-oeNA+gnQa7XYtvam0GhrJln/HhVLm8hG37sXvxfCiQs=";
+            hash = entry.hash;
           };
 
           sourceRoot = "honeclaw-v${version}-x86_64-unknown-linux-gnu";
@@ -70,25 +85,32 @@
           '';
 
         };
+
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+        # One `honeclaw_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "honeclaw_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = honeclaw;
-          inherit honeclaw;
-        };
+          default = latestPkg;
+          honeclaw = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${honeclaw}/bin/hone-cli";
+            program = "${latestPkg}/bin/hone-cli";
           };
           hone-cli = {
             type = "app";
-            program = "${honeclaw}/bin/hone-cli";
+            program = "${latestPkg}/bin/hone-cli";
           };
           hone-mcp = {
             type = "app";
-            program = "${honeclaw}/bin/hone-mcp";
+            program = "${latestPkg}/bin/hone-mcp";
           };
         };
       }

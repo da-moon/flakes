@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# Appends the newest (or an explicit) honeclaw GitHub release to releases.json
+# (the JSON version table read by flake.nix) and sets it as .latest. Existing
+# entries are preserved so consumers can still select past versions.
+#
+# honeclaw ships tagged GitHub releases, so:
+#   key     = the version (e.g. "0.12.4"), kind=tag-based
+#   version = the same version string
+#   hash    = the SRI hash of honeclaw-linux-x86_64.tar.gz
+#
+# Upstream ships only a linux-x86_64 asset (plus darwin), so the entry carries
+# a single `hash`. The version data in flake.nix is never touched — jq upserts.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -12,22 +23,34 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 readonly REPO_OWNER="B-M-Capital-Research"
 readonly REPO_NAME="honeclaw"
-readonly PACKAGE_ATTR="honeclaw"
 readonly BIN_NAME="hone-cli"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  for t in nix curl jq; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
+ensure_in_package_directory() {
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
+}
+
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_release_tag() {
@@ -49,57 +72,52 @@ asset_url() {
 
 prefetch_sha256_sri() {
   nix store prefetch-file --json --hash-type sha256 "$1" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+    | jq -r '.hash'
 }
 
-update_flake_version() {
-  sed -i.bak -E "0,/^([[:space:]]*version = \")[^\"]*(\";)/ s||\\1$1\\2|" "$flake_file"
+# sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
-update_hash() {
-  sed -i.bak -E "0,/^([[:space:]]*hash = \")[^\"]*(\";)/ s||\\1$1\\2|" "$flake_file"
-}
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
 
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --no-write-lock-file --print-out-paths)"; then
-    log_error "nix build failed for ${PACKAGE_ATTR}"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#honeclaw_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for honeclaw_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
+    return 1
+  fi
   timeout 30 "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
+show_changes() {
+  if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_info "Changes made:"
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -141,18 +159,28 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) honeclaw release to releases.json as a new
+version-table entry (keyed by version) and sets .latest to it. Existing entries
+are preserved so consumers can still select past versions.
+
 Options:
-  --version VERSION   Update to a specific version (default: latest)
+  --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute release asset hash for current version
+  --rehash            Recompute the asset hash for the current latest version
   --no-build          Skip build verification
   --help              Show this help message
+
+Examples:
+  ./scripts/update-version.sh
+  ./scripts/update-version.sh --check
+  ./scripts/update-version.sh --version 0.12.4
 EOF
 }
 
 main() {
   ensure_required_tools_installed
-  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  ensure_in_package_directory
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
   local target_version="" check_only=false rehash=false no_build=false
   while [[ $# -gt 0 ]]; do
@@ -170,31 +198,81 @@ main() {
     esac
   done
 
-  local current_version latest_version hash
+  local current_version
   current_version="$(get_current_version)"
+  if [ -z "$current_version" ]; then
+    log_error "Failed to detect current version from releases.json"
+    exit 2
+  fi
+
+  local latest_version
   latest_version="${target_version:-$(tag_to_version "$(get_latest_release_tag)")}"
+  if [ -z "$latest_version" ]; then
+    log_error "Failed to fetch latest version"
+    exit 2
+  fi
+
+  log_info "Current latest: $current_version"
+  log_info "Target version:  $latest_version"
 
   if [ "$check_only" = true ]; then
-    [ "$current_version" = "$latest_version" ] && { log_info "${PACKAGE_DIR_NAME} is up to date (${current_version})"; exit 0; }
-    log_warn "Update available: ${current_version} -> ${latest_version}"
+    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
+      log_info "Already up to date!"
+      exit 0
+    fi
+    log_info "Update available: $current_version -> $latest_version"
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" = false ]; then
-    log_info "${PACKAGE_DIR_NAME} is already at ${current_version}"
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] && [ "$rehash" = false ]; then
+    log_info "Already up to date!"
     exit 0
   fi
 
-  update_flake_version "$latest_version"
   log_info "Prefetching honeclaw-linux-x86_64.tar.gz"
+  local hash
   hash="$(prefetch_sha256_sri "$(asset_url "$latest_version")")"
-  [ -n "$hash" ] || { log_error "failed to extract sha256 from prefetch output"; exit 1; }
-  update_hash "$hash"
-  cleanup_backups
+  [ -n "$hash" ] && [ "$hash" != "null" ] || { log_error "failed to extract sha256 from prefetch output"; exit 1; }
+  log_info "x86_64-linux hash: $hash"
 
-  [ "$no_build" = false ] && verify_build
-  git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$latest_version" \
+    --arg rev "$latest_version" \
+    --arg hash "$hash" \
+    '{version: $v, rev: $rev, hash: $hash}')"
+
+  local backup
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
+
+  upsert_release_entry "$latest_version" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$latest_version")"
+
+  if [ "$no_build" != true ]; then
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
+      exit 1
+    fi
+  fi
+
+  rm -f "$backup"
+
+  show_changes
+
+  local msg
+  if [ "$current_version" = "$latest_version" ]; then
+    msg="chore(${PACKAGE_DIR_NAME}): rehash ${latest_version}"
+  else
+    msg="chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}"
+  fi
+  maybe_git_commit "$msg" "releases.json"
+
+  log_info "Successfully appended honeclaw $latest_version (latest was $current_version)"
 }
 
 main "$@"
