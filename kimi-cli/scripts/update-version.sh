@@ -19,16 +19,14 @@ declare -Ar SYSTEM_TO_RELEASE_PLATFORM=(
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 DOWNLOADER=""
-HAS_JQ=false
-temp_flake_file=""
 
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
-  command -v awk >/dev/null 2>&1 || { log_error "awk is required but not installed."; exit 2; }
+  command -v jq >/dev/null 2>&1 || { log_error "jq is required but not installed."; exit 2; }
 
   if command -v curl >/dev/null 2>&1; then
     DOWNLOADER="curl"
@@ -38,15 +36,15 @@ ensure_required_tools_installed() {
     log_error "Either curl or wget is required but neither is installed."
     exit 2
   fi
-
-  if command -v jq >/dev/null 2>&1; then
-    HAS_JQ=true
-  fi
 }
 
 ensure_in_package_directory() {
   if [ ! -f "$flake_file" ]; then
     log_error "flake.nix not found at: $flake_file"
+    exit 2
+  fi
+  if [ ! -f "$releases_file" ]; then
+    log_error "releases.json not found at: $releases_file"
     exit 2
   fi
 }
@@ -70,8 +68,15 @@ download_file() {
   fi
 }
 
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_version() {
@@ -86,21 +91,7 @@ get_manifest_json() {
 get_manifest_checksum() {
   local manifest_json="$1"
   local platform="$2"
-
-  if [ "$HAS_JQ" = true ]; then
-    printf '%s' "$manifest_json" | jq -r ".platforms[\"$platform\"].checksum // empty"
-    return 0
-  fi
-
-  local normalized_json
-  normalized_json="$(printf '%s' "$manifest_json" | tr -d '\n\r\t' | sed 's/ \+/ /g')"
-
-  if [[ $normalized_json =~ \"$platform\"[^}]*\"checksum\"[[:space:]]*:[[:space:]]*\"([a-f0-9]{64})\" ]]; then
-    printf '%s\n' "${BASH_REMATCH[1]}"
-    return 0
-  fi
-
-  return 1
+  printf '%s' "$manifest_json" | jq -r ".platforms[\"$platform\"].checksum // empty"
 }
 
 sha256_hex_to_sri() {
@@ -108,77 +99,33 @@ sha256_hex_to_sri() {
   nix hash to-sri --type sha256 "$hex_hash"
 }
 
-update_flake_version() {
-  local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
+
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-update_flake_hash_block() {
-  local x86_64_hash="$1"
-  local aarch64_hash="$2"
-
-  temp_flake_file="$(mktemp "${flake_file}.XXXXXX")"
-
-  if ! awk -v x86="$x86_64_hash" -v arm="$aarch64_hash" '
-    BEGIN {
-      in_block = 0
-      replaced = 0
-    }
-
-    /^[[:space:]]*binarySha256BySystem = \{/ {
-      print
-      print "          # update-version.sh managed hashes."
-      print "          x86_64-linux = \"" x86 "\";"
-      print "          aarch64-linux = \"" arm "\";"
-      in_block = 1
-      replaced = 1
-      next
-    }
-
-    in_block && /^[[:space:]]*\};[[:space:]]*$/ {
-      in_block = 0
-      print
-      next
-    }
-
-    !in_block {
-      print
-    }
-
-    END {
-      if (!replaced) {
-        exit 10
-      }
-    }
-  ' "$flake_file" > "$temp_flake_file"; then
-    rm -f "$temp_flake_file"
-    temp_flake_file=""
-    log_error "Failed to rewrite binarySha256BySystem block in flake.nix"
-    exit 2
-  fi
-
-  mv "$temp_flake_file" "$flake_file"
-  temp_flake_file=""
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-  if [ -n "$temp_flake_file" ]; then
-    rm -f "$temp_flake_file" 2>/dev/null || true
-  fi
-}
-
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#kimi-cli --no-write-lock-file --no-link --print-out-paths)"; then
-    log_error "nix build failed for kimi-cli"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#kimi-cli_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for kimi-cli_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/kimi" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/kimi"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
     return 1
   fi
   timeout 30 "$out_path/bin/kimi" --version >/dev/null 2>&1 || true
@@ -188,31 +135,16 @@ verify_build() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
 }
 
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
+# sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
   local commit_message="$1"
   shift
@@ -251,17 +183,20 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) kimi-cli release to releases.json as a new
+version-table entry (keyed by version) and sets .latest to it. Existing entries
+are preserved so consumers can still select past versions.
+
 Options:
-  --version VERSION   Update to a specific version (default: latest)
+  --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute Linux release hashes for the current version
   --no-build          Skip build verification
   --help              Show this help message
 
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --version 0.14.0
+  ./scripts/update-version.sh --version 0.21.1
 EOF
 }
 
@@ -272,7 +207,6 @@ main() {
 
   local target_version=""
   local check_only=false
-  local rehash=false
   local no_build=false
 
   while [[ $# -gt 0 ]]; do
@@ -284,10 +218,6 @@ main() {
         ;;
       --check)
         check_only=true
-        shift
-        ;;
-      --rehash)
-        rehash=true
         shift
         ;;
       --no-build)
@@ -309,7 +239,7 @@ main() {
   local current_version
   current_version="$(get_current_version)"
   if [ -z "$current_version" ]; then
-    log_error "Failed to detect current version from flake.nix"
+    log_error "Failed to detect current version from releases.json"
     exit 2
   fi
 
@@ -324,11 +254,11 @@ main() {
     latest_version="$target_version"
   fi
 
-  log_info "Current version: $current_version"
+  log_info "Current latest: $current_version"
   log_info "Target version:  $latest_version"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_version" = "$latest_version" ]; then
+    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
       log_info "Already up to date!"
       exit 0
     fi
@@ -336,7 +266,7 @@ main() {
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
     log_info "Already up to date!"
     exit 0
   fi
@@ -349,41 +279,42 @@ main() {
     exit 2
   fi
 
-  local x86_64_checksum_hex
-  x86_64_checksum_hex="$(get_manifest_checksum "$manifest_json" "${SYSTEM_TO_RELEASE_PLATFORM[x86_64-linux]}" || true)"
-  if [ -z "$x86_64_checksum_hex" ]; then
-    log_error "Missing manifest checksum for ${SYSTEM_TO_RELEASE_PLATFORM[x86_64-linux]}"
-    exit 2
-  fi
+  # Compute per-arch SRI hashes from the manifest checksums.
+  local system platform checksum_hex sri_hash
+  local hashes_json="{}"
+  for system in "${!SYSTEM_TO_RELEASE_PLATFORM[@]}"; do
+    platform="${SYSTEM_TO_RELEASE_PLATFORM[$system]}"
+    checksum_hex="$(get_manifest_checksum "$manifest_json" "$platform")"
+    if [ -z "$checksum_hex" ]; then
+      log_error "Missing manifest checksum for $platform ($system)"
+      exit 2
+    fi
+    sri_hash="$(sha256_hex_to_sri "$checksum_hex")"
+    log_info "$system hash: $sri_hash"
+    hashes_json="$(jq -n --argjson h "$hashes_json" --arg s "$system" --arg v "$sri_hash" \
+      '$h + {($s): $v}')"
+  done
 
-  local aarch64_checksum_hex
-  aarch64_checksum_hex="$(get_manifest_checksum "$manifest_json" "${SYSTEM_TO_RELEASE_PLATFORM[aarch64-linux]}" || true)"
-  if [ -z "$aarch64_checksum_hex" ]; then
-    log_error "Missing manifest checksum for ${SYSTEM_TO_RELEASE_PLATFORM[aarch64-linux]}"
-    exit 2
-  fi
-
-  local x86_64_hash
-  x86_64_hash="$(sha256_hex_to_sri "$x86_64_checksum_hex")"
-  local aarch64_hash
-  aarch64_hash="$(sha256_hex_to_sri "$aarch64_checksum_hex")"
-
-  log_info "x86_64-linux hash: $x86_64_hash"
-  log_info "aarch64-linux hash: $aarch64_hash"
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$latest_version" \
+    --arg rev "$latest_version" \
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
 
   local backup
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  cleanup_backups
-  update_flake_version "$latest_version"
-  update_flake_hash_block "$x86_64_hash" "$aarch64_hash"
-  cleanup_backups
+  upsert_release_entry "$latest_version" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$latest_version")"
 
   if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      log_error "Build verification failed; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
       rm -f "$backup"
       exit 1
     fi
@@ -393,9 +324,9 @@ main() {
 
   show_changes
 
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
+  maybe_git_commit "chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}" "releases.json"
 
-  log_info "Successfully updated kimi-cli from $current_version to $latest_version"
+  log_info "Successfully appended kimi-cli $latest_version (latest was $current_version)"
 }
 
 main "$@"

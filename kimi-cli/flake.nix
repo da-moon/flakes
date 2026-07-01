@@ -23,78 +23,92 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.21.1";
+
+        # Version table: consumers select the latest OR any past version.
+        # New entries are appended by scripts/update-version.sh via jq — do
+        # NOT hand-edit the version data in this file.
+        releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
           aarch64-linux = "linux-arm64";
         };
 
-        binarySha256BySystem = {
-          # update-version.sh managed hashes.
-          x86_64-linux = "sha256-rueuFzKSd9Dzh6NFq+/62146ZmAXx2a4GVrcCd4YslI=";
-          aarch64-linux = "sha256-TGcxmmCcrX+5ojBuryjDZF0cmtW6e5aSDWH1zOH5s2M=";
-        };
-
         releasePlatform = releasePlatformBySystem.${system};
-        binarySha256 = binarySha256BySystem.${system};
 
-        kimi-cli = pkgs.stdenv.mkDerivation rec {
-          pname = "kimi-cli";
-          inherit version;
+        # Builder: derive a kimi-cli package from one releases.json entry.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            binarySha256 = entry.hashes.${system};
+          in
+          pkgs.stdenv.mkDerivation rec {
+            pname = "kimi-cli";
+            inherit version;
 
-          meta = with lib; {
-            description = "Kimi Code - AI coding assistant CLI for terminal";
-            homepage = "https://code.kimi.com";
-            license = licenses.asl20;
-            mainProgram = "kimi";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "Kimi Code - AI coding assistant CLI for terminal";
+              homepage = "https://code.kimi.com";
+              license = licenses.asl20;
+              mainProgram = "kimi";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
+            src = pkgs.fetchurl {
+              url = "https://code.kimi.com/kimi-code/binaries/${version}/kimi-code-${releasePlatform}";
+              sha256 = binarySha256;
+            };
+
+            dontUnpack = true;
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+
+            nativeBuildInputs = with pkgs; [
+              autoPatchelfHook
+            ];
+
+            buildInputs = [
+              pkgs.stdenv.cc.cc.lib
+            ];
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/bin
+              install -m755 $src $out/bin/kimi
+
+              runHook postInstall
+            '';
           };
 
-          src = pkgs.fetchurl {
-            url = "https://code.kimi.com/kimi-code/binaries/${version}/kimi-code-${releasePlatform}";
-            sha256 = binarySha256;
-          };
+        # Sanitize a JSON key into a valid attribute-name suffix.
+        sanitizeKey = key: builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ] key;
 
-          dontUnpack = true;
-          dontBuild = true;
-          dontConfigure = true;
-          dontStrip = true;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          nativeBuildInputs = with pkgs; [
-            autoPatchelfHook
-          ];
-
-          buildInputs = [
-            pkgs.stdenv.cc.cc.lib
-          ];
-
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/bin
-            install -m755 $src $out/bin/kimi
-
-            runHook postInstall
-          '';
-        };
+        # One `kimi-cli_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "kimi-cli_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
 
       in
       {
         packages = {
-          default = kimi-cli;
-          kimi-cli = kimi-cli;
-        };
+          default = latestPkg;
+          kimi-cli = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${kimi-cli}/bin/kimi";
+            program = "${latestPkg}/bin/kimi";
           };
           kimi = {
             type = "app";
-            program = "${kimi-cli}/bin/kimi";
+            program = "${latestPkg}/bin/kimi";
           };
         };
       }
