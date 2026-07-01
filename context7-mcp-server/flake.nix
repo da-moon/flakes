@@ -16,7 +16,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
         pname = "context7-mcp";
         version = "3.2.2";
 
@@ -24,7 +24,7 @@
         # so the fixed-output hash from "npm install" is not portable across systems.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-H2LCtiPO65D7Ll7VwiJ+23sMkKdjpUYg6YUuJt1bgzM=";
+          "x86_64-linux" = "sha256-ifJ+MfIRmR//2+TxtAScBVI1n/QMefpRNyjl7uM0E7U=";
         };
 
         # Fixed-output derivation to fetch npm package with all dependencies
