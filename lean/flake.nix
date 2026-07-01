@@ -24,13 +24,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python312;
 
-        engineImageTag = "17882";
-        engineImageDigest = "sha256:8dd5be401e2d1ac440e4f6507d914cf602634e86a05fcd5c2573eda8199dd940";
-        researchImageDigest = "sha256:f4702ec52a6dfba7e1ee054222de4d9cf14af0089ca211760c9f55b35cf6048c";
+        engineImageTag = "17883";
+        engineImageDigest = "sha256:11d01346586d9778e0f5df09de6da9bc4e3a1ed089b3113b980910a8d8191fd1";
+        researchImageDigest = "sha256:77e66c32ff0941bfe5dd931ca4cf35c7687702d529b6f1221df8f106ad04d78d";
 
         quantconnect-stubs = python.pkgs.buildPythonPackage {
           pname = "quantconnect-stubs";
-          version = "17882";
+          version = "17883";
 
           meta = with pkgs.lib; {
             description = "Python type stubs for the QuantConnect LEAN API";
@@ -43,11 +43,11 @@
 
           src = pkgs.fetchPypi {
             pname = "quantconnect_stubs";
-            version = "17882";
+            version = "17883";
             format = "wheel";
             dist = "py3";
             python = "py3";
-            hash = "sha256-wnlRkKQGsLmNfcpTwp/+iCaOHsTUzxBbKTIsoUMbpU4=";
+            hash = "sha256-JOaTPzrMB5Pbqh45pKXjq9gVK6CtqkZECaKrJsHISt4=";
           };
 
           propagatedBuildInputs = with python.pkgs; [
