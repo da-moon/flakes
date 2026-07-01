@@ -1,0 +1,14 @@
+{
+  "latest": "4.0.2",
+  "versions": {
+    "4.0.2": {
+      "version": "4.0.2",
+      "rev": "4.0.2",
+      "hash": "sha256-25rzgJXTKZKvWKJwFdO1PMLj4nug/A7T2NdftSesnz0=",
+      "outputHashBySystem": {
+        "aarch64-linux": "sha256-B7tN2eP4EM9S1xpQQaGaQmlgt/QIQkWt55m1YPZtomE=",
+        "x86_64-linux": "sha256-14erYw3YR9soFULYDzjIHiWh5YnIqYYKs4a15cKwy3g="
+      }
+    }
+  }
+}
