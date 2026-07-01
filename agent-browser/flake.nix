@@ -16,7 +16,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
         pname = "agent-browser";
         version = "0.31.1";
 
