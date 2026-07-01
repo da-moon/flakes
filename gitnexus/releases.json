@@ -1,0 +1,14 @@
+{
+  "latest": "1.6.8",
+  "versions": {
+    "1.6.8": {
+      "version": "1.6.8",
+      "rev": "1.6.8",
+      "hash": "sha256-nJC+NTJnHm9KlPlJgWETOJeYomxgTmH3lT2tqkBezdY=",
+      "outputHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-g3ys+x7dlr3wo15BV5Jgex98itw5wRuyeEi/Hu3IX8U="
+      }
+    }
+  }
+}
