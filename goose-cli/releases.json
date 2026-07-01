@@ -1,0 +1,17 @@
+{
+  "latest": "1.39.0",
+  "versions": {
+    "1.39.0": {
+      "version": "1.39.0",
+      "rev": "v1.39.0",
+      "prebuiltHashes": {
+        "x86_64-linux": "sha256-9K0IZ0MNNCDqYLw7s2po9vVmnAYM5t6VL+mifYp+B2c="
+      },
+      "srcHash": "sha256-7CXLvfY2jYUB9IG/Z1lPiqwZ7UwIypq32ZLq1SsnHQI=",
+      "cargoOutputHashes": {
+        "mlx-lm-0.0.1": "sha256-iBBF6MN3caKbyaP8yniUxOt2uEgsm4C/DMtdyj7aUfg=",
+        "cudaforge-0.1.6": "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY="
+      }
+    }
+  }
+}
