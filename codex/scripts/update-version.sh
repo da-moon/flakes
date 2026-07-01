@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+# Appends the newest (or an explicit) openai/codex release to releases.json (the
+# JSON version table the flake reads) as a new entry keyed by version, and sets
+# .latest to it. Existing entries are preserved so consumers can still select
+# past versions. Both per-arch tarball hashes are recomputed via
+# `nix store prefetch-file` and written with jq — the version data in flake.nix
+# is never touched.
+#
+# codex ships TAGGED GitHub releases (rust-vN), so:
+#   key     = the release version (e.g. "0.142.5")
+#   version = the same
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -13,33 +23,43 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="openai"
 readonly REPO_NAME="codex"
+declare -Ar SYSTEM_TO_ARCH=(
+  [x86_64-linux]="x86_64"
+  [aarch64-linux]="aarch64"
+)
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  for t in nix curl jq; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
 ensure_in_package_directory() {
-  if [ ! -f "$flake_file" ]; then
-    log_error "flake.nix not found at: $flake_file"
-    exit 2
-  fi
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
 }
 
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_release_tag() {
   local release_json
   release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
-  printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  printf '%s\n' "$release_json" | jq -r '.tag_name // empty'
 }
 
 tag_to_version() {
@@ -51,43 +71,40 @@ tag_to_version() {
 
 prefetch_sha256_sri() {
   local url="$1"
-  nix store prefetch-file --json --hash-type sha256 "$url" \
-    | sed -n 's/.*"hash":[[:space:]]*"\([^"]*\)".*/\1/p' \
-    | head -n1
+  nix store prefetch-file --json --hash-type sha256 "$url" | jq -r '.hash // empty'
 }
 
-has_fake_hash() {
-  grep -v '^[[:space:]]*#' "$flake_file" | grep -Eq 'sha256-A{20,}'
+# sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
-update_flake_version() {
-  local new_version="$1"
-  # Anchor to the first `version = "...";` line only (the main package version);
-  # avoids clobbering any future sub-package/dep version lines.
-  sed -i.bak -E "0,/^[[:space:]]*version = \"[^\"]*\";/ s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-update_arch_sha256() {
-  local system_key="$1" # "aarch64-linux" or "x86_64-linux"
-  local new_sha256="$2"
-  sed -i.bak -E "/\"${system_key}\"[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*sha256 = \")[^\"]*(\";)|\\1${new_sha256}\\2|" "$flake_file"
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-}
-
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#codex --no-link --print-out-paths --no-write-lock-file)"; then
-    log_error "nix build failed for codex"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#codex_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for codex_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/codex" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/codex"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    log_error "nix build failed for default"
     return 1
   fi
   timeout 30 "$out_path/bin/codex" --version >/dev/null 2>&1 || true
@@ -97,29 +114,8 @@ verify_build() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
   fi
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -161,17 +157,20 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) openai/codex release to releases.json as a
+new version-table entry (keyed by version) and sets .latest to it. Existing
+entries are preserved so consumers can still select past versions.
+
 Options:
-  --version VERSION   Update to a specific version (default: latest)
+  --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute release asset hashes for current version
   --no-build          Skip build verification
   --help              Show this help message
 
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
-  ./scripts/update-version.sh --version 0.73.0
+  ./scripts/update-version.sh --version 0.142.5
 EOF
 }
 
@@ -182,7 +181,6 @@ main() {
 
   local target_version=""
   local check_only=false
-  local rehash=false
   local no_build=false
 
   while [[ $# -gt 0 ]]; do
@@ -194,10 +192,6 @@ main() {
         ;;
       --check)
         check_only=true
-        shift
-        ;;
-      --rehash)
-        rehash=true
         shift
         ;;
       --no-build)
@@ -219,86 +213,81 @@ main() {
   local current_version
   current_version="$(get_current_version)"
   if [ -z "$current_version" ]; then
-    log_error "Failed to detect current version from flake.nix"
+    log_error "Failed to detect current version from releases.json"
     exit 2
   fi
 
-  local latest_tag
-  latest_tag="$(get_latest_release_tag)"
-  if [ -z "$latest_tag" ]; then
-    log_error "Failed to fetch latest release from GitHub"
-    exit 2
-  fi
-
-  local latest_version
-  latest_version="$(tag_to_version "$latest_tag")"
-  if [ -z "$latest_version" ]; then
-    log_error "Failed to derive version from tag: $latest_tag"
-    exit 2
-  fi
-
+  local latest_tag latest_version
   if [ -n "$target_version" ]; then
     latest_version="$target_version"
     latest_tag="rust-v$target_version"
+  else
+    latest_tag="$(get_latest_release_tag)"
+    if [ -z "$latest_tag" ]; then
+      log_error "Failed to fetch latest release from GitHub"
+      exit 2
+    fi
+    latest_version="$(tag_to_version "$latest_tag")"
+    if [ -z "$latest_version" ]; then
+      log_error "Failed to derive version from tag: $latest_tag"
+      exit 2
+    fi
   fi
 
-  log_info "Current version: $current_version"
+  log_info "Current latest: $current_version"
   log_info "Target version:  $latest_version"
 
-  if has_fake_hash; then
-    log_warn "Detected placeholder fakeHash in flake.nix; forcing rehash"
-    rehash=true
-  fi
-
   if [ "$check_only" = true ]; then
-    if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
       log_info "Already up to date!"
       exit 0
     fi
-    if [ "$current_version" = "$latest_version" ]; then
-      log_info "Rehash required (placeholder hash present)"
-    else
-      log_info "Update available: $current_version -> $latest_version"
-    fi
+    log_info "Update available: $current_version -> $latest_version"
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
     log_info "Already up to date!"
     exit 0
   fi
 
-  local url_aarch64 url_x86_64
-  url_aarch64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/codex-aarch64-unknown-linux-musl.tar.gz"
-  url_x86_64="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/codex-x86_64-unknown-linux-musl.tar.gz"
-
+  # Compute per-arch SRI hashes from the release tarballs.
   log_info "Prefetching tarball hashes..."
-  local hash_aarch64 hash_x86_64
-  hash_aarch64="$(prefetch_sha256_sri "$url_aarch64")"
-  hash_x86_64="$(prefetch_sha256_sri "$url_x86_64")"
+  local system arch url sri_hash
+  local hashes_json="{}"
+  for system in "${!SYSTEM_TO_ARCH[@]}"; do
+    arch="${SYSTEM_TO_ARCH[$system]}"
+    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/codex-${arch}-unknown-linux-musl.tar.gz"
+    sri_hash="$(prefetch_sha256_sri "$url")"
+    if [ -z "$sri_hash" ]; then
+      log_error "Failed to prefetch hash for $arch ($system)"
+      exit 2
+    fi
+    log_info "$system hash: $sri_hash"
+    hashes_json="$(jq -n --argjson h "$hashes_json" --arg s "$system" --arg v "$sri_hash" \
+      '$h + {($s): $v}')"
+  done
 
-  if [ -z "$hash_aarch64" ] || [ -z "$hash_x86_64" ]; then
-    log_error "Failed to prefetch one or more tarball hashes"
-    exit 2
-  fi
-
-  log_info "aarch64 hash: $hash_aarch64"
-  log_info "x86_64 hash:  $hash_x86_64"
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$latest_version" \
+    --arg rev "$latest_version" \
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
 
   local backup
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  cleanup_backups
-  update_flake_version "$latest_version"
-  update_arch_sha256 "aarch64-linux" "$hash_aarch64"
-  update_arch_sha256 "x86_64-linux" "$hash_x86_64"
-  cleanup_backups
+  upsert_release_entry "$latest_version" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$latest_version")"
 
   if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      log_error "Build verification failed; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
       rm -f "$backup"
       exit 1
     fi
@@ -308,9 +297,9 @@ main() {
 
   show_changes
 
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
+  maybe_git_commit "chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}" "releases.json"
 
-  log_info "Successfully updated codex from $current_version to $latest_version"
+  log_info "Successfully appended codex $latest_version (latest was $current_version)"
 }
 
 main "$@"
