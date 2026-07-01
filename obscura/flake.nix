@@ -13,63 +13,89 @@
       ...
     }:
     let
-      linuxSystems = [ "x86_64-linux" ];
+      linuxSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.1.9";
 
-        obscura = pkgs.stdenv.mkDerivation rec {
-          pname = "obscura";
-          inherit version;
+        # Version table: consumers select the latest OR any past version.
+        # New entries are appended by scripts/update-version.sh via jq — do
+        # NOT hand-edit the version data in this file.
+        releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
-          meta = with lib; {
-            description = "Lightweight headless browser for web scraping and automation";
-            homepage = "https://github.com/h4ckf0r0day/obscura";
-            license = licenses.asl20;
-            mainProgram = "obscura";
-            platforms = linuxSystems;
-            maintainers = [ ];
+        # Builder: derive an obscura package from one releases.json entry.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            rev = entry.rev;
+            binaryHash = entry.hashes.${system};
+          in
+          pkgs.stdenv.mkDerivation rec {
+            pname = "obscura";
+            inherit version;
+
+            meta = with lib; {
+              description = "Lightweight headless browser for web scraping and automation";
+              homepage = "https://github.com/h4ckf0r0day/obscura";
+              license = licenses.asl20;
+              mainProgram = "obscura";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
+            src = pkgs.fetchurl {
+              url = "https://github.com/h4ckf0r0day/obscura/releases/download/v${rev}/obscura-${system}.tar.gz";
+              hash = binaryHash;
+            };
+
+            sourceRoot = ".";
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+
+            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+
+            installPhase = ''
+              runHook preInstall
+              install -m755 -D obscura $out/bin/obscura
+              runHook postInstall
+            '';
+
           };
 
-          src = pkgs.fetchurl {
-            url = "https://github.com/h4ckf0r0day/obscura/releases/download/v${version}/obscura-x86_64-linux.tar.gz";
-            hash = "sha256-gVj39jB2CmKQYuyHI55vZcE784l71zLaZOisB1q0EB8=";
-          };
+        # Sanitize a JSON key into a valid attribute-name suffix.
+        sanitizeKey = key: builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ] key;
 
-          sourceRoot = ".";
-          dontBuild = true;
-          dontConfigure = true;
-          dontStrip = true;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-          buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+        # One `obscura_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "obscura_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
 
-          installPhase = ''
-            runHook preInstall
-            install -m755 -D obscura $out/bin/obscura
-            runHook postInstall
-          '';
-
-        };
       in
       {
         packages = {
-          default = obscura;
-          inherit obscura;
-        };
+          default = latestPkg;
+          obscura = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${obscura}/bin/obscura";
+            program = "${latestPkg}/bin/obscura";
           };
           obscura = {
             type = "app";
-            program = "${obscura}/bin/obscura";
+            program = "${latestPkg}/bin/obscura";
           };
         };
       }
