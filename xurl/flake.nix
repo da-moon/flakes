@@ -17,75 +17,94 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "1.2.2";
 
-        releaseBySystem = {
-          "aarch64-linux" = {
-            asset = "xurl_Linux_arm64.tar.gz";
-            sha256 = "sha256-I+Mh+44GzesUPkMTzu7UHukVEd8aX/xtYDwo+9fcFXc=";
-          };
-          "x86_64-linux" = {
-            asset = "xurl_Linux_x86_64.tar.gz";
-            sha256 = "sha256-AADgrJ1GJb/N8UQei/EXnV+IG9lbMqz2w0is9wQHqpE=";
-          };
+        # Prebuilt release asset name per system (stable across versions).
+        assetBySystem = {
+          "aarch64-linux" = "xurl_Linux_arm64.tar.gz";
+          "x86_64-linux" = "xurl_Linux_x86_64.tar.gz";
         };
 
-        currentRelease =
-          releaseBySystem.${system}
-            or (throw "Unsupported system for xurl flake: ${system}");
+        # Builder: derive an xurl package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/rev/hash
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            asset =
+              assetBySystem.${system}
+                or (throw "Unsupported system for xurl flake: ${system}");
+            sha256 =
+              entry.hashes.${system}
+                or (throw "Missing hash for system ${system} in xurl release ${key}");
+          in
+          pkgs.stdenv.mkDerivation rec {
+            pname = "xurl";
+            inherit version;
 
-        xurl = pkgs.stdenv.mkDerivation rec {
-          pname = "xurl";
-          inherit version;
+            meta = with lib; {
+              description = "Official curl-like CLI for the X (Twitter) API";
+              homepage = "https://github.com/xdevplatform/xurl";
+              license = licenses.mit;
+              mainProgram = "xurl";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
 
-          meta = with lib; {
-            description = "Official curl-like CLI for the X (Twitter) API";
-            homepage = "https://github.com/xdevplatform/xurl";
-            license = licenses.mit;
-            mainProgram = "xurl";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            src = pkgs.fetchurl {
+              url = "https://github.com/xdevplatform/xurl/releases/download/${entry.rev}/${asset}";
+              hash = sha256;
+            };
+
+            sourceRoot = ".";
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+            dontPatchELF = true;
+
+            installPhase = ''
+              runHook preInstall
+              install -m755 -D xurl $out/bin/xurl
+              runHook postInstall
+            '';
+
           };
 
-          src = pkgs.fetchurl {
-            url = "https://github.com/xdevplatform/xurl/releases/download/v${version}/${currentRelease.asset}";
-            hash = currentRelease.sha256;
-          };
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          sourceRoot = ".";
-          dontBuild = true;
-          dontConfigure = true;
-          dontStrip = true;
-          dontPatchELF = true;
-
-          installPhase = ''
-            runHook preInstall
-            install -m755 -D xurl $out/bin/xurl
-            runHook postInstall
-          '';
-
-        };
+        # One `xurl_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "xurl_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = xurl;
-          inherit xurl;
-        };
+          default = latestPkg;
+          xurl = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${xurl}/bin/xurl";
+            program = "${latestPkg}/bin/xurl";
           };
           xurl = {
             type = "app";
-            program = "${xurl}/bin/xurl";
+            program = "${latestPkg}/bin/xurl";
           };
         };
       }

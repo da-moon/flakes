@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# Upserts the newest upstream release of xdevplatform/xurl as an entry in
+# releases.json (the JSON version table the flake reads) and sets it as
+# .latest. Never hand-edits the version data in flake.nix.
+#
+# xurl ships TAGGED GitHub releases with prebuilt per-arch tarballs, so:
+#   key     = the release version (e.g. "1.2.2"), tag = "v<version>"
+#   version = the same version string
+#   rev     = the git tag ("v<version>")
+#   hashes  = per-system SRI hashes derived from the release checksums.txt
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -20,37 +29,34 @@ declare -Ar ASSET_NAME_BY_SYSTEM=(
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
-flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
-  command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
-  command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
-  command -v awk >/dev/null 2>&1 || { log_error "awk is required but not installed."; exit 2; }
+  for t in nix curl jq awk git; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
+  done
 }
 
 ensure_in_package_directory() {
-  if [ ! -f "$flake_file" ]; then
-    log_error "flake.nix not found at: $flake_file"
-    exit 2
-  fi
+  [ -f "${pkg_dir}/flake.nix" ] || { log_error "flake.nix not found in ${pkg_dir}"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at $releases_file"; exit 2; }
 }
 
-get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+sanitize_key() {
+  # mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
 get_latest_release_tag() {
   local release_json
   release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
-  printf '%s\n' "$release_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  printf '%s\n' "$release_json" | jq -r '.tag_name'
 }
 
 tag_to_version() {
   local tag="$1"
-  tag="${tag#v}"
-  printf '%s\n' "$tag"
+  printf '%s\n' "${tag#v}"
 }
 
 get_release_checksums() {
@@ -70,110 +76,21 @@ hex_sha256_to_sri() {
   nix hash to-sri --type sha256 "$hex_hash"
 }
 
-update_flake_version() {
-  local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
-}
-
-update_arch_sha256() {
-  local system_key="$1"
-  local new_sha256="$2"
-  sed -i.bak -E "/\"${system_key}\"[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*sha256 = \")[^\"]*(\";)|\\1${new_sha256}\\2|" "$flake_file"
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-}
-
-trap cleanup_backups EXIT
-
-verify_build() {
-  log_info "Verifying build..."
-  local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#xurl --no-link --print-out-paths --no-write-lock-file)"; then
-    log_error "nix build failed for xurl"
-    return 1
-  fi
-  if [ -z "$out_path" ] || [ ! -x "$out_path/bin/xurl" ]; then
-    log_error "Build succeeded but expected binary not found at: $out_path/bin/xurl"
-    return 1
-  fi
-  timeout 30 "$out_path/bin/xurl" version >/dev/null 2>&1 || true
-  log_info "Build successful!"
-}
-
-show_changes() {
-  if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
-  fi
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
-}
-
-# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
-maybe_git_commit() {
-  local commit_message="$1"
-  shift
-  local -a paths=("$@")
-
-  if ! command -v git >/dev/null 2>&1; then
-    log_warn "git not found; skipping auto-commit"
-    return 0
-  fi
-  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    log_warn "not in a git work tree; skipping auto-commit"
-    return 0
-  fi
-
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
-    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
-
-  local git_dir lock_file
-  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
-  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
-
-  (
-    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
-    git -C "$pkg_dir" add -- "${paths[@]}"
-    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-      exit 0
-    fi
-    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
-    log_info "Committed: $commit_message"
-  ) 9>"$lock_file"
-}
-
 print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Upserts the newest upstream release of xdevplatform/xurl into releases.json
+(the JSON version table read by flake.nix) and sets it as .latest. Per-arch
+SRI hashes are derived from the release checksums.txt via jq — the version
+data in flake.nix is never touched.
+
 Options:
   --version VERSION   Update to a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute release asset hashes for current version
+  --rehash            Recompute release asset hashes for the current latest
   --no-build          Skip build verification
+  --no-commit         Do not auto-commit (default: auto-commit is enabled)
   --help              Show this help message
 
 Examples:
@@ -183,101 +100,90 @@ Examples:
 EOF
 }
 
+# Parallel-safe auto-commit (flock serialises the git index across updaters).
+maybe_git_commit() {
+  local commit_message="$1"; shift
+  local -a paths=("$@")
+  command -v git >/dev/null 2>&1 || { log_warn "git not found; skipping commit"; return 0; }
+  git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+    log_warn "not in a git work tree; skipping commit"; return 0; }
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then exit 0; fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
+}
+
 main() {
   ensure_required_tools_installed
   ensure_in_package_directory
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
-  local target_version=""
-  local check_only=false
-  local rehash=false
-  local no_build=false
-
+  local target_version="" check_only=false rehash=false no_build=false do_commit=true
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
         [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
-        target_version="$2"
-        shift 2
-        ;;
-      --check)
-        check_only=true
-        shift
-        ;;
-      --rehash)
-        rehash=true
-        shift
-        ;;
-      --no-build)
-        no_build=true
-        shift
-        ;;
-      --help)
-        print_usage
-        exit 0
-        ;;
-      *)
-        log_error "Unknown option: $1"
-        print_usage
-        exit 2
-        ;;
+        target_version="$2"; shift 2 ;;
+      --check) check_only=true; shift ;;
+      --rehash) rehash=true; shift ;;
+      --no-build) no_build=true; shift ;;
+      --no-commit) do_commit=false; shift ;;
+      --help) print_usage; exit 0 ;;
+      *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
   done
 
-  local current_version
-  current_version="$(get_current_version)"
-  if [ -z "$current_version" ]; then
-    log_error "Failed to detect current version from flake.nix"
-    exit 2
-  fi
+  local cur_latest_key
+  cur_latest_key="$(jq -r '.latest' "$releases_file")"
+  [ -n "$cur_latest_key" ] && [ "$cur_latest_key" != "null" ] || {
+    log_error "Failed to read .latest from releases.json"; exit 2; }
 
-  local latest_tag
-  latest_tag="$(get_latest_release_tag)"
-  if [ -z "$latest_tag" ]; then
-    log_error "Failed to fetch latest release from GitHub"
-    exit 2
-  fi
-
-  local latest_version
-  latest_version="$(tag_to_version "$latest_tag")"
-  if [ -z "$latest_version" ]; then
-    log_error "Failed to derive version from tag: $latest_tag"
-    exit 2
-  fi
-
+  local latest_tag latest_version
   if [ -n "$target_version" ]; then
     latest_version="$target_version"
     latest_tag="v$target_version"
+  else
+    latest_tag="$(get_latest_release_tag)"
+    [ -n "$latest_tag" ] && [ "$latest_tag" != "null" ] || {
+      log_error "Failed to fetch latest release from GitHub"; exit 2; }
+    latest_version="$(tag_to_version "$latest_tag")"
+    [ -n "$latest_version" ] || { log_error "Failed to derive version from tag: $latest_tag"; exit 2; }
   fi
 
-  log_info "Current version: $current_version"
-  log_info "Target version:  $latest_version"
+  log_info "Current latest key: $cur_latest_key"
+  log_info "Target version:     $latest_version"
 
   if [ "$check_only" = true ]; then
-    if [ "$current_version" = "$latest_version" ]; then
+    if [ "$cur_latest_key" = "$latest_version" ]; then
       log_info "Already up to date!"
       exit 0
     fi
-    log_info "Update available: $current_version -> $latest_version"
+    log_info "Update available: $cur_latest_key -> $latest_version"
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
+  if [ "$cur_latest_key" = "$latest_version" ] && [ "$rehash" != true ]; then
     log_info "Already up to date!"
     exit 0
   fi
 
   local checksums
   checksums="$(get_release_checksums "$latest_tag" "$latest_version")"
-  if [ -z "$checksums" ]; then
-    log_error "Failed to fetch release checksums"
-    exit 2
-  fi
+  [ -n "$checksums" ] || { log_error "Failed to fetch release checksums"; exit 2; }
 
   local hex_hash_aarch64 hex_hash_x86_64
   hex_hash_aarch64="$(get_hex_checksum_for_asset "$checksums" "${ASSET_NAME_BY_SYSTEM[aarch64-linux]}")"
   hex_hash_x86_64="$(get_hex_checksum_for_asset "$checksums" "${ASSET_NAME_BY_SYSTEM[x86_64-linux]}")"
-
   if [ -z "$hex_hash_aarch64" ] || [ -z "$hex_hash_x86_64" ]; then
     log_error "Failed to locate one or more asset checksums"
     exit 2
@@ -286,36 +192,55 @@ main() {
   local hash_aarch64 hash_x86_64
   hash_aarch64="$(hex_sha256_to_sri "$hex_hash_aarch64")"
   hash_x86_64="$(hex_sha256_to_sri "$hex_hash_x86_64")"
-
   log_info "aarch64 hash: $hash_aarch64"
   log_info "x86_64 hash:  $hash_x86_64"
 
-  local backup
-  backup="$(mktemp -t flake.nix.backup.XXXXXX)"
-  cp "$flake_file" "$backup"
-
-  cleanup_backups
-  update_flake_version "$latest_version"
-  update_arch_sha256 "aarch64-linux" "$hash_aarch64"
-  update_arch_sha256 "x86_64-linux" "$hash_x86_64"
-  cleanup_backups
+  # jq-upsert the entry and set .latest — flake.nix is never touched.
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$latest_version" \
+     --arg ver "$latest_version" \
+     --arg rev "$latest_tag" \
+     --arg hx86 "$hash_x86_64" \
+     --arg haarch "$hash_aarch64" '
+       .versions[$k] = {
+         version: $ver,
+         rev: $rev,
+         hashes: {
+           "x86_64-linux": $hx86,
+           "aarch64-linux": $haarch
+         }
+       }
+       | .latest = $k
+     ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
 
   if [ "$no_build" != true ]; then
-    if ! verify_build; then
-      log_error "Build verification failed; restoring previous flake.nix"
-      cp "$backup" "$flake_file"
-      rm -f "$backup"
+    log_info "Verifying build..."
+    local attr out
+    attr="xurl_$(sanitize_key "$latest_version")"
+    if ! out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
+      log_error "verification build failed:"
+      printf '%s\n' "$out" | tail -n 40 >&2
       exit 1
     fi
+    log_info "Build OK: $(printf '%s\n' "$out" | tail -n1)"
   fi
 
-  rm -f "$backup"
+  log_info "releases.json now contains:"
+  jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
 
-  show_changes
+  if [ "$do_commit" = true ]; then
+    local scope msg
+    scope="$(basename "$pkg_dir")"
+    if [ "$cur_latest_key" = "$latest_version" ]; then
+      msg="chore(${scope}): rehash ${latest_version}"
+    else
+      msg="chore(${scope}): add ${latest_version} to version table"
+    fi
+    maybe_git_commit "$msg" "releases.json"
+  fi
 
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
-
-  log_info "Successfully updated xurl from $current_version to $latest_version"
+  log_info "Successfully updated ${PACKAGE_DIR_NAME} to ${latest_version}"
 }
 
 main "$@"
