@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# Appends the newest (or an explicit) leaf release to releases.json (the JSON
+# version table read by flake.nix) as a new version-table entry keyed by the
+# release version, and sets .latest to it. Existing entries are preserved so
+# consumers can still select past versions. The version data in flake.nix is
+# never hand-edited.
+#
+# leaf ships tagged GitHub releases with per-arch prebuilt binaries, so:
+#   key   = the release version (e.g. "1.25.0")
+#   entry = { version, rev, hashes: { x86_64-linux, aarch64-linux } }
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -24,16 +33,29 @@ declare -Ar ASSET_BY_SYSTEM=(
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
   command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
-  command -v sed >/dev/null 2>&1 || { log_error "sed is required but not installed."; exit 2; }
+  command -v jq >/dev/null 2>&1 || { log_error "jq is required but not installed."; exit 2; }
 }
 
+ensure_in_package_directory() {
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
+}
+
+# Current "latest" key recorded in the version table.
 get_current_version() {
-  sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+  jq -r '.latest // empty' "$releases_file"
+}
+
+# Does the table already have an entry for this key?
+has_version_entry() {
+  local key="$1"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
 get_latest_release_tag() {
@@ -56,49 +78,41 @@ asset_url() {
 
 prefetch_sha256_sri() {
   nix store prefetch-file --json --hash-type sha256 "$1" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+    | jq -r '.hash'
 }
 
-update_flake_version() {
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1$1\\2/" "$flake_file"
+# sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
 }
 
-update_system_hash() {
-  local system_key="$1"
-  local hash="$2"
-  sed -i.bak -E "/\"${system_key}\"[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*hash = \")[^\"]*(\";)|\\1${hash}\\2|" "$flake_file"
-}
+# Append/upsert an entry into releases.json and set .latest.
+upsert_release_entry() {
+  local key="$1"
+  local entry_json="$2"
 
-backup_file=""
-
-create_backup() {
-  backup_file="$(mktemp)"
-  cp -- "$flake_file" "$backup_file"
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --argjson e "$entry_json" \
+    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
+  mv "$tmp" "$releases_file"
 }
-
-restore_flake() {
-  if [ -n "$backup_file" ] && [ -f "$backup_file" ]; then
-    cp -- "$backup_file" "$flake_file"
-    log_warn "Restored ${flake_file} from backup"
-  fi
-}
-
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
-  [ -n "$backup_file" ] && rm -f "$backup_file" 2>/dev/null || true
-}
-trap cleanup_backups EXIT
 
 verify_build() {
+  local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-write-lock-file --no-link --print-out-paths)"; then
-    log_error "nix build failed for ${PACKAGE_ATTR}"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}_${sanitized_key}" --no-write-lock-file --no-link --print-out-paths)"; then
+    log_error "nix build failed for ${PACKAGE_ATTR}_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
+    return 1
+  fi
+  # default must also resolve (it points at the new .latest).
+  if ! (cd "$pkg_dir" && nix build ".#default" --no-write-lock-file --no-link); then
+    log_error "nix build failed for default"
     return 1
   fi
   timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
@@ -106,28 +120,7 @@ verify_build() {
 }
 
 show_changes() {
-  git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
+  git -C "$pkg_dir" diff --stat releases.json 2>/dev/null || true
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -169,10 +162,14 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
+Appends the newest (or an explicit) leaf release to releases.json as a new
+version-table entry (keyed by version) and sets .latest to it. Existing entries
+are preserved so consumers can still select past versions.
+
 Options:
-  --version VERSION   Update to a specific version (default: latest)
+  --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute release asset hashes for current version
+  --rehash            Recompute release asset hashes for the latest version
   --no-build          Skip build verification
   --help              Show this help message
 EOF
@@ -180,7 +177,8 @@ EOF
 
 main() {
   ensure_required_tools_installed
-  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  ensure_in_package_directory
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
   local target_version="" check_only=false rehash=false no_build=false
   while [[ $# -gt 0 ]]; do
@@ -200,44 +198,87 @@ main() {
 
   local current_version latest_version
   current_version="$(get_current_version)"
+  if [ -z "$current_version" ]; then
+    log_error "Failed to detect current version from releases.json"
+    exit 2
+  fi
   latest_version="${target_version:-$(tag_to_version "$(get_latest_release_tag)")}"
+  if [ -z "$latest_version" ]; then
+    log_error "Failed to determine target version"
+    exit 2
+  fi
+
+  log_info "Current latest: $current_version"
+  log_info "Target version: $latest_version"
 
   if [ "$check_only" = true ]; then
-    [ "$current_version" = "$latest_version" ] && { log_info "${PACKAGE_DIR_NAME} is up to date (${current_version})"; exit 0; }
+    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
+      log_info "${PACKAGE_DIR_NAME} is up to date (${current_version})"
+      exit 0
+    fi
     log_warn "Update available: ${current_version} -> ${latest_version}"
     exit 1
   fi
 
-  if [ "$current_version" = "$latest_version" ] && [ "$rehash" = false ]; then
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] && [ "$rehash" = false ]; then
     log_info "${PACKAGE_DIR_NAME} is already at ${current_version}"
     exit 0
   fi
 
-  create_backup
-
-  update_flake_version "$latest_version"
+  # Compute per-arch SRI hashes from the upstream release assets.
   local system_key asset hash
+  local hashes_json="{}"
   for system_key in "${!ASSET_BY_SYSTEM[@]}"; do
     asset="${ASSET_BY_SYSTEM[$system_key]}"
     log_info "Prefetching ${asset}"
     hash="$(prefetch_sha256_sri "$(asset_url "$latest_version" "$asset")")"
     if [[ "$hash" != sha256-* ]]; then
       log_error "Invalid or empty hash for ${system_key}: '${hash}'"
-      restore_flake
       exit 1
     fi
-    update_system_hash "$system_key" "$hash"
+    log_info "$system_key hash: $hash"
+    hashes_json="$(jq -n --argjson h "$hashes_json" --arg s "$system_key" --arg v "$hash" \
+      '$h + {($s): $v}')"
   done
 
-  if [ "$no_build" = false ]; then
-    if ! verify_build; then
-      restore_flake
+  local entry_json
+  entry_json="$(jq -n \
+    --arg v "$latest_version" \
+    --arg rev "$latest_version" \
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
+
+  local backup
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
+
+  upsert_release_entry "$latest_version" "$entry_json"
+
+  local sanitized_key
+  sanitized_key="$(sanitize_key "$latest_version")"
+
+  if [ "$no_build" != true ]; then
+    if ! verify_build "$sanitized_key"; then
+      log_error "Build verification failed; restoring previous releases.json"
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
       exit 1
     fi
   fi
 
+  rm -f "$backup"
+
   show_changes
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
+
+  local msg
+  if [ "$current_version" = "$latest_version" ]; then
+    msg="chore(${PACKAGE_DIR_NAME}): rehash ${latest_version}"
+  else
+    msg="chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}"
+  fi
+  maybe_git_commit "$msg" "releases.json"
+
+  log_info "Successfully recorded leaf $latest_version (latest was $current_version)"
 }
 
 main "$@"

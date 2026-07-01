@@ -23,70 +23,89 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "1.25.0";
 
-        releaseBySystem = {
-          "x86_64-linux" = {
-            asset = "leaf-linux-x86_64";
-            hash = "sha256-ykxN6RcCnEhk4QKglZiwnPoTremhdGWNRA6s+3mESAs=";
-          };
-          "aarch64-linux" = {
-            asset = "leaf-linux-arm64";
-            hash = "sha256-WQFmJ7eAVmjRztUT621gmNfq8LtnJbBqehv91aQIhC4=";
-          };
+        # Version table: consumers select the latest OR any past version.
+        # New entries are appended by scripts/update-version.sh via jq — do
+        # NOT hand-edit the version data in this file.
+        releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+        # Per-system upstream release asset name (build logic, keyed by system).
+        assetBySystem = {
+          "x86_64-linux" = "leaf-linux-x86_64";
+          "aarch64-linux" = "leaf-linux-arm64";
         };
 
-        release =
-          releaseBySystem.${system}
-            or (throw "Unsupported system for leaf: ${system}");
+        # Builder: derive a leaf package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/src-url/hash
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            asset =
+              assetBySystem.${system}
+                or (throw "Unsupported system for leaf: ${system}");
+            hash =
+              entry.hashes.${system}
+                or (throw "Missing hash for system: ${system}");
+          in
+          pkgs.stdenv.mkDerivation rec {
+            pname = "leaf";
+            inherit version;
 
-        leaf = pkgs.stdenv.mkDerivation rec {
-          pname = "leaf";
-          inherit version;
+            meta = with lib; {
+              description = "Terminal Markdown previewer with a GUI-like experience";
+              homepage = "https://github.com/RivoLink/leaf";
+              mainProgram = "leaf";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
 
-          meta = with lib; {
-            description = "Terminal Markdown previewer with a GUI-like experience";
-            homepage = "https://github.com/RivoLink/leaf";
-            mainProgram = "leaf";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            src = pkgs.fetchurl {
+              url = "https://github.com/RivoLink/leaf/releases/download/${version}/${asset}";
+              inherit hash;
+            };
+
+            dontUnpack = true;
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+
+            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+
+            installPhase = ''
+              runHook preInstall
+              install -m755 -D $src $out/bin/leaf
+              runHook postInstall
+            '';
+
           };
 
-          src = pkgs.fetchurl {
-            url = "https://github.com/RivoLink/leaf/releases/download/${version}/${release.asset}";
-            inherit (release) hash;
-          };
+        # Sanitize a JSON key into a valid attribute-name suffix.
+        sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
 
-          dontUnpack = true;
-          dontBuild = true;
-          dontConfigure = true;
-          dontStrip = true;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-          buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
-
-          installPhase = ''
-            runHook preInstall
-            install -m755 -D $src $out/bin/leaf
-            runHook postInstall
-          '';
-
-        };
+        # One `leaf_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "leaf_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = leaf;
-          inherit leaf;
-        };
+          default = latestPkg;
+          leaf = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${leaf}/bin/leaf";
+            program = "${latestPkg}/bin/leaf";
           };
           leaf = {
             type = "app";
-            program = "${leaf}/bin/leaf";
+            program = "${latestPkg}/bin/leaf";
           };
         };
       }
