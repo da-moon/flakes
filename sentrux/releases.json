@@ -1,0 +1,17 @@
+{
+  "latest": "0.5.7",
+  "versions": {
+    "0.5.7": {
+      "version": "0.5.7",
+      "rev": "0.5.7",
+      "binaryHashes": {
+        "x86_64-linux": "sha256-Mjf4D+INVKrU3u+ooUPw1gVDu10tatiR60JDLxVXJaY=",
+        "aarch64-linux": "sha256-J+G0o+RxazQd126XNqVVPGc3wk4WXMJ+Dbw5nMW014Y="
+      },
+      "grammarHashes": {
+        "x86_64-linux": "sha256-iEnx6wffP21Ooe1CLY3uS5t5olBoL6VkZnXa5GZVRFQ=",
+        "aarch64-linux": "sha256-8fuLTRD5YvPNynHq9oZi36lx5Q4i07iUfRvCKcQX8lM="
+      }
+    }
+  }
+}
