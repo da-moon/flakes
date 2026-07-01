@@ -16,7 +16,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
         pname = "gitnexus";
         version = "1.6.8";
 
@@ -24,7 +24,7 @@
         # arch-specific. Rehash each supported Linux system separately.
         outputHashBySystem = {
           "aarch64-linux" = pkgs.lib.fakeHash;
-          "x86_64-linux" = "sha256-1LTC9Jwh28MK4z9ADB7wDZx8O7ur2KOF6veyWSyoOrI=";
+          "x86_64-linux" = "sha256-g3ys+x7dlr3wo15BV5Jgex98itw5wRuyeEi/Hu3IX8U=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
