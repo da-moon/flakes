@@ -96,34 +96,38 @@
           config = lib.mkIf cfg.enable {
             home.packages = [ cfg.package ];
 
-            # Write ~/.config/polymarket/config.json imperatively so the secret
-            # is merged in at activation and never symlinked from the store.
-            home.activation.polymarketConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-              ''
+            # config.rs's `Config` requires BOTH private_key and chain_id (only
+            # signature_type has a serde default), so a config.json is VALID only
+            # when it carries a key. We therefore write it ONLY when
+            # privateKeyFile is set; with no key the binary is installed and the
+            # key/chain are supplied via `polymarket wallet import` or the
+            # POLYMARKET_PRIVATE_KEY env var. Writing a keyless config would
+            # produce a file the CLI fails to parse, so we don't.
+            assertions = [
+              {
+                assertion = cfg.privateKeyFile == null || (cfg.settings ? chain_id);
+                message = "programs.polymarket-cli: settings.chain_id must be set when privateKeyFile is used (config.rs requires chain_id).";
+              }
+            ];
+
+            # Secret merged in imperatively at activation and never symlinked from
+            # the store. Only runs when a key file is configured.
+            home.activation.polymarketConfig = lib.mkIf (cfg.privateKeyFile != null) (
+              lib.hm.dag.entryAfter [ "writeBoundary" ] ''
                 _pmDir="$HOME/.config/polymarket"
                 _pmFile="$_pmDir/config.json"
-                $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -d -m700 "$_pmDir"
-              ''
-              + (
-                if cfg.privateKeyFile == null then
-                  ''
-                    $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -m600 ${nonSecretConfig} "$_pmFile"
-                  ''
+                if [ -r ${keyPath} ]; then
+                  $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -d -m700 "$_pmDir"
+                  _pmTmp="$(${pkgs.coreutils}/bin/mktemp)"
+                  ${pkgs.jq}/bin/jq --rawfile pk ${keyPath} \
+                    '. + { private_key: ($pk | sub("[[:space:]]+$"; "")) }' \
+                    ${nonSecretConfig} > "$_pmTmp"
+                  $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -m600 "$_pmTmp" "$_pmFile"
+                  ${pkgs.coreutils}/bin/rm -f "$_pmTmp"
                 else
-                  ''
-                    if [ -r ${keyPath} ]; then
-                      _pmTmp="$(${pkgs.coreutils}/bin/mktemp)"
-                      ${pkgs.jq}/bin/jq --rawfile pk ${keyPath} \
-                        '. + { private_key: ($pk | sub("[[:space:]]+$"; "")) }' \
-                        ${nonSecretConfig} > "$_pmTmp"
-                      $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -m600 "$_pmTmp" "$_pmFile"
-                      ${pkgs.coreutils}/bin/rm -f "$_pmTmp"
-                    else
-                      echo "polymarket-cli: privateKeyFile (${toString cfg.privateKeyFile}) is not readable; writing non-secret config only" >&2
-                      $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -m600 ${nonSecretConfig} "$_pmFile"
-                    fi
-                  ''
-              )
+                  echo "polymarket-cli: privateKeyFile (${toString cfg.privateKeyFile}) is not readable; leaving config.json untouched" >&2
+                fi
+              ''
             );
           };
         };
