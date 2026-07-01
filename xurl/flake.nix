@@ -1,5 +1,5 @@
 {
-  description = "xurl - ngrok-enchanced curl replacement for Linux";
+  description = "xurl - a curl-like CLI tool for the X API";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -45,7 +45,7 @@
           inherit version;
 
           meta = with lib; {
-            description = "ngrok-enhanced curl replacement for API and webhook testing";
+            description = "Official curl-like CLI for the X (Twitter) API";
             homepage = "https://github.com/xdevplatform/xurl";
             license = licenses.mit;
             mainProgram = "xurl";
