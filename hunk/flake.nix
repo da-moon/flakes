@@ -23,72 +23,96 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        version = "0.16.0";
 
-        releaseBySystem = {
+        # Version table: consumers select the latest OR any past version.
+        # New entries are appended by scripts/update-version.sh via jq — do
+        # NOT hand-edit the version data in this file.
+        releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+        # Per-system release-asset metadata (version-independent).
+        assetBySystem = {
           "x86_64-linux" = {
             asset = "hunkdiff-linux-x64.tar.gz";
             sourceRoot = "hunkdiff-linux-x64";
-            hash = "sha256-DdgMdnkmXfcmF4d6Atr+/WrGqDRSjhAldWdkLrLAXqY=";
           };
           "aarch64-linux" = {
             asset = "hunkdiff-linux-arm64.tar.gz";
             sourceRoot = "hunkdiff-linux-arm64";
-            hash = "sha256-fi5k7N7+x/sCSndy6gu2INQBQgNhPnvUY4BDrWvi7uM=";
           };
         };
 
-        release =
-          releaseBySystem.${system}
+        systemAsset =
+          assetBySystem.${system}
             or (throw "Unsupported system for hunk: ${system}");
 
-        hunk = pkgs.stdenv.mkDerivation rec {
-          pname = "hunk";
-          inherit version;
+        # Builder: derive a hunk package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/hash(es)
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            binarySha256 =
+              entry.hashes.${system}
+                or (throw "Missing hash for system ${system} in hunk ${key}");
+          in
+          pkgs.stdenv.mkDerivation rec {
+            pname = "hunk";
+            inherit version;
 
-          meta = with lib; {
-            description = "AI-friendly diff review CLI";
-            homepage = "https://github.com/modem-dev/hunk";
-            mainProgram = "hunk";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "AI-friendly diff review CLI";
+              homepage = "https://github.com/modem-dev/hunk";
+              mainProgram = "hunk";
+              platforms = linuxSystems;
+              maintainers = [ ];
+            };
+
+            src = pkgs.fetchurl {
+              url = "https://github.com/modem-dev/hunk/releases/download/v${version}/${systemAsset.asset}";
+              hash = binarySha256;
+            };
+
+            sourceRoot = systemAsset.sourceRoot;
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+
+            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+
+            installPhase = ''
+              runHook preInstall
+              install -m755 -D hunk $out/bin/hunk
+              runHook postInstall
+            '';
+
           };
 
-          src = pkgs.fetchurl {
-            url = "https://github.com/modem-dev/hunk/releases/download/v${version}/${release.asset}";
-            inherit (release) hash;
-          };
+        # Sanitize a JSON key into a valid attribute-name suffix.
+        sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
 
-          sourceRoot = release.sourceRoot;
-          dontBuild = true;
-          dontConfigure = true;
-          dontStrip = true;
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-          buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
-
-          installPhase = ''
-            runHook preInstall
-            install -m755 -D hunk $out/bin/hunk
-            runHook postInstall
-          '';
-
-        };
+        # One `hunk_<sanitized-key>` package per entry in the table.
+        versionPackages = lib.mapAttrs' (
+          key: entry: lib.nameValuePair "hunk_${sanitizeKey key}" (mk key entry)
+        ) releases.versions;
       in
       {
         packages = {
-          default = hunk;
-          inherit hunk;
-        };
+          default = latestPkg;
+          hunk = latestPkg;
+        } // versionPackages;
 
         apps = {
           default = {
             type = "app";
-            program = "${hunk}/bin/hunk";
+            program = "${latestPkg}/bin/hunk";
           };
           hunk = {
             type = "app";
-            program = "${hunk}/bin/hunk";
+            program = "${latestPkg}/bin/hunk";
           };
         };
       }
