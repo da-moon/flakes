@@ -1,0 +1,11 @@
+{
+  "latest": "4.3.0",
+  "versions": {
+    "4.3.0": {
+      "version": "4.3.0",
+      "rev": "4.3.0",
+      "url": "https://files.pythonhosted.org/packages/b2/55/41fd89182d46f3489b6e0f53c7c9403b745091fce893e90cc31ddaa57e61/superclaude-4.3.0-py3-none-any.whl",
+      "hash": "sha256-uWp1RpMHzSPUDMQ8MFg2U9FCwgE87L4XWVQ7uwAq0eU="
+    }
+  }
+}
