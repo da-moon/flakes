@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
         pname = "purgecss";
         version = "8.0.0";
 
@@ -19,7 +19,7 @@
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
         outputHashBySystem = {
           "aarch64-linux" = "sha256-+OfpurXKdhc6ejCcmmwpbEsYkwnzZAcOOcnpga0T9NU=";
-          "x86_64-linux" = "sha256-mb7DufeI310vhCT/cgj+wdG7cuxctcBhv1BJygrhiNA=";
+          "x86_64-linux" = "sha256-UoVnbh3CGeXveNlWQOyF/DWK76WI0nrTD7NPNSTV1nA=";
         };
 
         npmDeps = pkgs.stdenv.mkDerivation {
