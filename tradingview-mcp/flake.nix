@@ -22,11 +22,11 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
 
         tradingview-mcp = pkgs.buildNpmPackage rec {
           pname = "tradingview-mcp";
-          version = "1.0.0-unstable-2026-06-30";
+          version = "1.0.0-unstable-2026-07-01";
 
           meta = with pkgs.lib; {
             description = "MCP bridge for TradingView Desktop via Chrome DevTools Protocol";
