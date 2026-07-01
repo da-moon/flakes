@@ -81,13 +81,21 @@ prefetch_sha256_sri() {
 
 update_flake_version() {
   local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+  sed -i.bak -E "0,/^[[:space:]]*version = \"/ s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+  if ! grep -Fq "version = \"${new_version}\"" "$flake_file"; then
+    log_error "Failed to update version in flake.nix"
+    return 1
+  fi
 }
 
 update_source_hash() {
   local system_key="$1"
   local new_hash="$2"
-  sed -i.bak -E "/sourceHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)|\\1${new_hash}\\2|" "$flake_file"
+  sed -i.bak -E "/sourceHashBySystem[[:space:]]*=[[:space:]]*\\{/,/\\};/ s#^([[:space:]]*\"${system_key}\"[[:space:]]*=[[:space:]]*\")[^\"]*(\";)#\\1${new_hash}\\2#" "$flake_file"
+  if ! grep -Fq "\"${system_key}\" = \"${new_hash}\";" "$flake_file"; then
+    log_error "Failed to update sourceHash for system: $system_key"
+    return 1
+  fi
 }
 
 get_source_hash_for_system() {
@@ -162,7 +170,7 @@ extract_got_hash_from_build() {
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-write-lock-file --no-link --print-out-paths)"; then
     log_error "nix build failed for ${PACKAGE_ATTR}"
     return 1
   fi
@@ -170,7 +178,7 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
+  timeout 30 "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
@@ -189,7 +197,7 @@ compute_and_update_output_hash() {
   cleanup_backups
 
   local build_output
-  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link 2>&1 || true)"
+  build_output="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-write-lock-file --no-link 2>&1 || true)"
   local got_hash
   got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
 
@@ -228,6 +236,7 @@ build_commit_message() {
   printf 'chore(%s): update version\n' "$scope"
 }
 
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
   local commit_message="$1"
   shift
@@ -242,18 +251,24 @@ maybe_git_commit() {
     return 0
   fi
 
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
     return 0
   fi
 
-  git -C "$pkg_dir" add -- "${paths[@]}"
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
 
-  if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
-
-  git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
-  log_info "Committed: $commit_message"
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -265,7 +280,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute source hash and outputHash for current architecture
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 
 Examples:
@@ -284,12 +298,12 @@ main() {
   local check_only=false
   local rehash=false
   local no_build=false
-  local update_lock=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
-        target_version="${2:-}"
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        target_version="$2"
         shift 2
         ;;
       --check)
@@ -302,10 +316,6 @@ main() {
         ;;
       --no-build)
         no_build=true
-        shift
-        ;;
-      --update-lock)
-        update_lock=true
         shift
         ;;
       --help)
@@ -392,9 +402,15 @@ main() {
   cp "$flake_file" "$backup"
 
   cleanup_backups
-  update_flake_version "$latest_version"
-  update_source_hash "aarch64-linux" "$source_hash"
-  update_source_hash "x86_64-linux" "$source_hash"
+  if ! update_flake_version "$latest_version" \
+    || ! update_source_hash "aarch64-linux" "$source_hash" \
+    || ! update_source_hash "x86_64-linux" "$source_hash"; then
+    log_error "Failed to update version/source hash; restoring previous flake.nix"
+    cp "$backup" "$flake_file"
+    rm -f "$backup"
+    cleanup_backups
+    exit 1
+  fi
   if [ "$current_version" != "$latest_version" ]; then
     mark_other_output_hashes_pending "$current_system_key"
   fi
@@ -422,16 +438,7 @@ main() {
   rm -f "$backup"
   warn_other_output_hash_systems "$current_system_key"
 
-  if [ "$update_lock" = true ]; then
-    log_info "Updating flake.lock..."
-    (cd "$pkg_dir" && nix flake update)
-  fi
-
-  local -a commit_paths=("flake.nix")
-  if [ -f "$pkg_dir/flake.lock" ]; then
-    commit_paths+=("flake.lock")
-  fi
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
 
   log_info "Successfully updated ${PACKAGE_ATTR} from $current_version to $latest_version"
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
@@ -21,6 +21,77 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+
+# Snapshot flake.nix before mutating it so a mid-run failure reverts cleanly.
+FLAKE_BACKUP=""
+restore_flake_on_failure() {
+  if [ -n "$FLAKE_BACKUP" ] && [ -f "$FLAKE_BACKUP" ]; then
+    cp -f "$FLAKE_BACKUP" "$flake_file"
+    log_warn "Restored flake.nix from backup after failure."
+  fi
+}
+cleanup_backup() {
+  [ -n "$FLAKE_BACKUP" ] && rm -f "$FLAKE_BACKUP"
+  return 0
+}
+trap 'restore_flake_on_failure' ERR
+trap 'cleanup_backup' EXIT
+
+build_commit_message() {
+  local previous_version="$1"
+  local new_version="$2"
+  local rehash="${3:-false}"
+
+  local scope
+  scope="$(basename "$pkg_dir")"
+
+  if [ "$previous_version" != "$new_version" ]; then
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  printf 'chore(%s): update version\n' "$scope"
+}
+
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
+maybe_git_commit() {
+  local commit_message="$1"
+  shift
+  local -a paths=("$@")
+
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
+    return 0
+  fi
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
+}
 
 ensure_required_tools_installed() {
   command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
@@ -52,7 +123,7 @@ get_current_rev() {
 resolve_tag_sha() {
   local tag="$1"
   git ls-remote "https://github.com/${OWNER}/${REPO}.git" "refs/tags/${tag}^{}" \
-    "refs/tags/${tag}" | awk '{print $1; exit}'
+    "refs/tags/${tag}" | awk '/\^\{\}/{print $1; exit} {last=$1} END{if (last!="") print last}'
 }
 
 get_latest_release_tag() {
@@ -80,22 +151,22 @@ update_field() {
 rehash_deps() {
   log_info "Rehashing node_modules FOD (forces a network install)..."
   local sentinel="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  update_field "depsHash" "$sentinel"
+  update_field "depsHash" "$sentinel" "~"
   local got
-  got="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}-deps" --no-link --rebuild 2>&1 \
+  got="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}-deps" --no-link --rebuild --no-write-lock-file 2>&1 \
     | sed -n 's/^[[:space:]]*got:[[:space:]]*\(sha256-[^ ]*\).*/\1/p' | tail -n1 || true)"
   if [ -z "$got" ]; then
     log_error "Failed to capture node_modules FOD hash. Build output may have changed shape."
     return 1
   fi
   log_info "node_modules FOD hash: $got"
-  update_field "depsHash" "$got"
+  update_field "depsHash" "$got" "~"
 }
 
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --print-out-paths --no-write-lock-file)"; then
     log_error "nix build failed for ${PACKAGE_ATTR}"
     return 1
   fi
@@ -103,7 +174,7 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --version >/dev/null
+  timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
@@ -116,12 +187,16 @@ hash and the node_modules fixed-output hash.
 
 Options:
   --tag TAG       Pin to this release tag (e.g. v0.24.3). Default: latest release.
+  --version VER   Pin to this version (e.g. 0.24.3); mapped to release tag vVER.
+  --check         Report current vs. latest release and exit (no changes).
   --rehash        Only re-derive the node_modules FOD hash for the current rev.
   --no-build      Skip the final build verification.
   --help          Show this help message.
 
 Examples:
   ./scripts/update-version.sh --tag v0.24.3
+  ./scripts/update-version.sh --version 0.24.3
+  ./scripts/update-version.sh --check
   ./scripts/update-version.sh --rehash
 EOF
 }
@@ -131,10 +206,20 @@ main() {
   ensure_in_package_directory
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
-  local tag="" rehash_only=false no_build=false
+  local tag="" rehash_only=false no_build=false check_only=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --tag) tag="${2:-}"; shift 2 ;;
+      --tag)
+        [ $# -ge 2 ] || { log_error "--tag requires an argument"; exit 2; }
+        tag="$2"
+        shift 2
+        ;;
+      --version)
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        tag="v${2#v}"
+        shift 2
+        ;;
+      --check) check_only=true; shift ;;
       --rehash) rehash_only=true; shift ;;
       --no-build) no_build=true; shift ;;
       --help) print_usage; exit 0 ;;
@@ -148,9 +233,27 @@ main() {
   log_info "Current version:  $current_version"
   log_info "Current revision: $current_rev"
 
+  if [ "$check_only" = true ]; then
+    local latest_tag
+    latest_tag="$(get_latest_release_tag)"
+    [ -n "$latest_tag" ] || { log_error "Could not determine latest release tag."; exit 1; }
+    log_info "Latest release:   ${latest_tag#v}"
+    if [ "${latest_tag#v}" != "$current_version" ]; then
+      log_info "Update available: $current_version -> ${latest_tag#v}"
+    else
+      log_info "Up to date."
+    fi
+    return 0
+  fi
+
+  # Snapshot flake.nix so restore_flake_on_failure can revert a half-applied edit.
+  FLAKE_BACKUP="$(mktemp)"
+  cp "$flake_file" "$FLAKE_BACKUP"
+
   if [ "$rehash_only" = true ]; then
     rehash_deps
     [ "$no_build" = true ] || verify_build
+    maybe_git_commit "$(build_commit_message "$current_version" "$current_version" true)" "flake.nix"
     log_info "Done."
     return 0
   fi
@@ -179,8 +282,8 @@ main() {
 
   rehash_deps
   [ "$no_build" = true ] || verify_build
-  log_info "Done. Review the flake.nix diff and commit:"
-  echo "  chore(${PACKAGE_DIR_NAME}): bump to ${target_version}"
+  maybe_git_commit "$(build_commit_message "$current_version" "$target_version" false)" "flake.nix"
+  log_info "Done."
 }
 
 main "$@"

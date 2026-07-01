@@ -20,6 +20,9 @@ pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
+# Pristine copy of flake.nix taken before mutation, restored on build failure.
+FLAKE_BACKUP=""
+
 ensure_required_tools_installed() {
   command -v curl >/dev/null 2>&1 || { log_error "curl is required but not installed."; exit 2; }
   command -v git >/dev/null 2>&1 || { log_error "git is required but not installed."; exit 2; }
@@ -70,7 +73,10 @@ prefetch_source_hash_sri() {
 
 update_flake_version() {
   local new_version="$1"
-  sed -i.bak -E "s/^([[:space:]]*version = \")[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
+  # Anchor to the main package's `version = "unstable-…"` line only; the flake
+  # also declares four Python wheel sub-packages with their own semver
+  # `version = "0.x.y"` lines that must not be rewritten.
+  sed -i.bak -E "s/(^[[:space:]]*version = \")unstable-[^\"]*(\";)/\\1${new_version}\\2/" "$flake_file"
 }
 
 update_rev() {
@@ -87,12 +93,14 @@ cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
-trap cleanup_backups EXIT
-
-update_flake_lock() {
-  log_info "Updating flake.lock..."
-  (cd "$pkg_dir" && nix flake update)
+on_exit() {
+  cleanup_backups
+  if [ -n "${FLAKE_BACKUP:-}" ]; then
+    rm -f "$FLAKE_BACKUP" 2>/dev/null || true
+  fi
 }
+
+trap on_exit EXIT
 
 verify_build() {
   log_info "Verifying build..."
@@ -105,14 +113,14 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --version >/dev/null
+  timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
   fi
 }
 
@@ -137,6 +145,7 @@ build_commit_message() {
   printf 'chore(%s): update version\n' "$scope"
 }
 
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
   local commit_message="$1"
   shift
@@ -151,18 +160,24 @@ maybe_git_commit() {
     return 0
   fi
 
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
     return 0
   fi
 
-  git -C "$pkg_dir" add -- "${paths[@]}"
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
 
-  if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
-
-  git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
-  log_info "Committed: $commit_message"
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -174,7 +189,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute the source hash for the current revision
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 
 Examples:
@@ -193,12 +207,12 @@ main() {
   local check_only=false
   local rehash=false
   local no_build=false
-  local update_lock=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
-        explicit_version="${2:-}"
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        explicit_version="$2"
         shift 2
         ;;
       --check)
@@ -211,10 +225,6 @@ main() {
         ;;
       --no-build)
         no_build=true
-        shift
-        ;;
-      --update-lock)
-        update_lock=true
         shift
         ;;
       --help)
@@ -264,9 +274,16 @@ main() {
   local commit_message
   commit_message="$(build_commit_message "$current_version" "$target_version" "$rehash")"
 
+  FLAKE_BACKUP="$(mktemp)"
+  cp -- "$flake_file" "$FLAKE_BACKUP"
+
   if [ "$current_rev" != "$target_rev" ]; then
-    update_flake_version "$target_version"
     update_rev "$target_rev"
+    update_flake_version "$target_version"
+    cleanup_backups
+  elif [ -n "$explicit_version" ]; then
+    # Rev unchanged but the user pinned an explicit version label: still write it.
+    update_flake_version "$target_version"
     cleanup_backups
   fi
 
@@ -282,17 +299,17 @@ main() {
     cleanup_backups
   fi
 
-  if [ "$update_lock" = true ] && [ -f "${pkg_dir}/flake.lock" ]; then
-    update_flake_lock
-  fi
-
   show_changes
 
   if [ "$no_build" != true ]; then
-    verify_build
+    if ! verify_build; then
+      log_error "Build failed; restoring ${flake_file}"
+      cp -- "$FLAKE_BACKUP" "$flake_file"
+      exit 1
+    fi
   fi
 
-  maybe_git_commit "$commit_message" flake.nix scripts/update-version.sh
+  maybe_git_commit "$commit_message" flake.nix
   log_info "Done."
 }
 

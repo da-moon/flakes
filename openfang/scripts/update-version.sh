@@ -37,9 +37,19 @@ get_current_version() {
 }
 
 get_latest_release_tag() {
-  local effective_url
+  local effective_url tag
   effective_url="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest")"
-  printf '%s\n' "${effective_url##*/}"
+  # The redirect must land on /releases/tag/<tag>; otherwise there is no published release.
+  case "$effective_url" in
+    */releases/tag/*) ;;
+    *) log_error "Could not resolve a release tag (redirected to: ${effective_url})"; exit 1 ;;
+  esac
+  tag="${effective_url##*/}"
+  case "$tag" in
+    "${TAG_PREFIX}"*) ;;
+    *) log_error "Resolved tag '${tag}' does not start with expected prefix '${TAG_PREFIX}'"; exit 1 ;;
+  esac
+  printf '%s\n' "$tag"
 }
 
 tag_to_version() {
@@ -56,7 +66,7 @@ asset_url() {
 
 prefetch_sha256_sri() {
   nix store prefetch-file --json --hash-type sha256 "$1" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
+    | sed -n 's/.*"hash"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
     | head -n1
 }
 
@@ -70,15 +80,24 @@ update_system_hash() {
   sed -i.bak -E "/\"${system_key}\"[[:space:]]*=[[:space:]]*\\{/,/\\};/ s|^([[:space:]]*hash = \")[^\"]*(\";)|\\1${hash}\\2|" "$flake_file"
 }
 
+ORIG_FLAKE_BACKUP=""
 cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
+  [ -n "$ORIG_FLAKE_BACKUP" ] && rm -f "$ORIG_FLAKE_BACKUP" 2>/dev/null || true
 }
 trap cleanup_backups EXIT
+
+restore_flake() {
+  if [ -n "$ORIG_FLAKE_BACKUP" ] && [ -f "$ORIG_FLAKE_BACKUP" ]; then
+    cp "$ORIG_FLAKE_BACKUP" "$flake_file"
+    log_warn "Restored ${flake_file} to its pre-update state"
+  fi
+}
 
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-write-lock-file --no-link --print-out-paths)"; then
     log_error "nix build failed for ${PACKAGE_ATTR}"
     return 1
   fi
@@ -86,20 +105,64 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
+  timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
-maybe_commit() {
-  local message="$1"
-  if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    local -a paths=(flake.nix scripts/update-version.sh)
-    [ -f "$pkg_dir/flake.lock" ] && paths+=(flake.lock)
-    if ! git -C "$pkg_dir" diff --quiet -- "${paths[@]}"; then
-      git -C "$pkg_dir" add -- "${paths[@]}"
-      git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}" || git -C "$pkg_dir" commit --only -m "$message" -- "${paths[@]}"
-    fi
+build_commit_message() {
+  local previous_version="$1"
+  local new_version="$2"
+  local rehash="${3:-false}"
+
+  local scope
+  scope="$(basename "$pkg_dir")"
+
+  if [ "$previous_version" != "$new_version" ]; then
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+    return 0
   fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  printf 'chore(%s): update version\n' "$scope"
+}
+
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
+maybe_git_commit() {
+  local commit_message="$1"
+  shift
+  local -a paths=("$@")
+
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
+    return 0
+  fi
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -111,7 +174,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute release asset hashes for current version
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 EOF
 }
@@ -120,14 +182,17 @@ main() {
   ensure_required_tools_installed
   [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
 
-  local target_version="" check_only=false rehash=false no_build=false update_lock=false
+  local target_version="" check_only=false rehash=false no_build=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version) target_version="${2:-}"; shift 2 ;;
+      --version)
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        target_version="$2"
+        shift 2
+        ;;
       --check) check_only=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
-      --update-lock) update_lock=true; shift ;;
       --help) print_usage; exit 0 ;;
       *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
@@ -148,20 +213,33 @@ main() {
     exit 0
   fi
 
+  ORIG_FLAKE_BACKUP="$(mktemp)"
+  cp "$flake_file" "$ORIG_FLAKE_BACKUP"
+
   update_flake_version "$latest_version"
   local system_key asset hash
   for system_key in "${!ASSET_BY_SYSTEM[@]}"; do
     asset="${ASSET_BY_SYSTEM[$system_key]}"
     log_info "Prefetching ${asset}"
     hash="$(prefetch_sha256_sri "$(asset_url "$latest_version" "$asset")")"
+    if [[ ! "$hash" =~ ^sha256- ]]; then
+      log_error "Failed to prefetch a valid sha256 hash for ${asset} (got: '${hash}')"
+      restore_flake
+      exit 1
+    fi
     update_system_hash "$system_key" "$hash"
   done
-  cleanup_backups
+  rm -f "${flake_file}.bak"
 
-  [ "$update_lock" = true ] && (cd "$pkg_dir" && nix flake update)
-  [ "$no_build" = false ] && verify_build
-  git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
-  maybe_commit "chore(${PACKAGE_DIR_NAME}): ${current_version} -> ${latest_version}"
+  if [ "$no_build" = false ]; then
+    if ! verify_build; then
+      restore_flake
+      exit 1
+    fi
+  fi
+
+  git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
 }
 
 main "$@"

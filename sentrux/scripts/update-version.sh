@@ -60,8 +60,7 @@ asset_url() {
 
 prefetch_sha256_sri() {
   nix store prefetch-file --json --hash-type sha256 "$1" \
-    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p' \
-    | head -n1
+    | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p'
 }
 
 update_flake_version() {
@@ -76,14 +75,26 @@ update_system_field_hash() {
 }
 
 cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
+  rm -f "${flake_file}.bak" "${flake_file}.orig" 2>/dev/null || true
 }
 trap cleanup_backups EXIT
+
+# Snapshot the pristine flake.nix before any mutation so a failed run can roll back.
+backup_flake() {
+  cp -f "$flake_file" "${flake_file}.orig"
+}
+
+restore_flake_backup() {
+  if [ -f "${flake_file}.orig" ]; then
+    mv -f "${flake_file}.orig" "$flake_file"
+  fi
+  rm -f "${flake_file}.bak" 2>/dev/null || true
+}
 
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --no-write-lock-file --print-out-paths)"; then
     log_error "nix build failed for ${PACKAGE_ATTR}"
     return 1
   fi
@@ -91,8 +102,64 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
+  timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
+}
+
+build_commit_message() {
+  local previous_version="$1"
+  local new_version="$2"
+  local rehash="${3:-false}"
+
+  local scope
+  scope="$(basename "$pkg_dir")"
+
+  if [ "$previous_version" != "$new_version" ]; then
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  printf 'chore(%s): update version\n' "$scope"
+}
+
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
+maybe_git_commit() {
+  local commit_message="$1"
+  shift
+  local -a paths=("$@")
+
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
+    return 0
+  fi
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -104,7 +171,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute release asset hashes for current version
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 EOF
 }
@@ -113,14 +179,17 @@ main() {
   ensure_required_tools_installed
   [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
 
-  local target_version="" check_only=false rehash=false no_build=false update_lock=false
+  local target_version="" check_only=false rehash=false no_build=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version) target_version="${2:-}"; shift 2 ;;
+      --version)
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        target_version="$2"
+        shift 2
+        ;;
       --check) check_only=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
-      --update-lock) update_lock=true; shift ;;
       --help) print_usage; exit 0 ;;
       *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
@@ -141,6 +210,7 @@ main() {
     exit 0
   fi
 
+  backup_flake
   update_flake_version "$latest_version"
 
   local system_key asset hash
@@ -148,18 +218,27 @@ main() {
     asset="${BINARY_ASSET_BY_SYSTEM[$system_key]}"
     log_info "Prefetching ${asset}"
     hash="$(prefetch_sha256_sri "$(asset_url "$latest_version" "$asset")")"
+    [[ $hash == sha256-* ]] || { restore_flake_backup; log_error "empty/invalid hash for $asset"; exit 1; }
     update_system_field_hash "$system_key" "binaryHash" "$hash"
 
     asset="${GRAMMAR_ASSET_BY_SYSTEM[$system_key]}"
     log_info "Prefetching ${asset}"
     hash="$(prefetch_sha256_sri "$(asset_url "$latest_version" "$asset")")"
+    [[ $hash == sha256-* ]] || { restore_flake_backup; log_error "empty/invalid hash for $asset"; exit 1; }
     update_system_field_hash "$system_key" "grammarHash" "$hash"
   done
+
+  if [ "$no_build" = false ]; then
+    if ! verify_build; then
+      restore_flake_backup
+      log_error "build verification failed; restored ${flake_file}"
+      exit 1
+    fi
+  fi
   cleanup_backups
 
-  [ "$update_lock" = true ] && (cd "$pkg_dir" && nix flake update)
-  [ "$no_build" = false ] && verify_build
-  git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+  git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
 }
 
 main "$@"

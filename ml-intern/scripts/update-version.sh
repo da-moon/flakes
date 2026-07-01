@@ -132,9 +132,60 @@ verify_build() {
   log_info "Build successful."
 }
 
-update_flake_lock() {
-  log_info "Updating flake.lock..."
-  (cd "$pkg_dir" && nix flake update)
+build_commit_message() {
+  local previous_version="$1"
+  local new_version="$2"
+  local rehash="${3:-false}"
+
+  local scope
+  scope="$(basename "$pkg_dir")"
+
+  if [ "$previous_version" != "$new_version" ]; then
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  printf 'chore(%s): update version\n' "$scope"
+}
+
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
+maybe_git_commit() {
+  local commit_message="$1"
+  shift
+  local -a paths=("$@")
+
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
+    return 0
+  fi
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -146,7 +197,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute the wheel hash for the current version
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 USAGE
 }
@@ -155,14 +205,17 @@ main() {
   ensure_required_tools_installed
   [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
 
-  local target_version="" check_only=false rehash=false no_build=false update_lock=false
+  local target_version="" check_only=false rehash=false no_build=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version) target_version="${2:-}"; shift 2 ;;
+      --version)
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        target_version="$2"
+        shift 2
+        ;;
       --check) check_only=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
-      --update-lock) update_lock=true; shift ;;
       --help) print_usage; exit 0 ;;
       *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
@@ -191,7 +244,7 @@ main() {
 
   wheel_url="$(get_wheel_url_for_version "$new_version")"
   wheel_hash="$(prefetch_sha256_sri "$wheel_url")"
-  [ -n "$wheel_hash" ] || { log_error "Failed to prefetch wheel hash"; cp "$backup" "$flake_file"; exit 1; }
+  [ -n "$wheel_hash" ] || { log_error "Failed to prefetch wheel hash"; cp "$backup" "$flake_file"; rm -f "$backup"; exit 1; }
 
   update_flake_version "$new_version"
   update_wheel_url "$wheel_url"
@@ -207,7 +260,8 @@ main() {
   fi
 
   rm -f "$backup"
-  [ "$update_lock" = true ] && update_flake_lock
+
+  maybe_git_commit "$(build_commit_message "$current_version" "$new_version" "$rehash")" "flake.nix"
 }
 
 main "$@"

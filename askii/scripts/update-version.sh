@@ -63,20 +63,21 @@ update_flake_hash() {
   sed -i.bak -E "s|^([[:space:]]*hash = \")[^\"]*(\";)|\\1${hash}\\2|" "$flake_file"
 }
 
-cleanup_backups() {
-  rm -f "${flake_file}.bak" 2>/dev/null || true
+flake_backup=""
+cleanup() {
+  local exit_code=$?
+  if [ "$exit_code" -ne 0 ] && [ -n "$flake_backup" ] && [ -f "$flake_backup" ]; then
+    cp -f "$flake_backup" "$flake_file" 2>/dev/null || true
+    log_warn "Restored ${flake_file} after failure"
+  fi
+  rm -f "${flake_file}.bak" "$flake_backup" 2>/dev/null || true
 }
-trap cleanup_backups EXIT
-
-update_flake_lock() {
-  log_info "Updating flake.lock..."
-  (cd "$pkg_dir" && nix flake update)
-}
+trap cleanup EXIT
 
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --no-write-lock-file --print-out-paths)"; then
     log_error "nix build failed for ${PACKAGE_ATTR}"
     return 1
   fi
@@ -84,14 +85,14 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --version >/dev/null
+  timeout 30 "$out_path/bin/$BIN_NAME" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
   fi
 }
 
@@ -113,17 +114,33 @@ maybe_git_commit() {
   shift
   local -a paths=("$@")
 
-  if ! command -v git >/dev/null 2>&1 || ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
     return 0
   fi
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
     return 0
   fi
-  git -C "$pkg_dir" add -- "${paths[@]}"
-  if ! git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
     git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
     log_info "Committed: $commit_message"
-  fi
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -135,7 +152,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute release asset hash for current version
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 EOF
 }
@@ -145,14 +161,17 @@ main() {
   [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
-  local target_version="" check_only=false rehash=false no_build=false update_lock=false
+  local target_version="" check_only=false rehash=false no_build=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version) target_version="${2:-}"; shift 2 ;;
+      --version)
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        target_version="$2"
+        shift 2
+        ;;
       --check) check_only=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
-      --update-lock) update_lock=true; shift ;;
       --help) print_usage; exit 0 ;;
       *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
@@ -181,25 +200,22 @@ main() {
     exit 0
   fi
 
+  flake_backup="$(mktemp)"
+  cp "$flake_file" "$flake_backup"
+
   update_flake_version "$latest_version"
 
   log_info "Prefetching askii"
   hash="$(prefetch_sha256_sri "$(asset_url "$latest_version")")"
   [ -n "$hash" ] || { log_error "Failed to prefetch askii"; exit 2; }
   update_flake_hash "$hash"
-  cleanup_backups
 
-  if [ "$update_lock" = true ]; then
-    update_flake_lock
-  fi
   if [ "$no_build" = false ]; then
     verify_build
   fi
   show_changes
 
-  local -a commit_paths=(flake.nix scripts/update-version.sh)
-  [ -f "$pkg_dir/flake.lock" ] && commit_paths+=(flake.lock)
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
 }
 
 main "$@"

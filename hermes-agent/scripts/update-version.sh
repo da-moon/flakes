@@ -52,7 +52,12 @@ get_commit_date() {
   local revision="$1"
   local commit_json
   commit_json="$(curl -fsSL "${GITHUB_API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/commits/${revision}")"
-  printf '%s\n' "$commit_json" | sed -n 's/.*"date":[[:space:]]*"\([0-9-]*\)T.*/\1/p' | head -n1
+  # grep -oE avoids greedy `.*` grabbing the committer date on minified JSON;
+  # head -n1 keeps the first (author) date deterministically.
+  printf '%s\n' "$commit_json" \
+    | grep -oE '"date":[[:space:]]*"[0-9]{4}-[0-9]{2}-[0-9]{2}' \
+    | head -n1 \
+    | sed -E 's/.*"([0-9]{4}-[0-9]{2}-[0-9]{2})$/\1/'
 }
 
 prefetch_sha256_sri() {
@@ -90,14 +95,14 @@ trap cleanup_backups EXIT
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
   fi
 }
 
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build .#${PACKAGE_ATTR} --no-link --no-write-lock-file --print-out-paths)"; then
     log_error "nix build failed for ${PACKAGE_ATTR}"
     return 1
   fi
@@ -105,13 +110,8 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
     return 1
   fi
-  "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
+  timeout 30 "$out_path/bin/$BIN_NAME" --help >/dev/null 2>&1 || true
   log_info "Build successful."
-}
-
-update_flake_lock() {
-  log_info "Updating flake.lock..."
-  (cd "$pkg_dir" && nix flake update)
 }
 
 build_commit_message() {
@@ -142,28 +142,39 @@ build_commit_message() {
   printf 'chore(%s): refresh source metadata\n' "$scope"
 }
 
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
   local commit_message="$1"
   shift
   local -a paths=("$@")
 
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
   if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_warn "not in a git work tree; skipping auto-commit"
     return 0
   fi
 
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
     return 0
   fi
 
-  git -C "$pkg_dir" add -- "${paths[@]}"
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
 
-  if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
-
-  git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
-  log_info "Committed: $commit_message"
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -172,10 +183,10 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 
 Options:
   --revision REV      Update to a specific upstream revision (default: main HEAD)
+  --version REV       Alias for --revision (git ref/rev to pin)
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute source hash for current revision
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 
 Examples:
@@ -195,12 +206,12 @@ main() {
   local check_only=false
   local rehash=false
   local no_build=false
-  local refresh_lock=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --revision)
-        target_revision="${2:-}"
+      --revision|--version)
+        [ $# -ge 2 ] || { log_error "$1 requires an argument"; exit 2; }
+        target_revision="$2"
         shift 2
         ;;
       --check)
@@ -213,10 +224,6 @@ main() {
         ;;
       --no-build)
         no_build=true
-        shift
-        ;;
-      --update-lock)
-        refresh_lock=true
         shift
         ;;
       --help)
@@ -279,7 +286,7 @@ main() {
   local archive_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/${latest_revision}.tar.gz"
   log_info "Prefetching source hash..."
   local source_hash
-  source_hash="$(prefetch_sha256_sri "$archive_url")"
+  source_hash="$(prefetch_sha256_sri "$archive_url")" || true
   if [ -z "$source_hash" ]; then
     log_error "Failed to prefetch source hash"
     exit 1
@@ -305,19 +312,11 @@ main() {
 
   rm -f "$backup"
 
-  if [ "$refresh_lock" = true ]; then
-    update_flake_lock
-  fi
-
   show_changes
 
   local commit_message
   commit_message="$(build_commit_message "$current_revision" "$latest_revision" "$current_version" "$latest_version" "$rehash")"
-  local -a commit_paths=("flake.nix")
-  if [ -f "$pkg_dir/flake.lock" ]; then
-    commit_paths+=("flake.lock")
-  fi
-  maybe_git_commit "$commit_message" "${commit_paths[@]}"
+  maybe_git_commit "$commit_message" "flake.nix"
 
   log_info "Update complete."
 }

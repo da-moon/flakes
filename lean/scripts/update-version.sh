@@ -101,22 +101,83 @@ PY
 
 verify_build() {
   log_info "Verifying build..."
-  (cd "$pkg_dir" && nix build .#lean --no-link)
+  (cd "$pkg_dir" && nix build .#lean --no-link --no-write-lock-file)
+}
+
+build_commit_message() {
+  local previous_version="$1"
+  local new_version="$2"
+  local rehash="${3:-false}"
+
+  local scope
+  scope="$(basename "$pkg_dir")"
+
+  if [ "$previous_version" != "$new_version" ]; then
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  printf 'chore(%s): update version\n' "$scope"
+}
+
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
+maybe_git_commit() {
+  local commit_message="$1"
+  shift
+  local -a paths=("$@")
+
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
+    return 0
+  fi
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/update-version.sh [--version LEAN_CLI_VERSION] [--engine-tag TAG] [--check] [--no-build]
+Usage: ./scripts/update-version.sh [--version LEAN_CLI_VERSION] [--engine-tag TAG] [--rehash] [--check] [--no-build] [--help]
 EOF
 }
 
 main() {
   ensure_tools
-  local requested_cli="" requested_engine="" check=false no_build=false
+  local requested_cli="" requested_engine="" check=false no_build=false rehash=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version) requested_cli="${2:-}"; shift 2 ;;
-      --engine-tag) requested_engine="${2:-}"; shift 2 ;;
+      --version)
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        requested_cli="$2"; shift 2 ;;
+      --engine-tag)
+        [ $# -ge 2 ] || { log_error "--engine-tag requires an argument"; exit 2; }
+        requested_engine="$2"; shift 2 ;;
+      --rehash) rehash=true; shift ;;
       --check) check=true; shift ;;
       --no-build) no_build=true; shift ;;
       --help) usage; exit 0 ;;
@@ -126,7 +187,17 @@ main() {
 
   local current
   current="$(current_version)"
-  mapfile -t fields < <(read_metadata "$requested_cli" "$requested_engine")
+
+  local metadata
+  if ! metadata="$(read_metadata "$requested_cli" "$requested_engine")"; then
+    log_error "failed to fetch metadata from PyPI/Docker Hub"
+    exit 1
+  fi
+  mapfile -t fields <<<"$metadata"
+  if [ "${#fields[@]}" -ne 7 ]; then
+    log_error "expected 7 metadata fields, got ${#fields[@]}"
+    exit 1
+  fi
 
   log_info "Current Lean CLI: $current"
   log_info "Target Lean CLI:  ${fields[0]}"
@@ -135,9 +206,20 @@ main() {
     [ "$current" = "${fields[0]}" ] && exit 0 || exit 1
   fi
 
+  local backup
+  backup="$(mktemp)"
+  cp -- "$flake_file" "$backup"
+  # shellcheck disable=SC2064
+  trap "cp -- '$backup' '$flake_file'; rm -f -- '$backup'" ERR
+
   update_flake "${fields[@]}"
   [ "$no_build" = true ] || verify_build
+
+  trap - ERR
+  rm -f -- "$backup"
+
   log_info "Updated lean CLI to ${fields[0]} with engine tag ${fields[4]}"
+  maybe_git_commit "$(build_commit_message "$current" "${fields[0]}" "$rehash")" "flake.nix"
 }
 
 main "$@"

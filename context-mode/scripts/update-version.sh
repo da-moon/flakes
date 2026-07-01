@@ -38,6 +38,10 @@ get_current_version() {
   sed -n 's/^[[:space:]]*version = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
 }
 
+has_fake_hash() {
+  grep -v '^[[:space:]]*#' "$flake_file" | grep -Eq 'fakeHash|sha256-AAAA'
+}
+
 get_latest_version_from_npm() {
   local latest_json
   latest_json="$(curl -fsSL "$NPM_REGISTRY_URL/$NPM_PACKAGE/latest")"
@@ -86,16 +90,18 @@ update_output_hash() {
   fi
 }
 
+restore_backup=""
+
 cleanup_backups() {
   rm -f "${flake_file}.bak" 2>/dev/null || true
 }
 
-trap cleanup_backups EXIT
-
-update_flake_lock() {
-  log_info "Updating flake.lock..."
-  (cd "$pkg_dir" && nix flake update)
+cleanup_on_exit() {
+  cleanup_backups
+  [ -n "$restore_backup" ] && rm -f "$restore_backup" 2>/dev/null || true
 }
+
+trap cleanup_on_exit EXIT
 
 verify_build() {
   log_info "Verifying build..."
@@ -140,7 +146,7 @@ compute_and_update_output_hash() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
   fi
 }
 
@@ -165,6 +171,7 @@ build_commit_message() {
   printf 'chore(%s): update version\n' "$scope"
 }
 
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
   local commit_message="$1"
   shift
@@ -179,18 +186,24 @@ maybe_git_commit() {
     return 0
   fi
 
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
     return 0
   fi
 
-  git -C "$pkg_dir" add -- "${paths[@]}"
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
 
-  if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
-
-  git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
-  log_info "Committed: $commit_message"
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -202,7 +215,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute npm dependency hash for current version
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 
 Examples:
@@ -221,12 +233,12 @@ main() {
   local check_only=false
   local rehash=false
   local no_build=false
-  local update_lock=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
-        target_version="${2:-}"
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        target_version="$2"
         shift 2
         ;;
       --check)
@@ -239,10 +251,6 @@ main() {
         ;;
       --no-build)
         no_build=true
-        shift
-        ;;
-      --update-lock)
-        update_lock=true
         shift
         ;;
       --help)
@@ -275,6 +283,11 @@ main() {
     latest_version="$target_version"
   fi
 
+  if [ "$rehash" != true ] && has_fake_hash; then
+    log_warn "Placeholder/fakeHash detected in flake.nix; forcing rehash"
+    rehash=true
+  fi
+
   log_info "Current version: $current_version"
   log_info "Target version:  $latest_version"
 
@@ -305,6 +318,7 @@ main() {
 
   local backup
   backup="$(mktemp -t flake.nix.backup.XXXXXX)"
+  restore_backup="$backup"
   cp "$flake_file" "$backup"
 
   cleanup_backups
@@ -315,7 +329,7 @@ main() {
   if ! compute_and_update_output_hash; then
     log_error "Failed to compute outputHash; restoring previous flake.nix"
     cp "$backup" "$flake_file"
-    rm -f "$backup"
+    rm -f "$backup"; restore_backup=""
     exit 1
   fi
 
@@ -323,24 +337,16 @@ main() {
     if ! verify_build; then
       log_error "Build verification failed; restoring previous flake.nix"
       cp "$backup" "$flake_file"
-      rm -f "$backup"
+      rm -f "$backup"; restore_backup=""
       exit 1
     fi
   fi
 
-  rm -f "$backup"
-
-  if [ "$update_lock" = true ]; then
-    update_flake_lock
-  fi
+  rm -f "$backup"; restore_backup=""
 
   show_changes
 
-  local -a commit_paths=("flake.nix")
-  if [ -f "$pkg_dir/flake.lock" ]; then
-    commit_paths+=("flake.lock")
-  fi
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
 
   log_info "Successfully updated context-mode from $current_version to $latest_version"
 }

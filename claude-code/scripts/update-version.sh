@@ -100,7 +100,8 @@ get_manifest_checksum() {
     return 0
   fi
 
-  return 1
+  printf ''
+  return 0
 }
 
 sha256_hex_to_sri() {
@@ -170,15 +171,10 @@ cleanup_backups() {
 
 trap cleanup_backups EXIT
 
-update_flake_lock() {
-  log_info "Updating flake.lock..."
-  (cd "$pkg_dir" && nix flake update)
-}
-
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#claude-code --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build .#claude-code --no-link --print-out-paths --no-write-lock-file)"; then
     log_error "nix build failed for claude-code"
     return 1
   fi
@@ -186,14 +182,14 @@ verify_build() {
     log_error "Build succeeded but expected binary not found at: $out_path/bin/claude"
     return 1
   fi
-  "$out_path/bin/claude" --version >/dev/null 2>&1 || true
+  timeout 30 "$out_path/bin/claude" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
 }
 
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
   fi
 }
 
@@ -218,6 +214,7 @@ build_commit_message() {
   printf 'chore(%s): update version\n' "$scope"
 }
 
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
   local commit_message="$1"
   shift
@@ -232,18 +229,24 @@ maybe_git_commit() {
     return 0
   fi
 
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
     return 0
   fi
 
-  git -C "$pkg_dir" add -- "${paths[@]}"
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
 
-  if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
-
-  git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
-  log_info "Committed: $commit_message"
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -255,7 +258,6 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute Linux release hashes for the current version
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
   --help              Show this help message
 
 Examples:
@@ -274,12 +276,12 @@ main() {
   local check_only=false
   local rehash=false
   local no_build=false
-  local update_lock=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
-        target_version="${2:-}"
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        target_version="$2"
         shift 2
         ;;
       --check)
@@ -292,10 +294,6 @@ main() {
         ;;
       --no-build)
         no_build=true
-        shift
-        ;;
-      --update-lock)
-        update_lock=true
         shift
         ;;
       --help)
@@ -395,17 +393,9 @@ main() {
 
   rm -f "$backup"
 
-  if [ "$update_lock" = true ]; then
-    update_flake_lock
-  fi
-
   show_changes
 
-  local -a commit_paths=("flake.nix")
-  if [ -f "$pkg_dir/flake.lock" ]; then
-    commit_paths+=("flake.lock")
-  fi
-  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "${commit_paths[@]}"
+  maybe_git_commit "$(build_commit_message "$current_version" "$latest_version" "$rehash")" "flake.nix"
 
   log_info "Successfully updated claude-code from $current_version to $latest_version"
 }

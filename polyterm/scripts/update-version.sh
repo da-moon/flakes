@@ -52,25 +52,84 @@ update_flake() {
 
 verify_build() {
   log_info "Verifying build..."
-  (cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-link --print-out-paths)
+  (cd "$pkg_dir" && nix build ".#${PACKAGE_ATTR}" --no-write-lock-file --no-link --print-out-paths)
+}
+
+build_commit_message() {
+  local previous_version="$1"
+  local new_version="$2"
+  local rehash="${3:-false}"
+
+  local scope
+  scope="$(basename "$pkg_dir")"
+
+  if [ "$previous_version" != "$new_version" ]; then
+    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  if [ "$rehash" = true ]; then
+    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
+    return 0
+  fi
+
+  printf 'chore(%s): update version\n' "$scope"
+}
+
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
+maybe_git_commit() {
+  local commit_message="$1"
+  shift
+  local -a paths=("$@")
+
+  if ! command -v git >/dev/null 2>&1; then
+    log_warn "git not found; skipping auto-commit"
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log_warn "not in a git work tree; skipping auto-commit"
+    return 0
+  fi
+
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+    return 0
+  fi
+
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
+
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/update-version.sh [--version VERSION] [--check] [--rehash] [--no-build] [--update-lock]
+Usage: ./scripts/update-version.sh [--version VERSION] [--check] [--rehash] [--no-build] [--help]
 EOF
 }
 
 main() {
   ensure_tools
-  local requested="" check=false rehash=false no_build=false update_lock=false
+  local requested="" check=false rehash=false no_build=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --version) requested="${2:-}"; shift 2 ;;
+      --version)
+        [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
+        requested="$2"
+        shift 2
+        ;;
       --check) check=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
-      --update-lock) update_lock=true; shift ;;
       --help) usage; exit 0 ;;
       *) log_error "Unknown option: $1"; usage; exit 2 ;;
     esac
@@ -92,10 +151,20 @@ main() {
   fi
 
   hash="$(prefetch_source_hash "$target")"
+
+  local backup
+  backup="$(mktemp)"
+  cp "$flake_file" "$backup"
+  trap 'cp "$backup" "$flake_file"; rm -f "$backup"' ERR
+
   update_flake "$target" "$hash"
-  [ "$update_lock" = true ] && (cd "$pkg_dir" && nix flake update)
   [ "$no_build" = true ] || verify_build
+
+  trap - ERR
+  rm -f "$backup"
+
   log_info "Updated polyterm to $target"
+  maybe_git_commit "$(build_commit_message "$current" "$target" "$rehash")" "flake.nix"
 }
 
 main "$@"

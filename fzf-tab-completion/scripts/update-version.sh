@@ -42,14 +42,14 @@ get_current_version() {
 
 get_default_branch() {
   local repo_json
-  repo_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME")"
+  repo_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME" || true)"
   printf '%s\n' "$repo_json" | sed -n 's/.*"default_branch":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
 }
 
 get_latest_commit_info() {
   local branch="$1"
   local commit_json
-  commit_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/commits/$branch")"
+  commit_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/commits/$branch" || true)"
   local sha date
   sha="$(printf '%s\n' "$commit_json" | sed -n 's/.*"sha":[[:space:]]*"\([0-9a-f]\{40\}\)".*/\1/p' | head -n1)"
   date="$(printf '%s\n' "$commit_json" | sed -n 's/.*"date":[[:space:]]*"\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T.*/\1/p' | head -n1)"
@@ -57,7 +57,7 @@ get_latest_commit_info() {
 }
 
 extract_got_hash_from_build() {
-  sed -n 's/.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | head -n1
+  sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
 }
 
 update_flake_version() {
@@ -86,15 +86,10 @@ cleanup_backups() {
 
 trap cleanup_backups EXIT
 
-update_flake_lock() {
-  log_info "Updating flake.lock..."
-  (cd "$pkg_dir" && nix flake update)
-}
-
 verify_build() {
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build .#fzf-tab-completion --no-link --print-out-paths)"; then
+  if ! out_path="$(cd "$pkg_dir" && nix build .#fzf-tab-completion --no-write-lock-file --no-link --print-out-paths)"; then
     log_error "nix build failed for fzf-tab-completion"
     return 1
   fi
@@ -112,7 +107,7 @@ compute_and_update_src_sha256() {
   cleanup_backups
 
   local build_output
-  build_output="$(cd "$pkg_dir" && nix build .#fzf-tab-completion --no-link 2>&1 || true)"
+  build_output="$(cd "$pkg_dir" && nix build .#fzf-tab-completion --no-write-lock-file --no-link 2>&1 || true)"
   local got_hash
   got_hash="$(printf '%s\n' "$build_output" | extract_got_hash_from_build)"
 
@@ -133,7 +128,7 @@ compute_and_update_src_sha256() {
 show_changes() {
   if command -v git >/dev/null 2>&1 && git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     log_info "Changes made:"
-    git -C "$pkg_dir" diff --stat flake.nix flake.lock 2>/dev/null || true
+    git -C "$pkg_dir" diff --stat flake.nix 2>/dev/null || true
   fi
 }
 
@@ -158,6 +153,7 @@ build_commit_message() {
   printf 'chore(%s): update version\n' "$scope"
 }
 
+# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
   local commit_message="$1"
   shift
@@ -172,18 +168,24 @@ maybe_git_commit() {
     return 0
   fi
 
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
+    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
     return 0
   fi
 
-  git -C "$pkg_dir" add -- "${paths[@]}"
+  local git_dir lock_file
+  git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
 
-  if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
-
-  git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
-  log_info "Committed: $commit_message"
+  (
+    if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
+    git -C "$pkg_dir" add -- "${paths[@]}"
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
+      exit 0
+    fi
+    git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
+    log_info "Committed: $commit_message"
+  ) 9>"$lock_file"
 }
 
 print_usage() {
@@ -194,16 +196,19 @@ Options:
   --check             Only check for updates (exit 1 if update available)
   --rehash            Recompute sha256 for current revision
   --no-build          Skip build verification
-  --update-lock       Run 'nix flake update' after updating
+  --version VALUE     Pin to a specific git ref/rev/branch (alias: --rev, --revision)
+                      instead of the default branch HEAD
   --help              Show this help message
 
 Notes:
   This repo does not publish regular versioned releases. This script tracks the
   latest commit on the default branch and sets version to "unstable-YYYY-MM-DD".
+  Pass --version <ref> to pin a specific commit/branch/tag instead.
 
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
+  ./scripts/update-version.sh --version main
 EOF
 }
 
@@ -215,7 +220,7 @@ main() {
   local check_only=false
   local rehash=false
   local no_build=false
-  local update_lock=false
+  local target_ref=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -231,9 +236,10 @@ main() {
         no_build=true
         shift
         ;;
-      --update-lock)
-        update_lock=true
-        shift
+      --rev | --revision | --version)
+        [ $# -ge 2 ] || { log_error "$1 requires an argument"; exit 2; }
+        target_ref="$2"
+        shift 2
         ;;
       --help)
         print_usage
@@ -255,15 +261,22 @@ main() {
     exit 2
   fi
 
-  local default_branch
-  default_branch="$(get_default_branch)"
-  if [ -z "$default_branch" ]; then
-    log_error "Failed to detect default branch from GitHub"
-    exit 2
+  local ref
+  if [ -n "$target_ref" ]; then
+    ref="$target_ref"
+    log_info "Pinning to requested ref: $ref"
+  else
+    local default_branch
+    default_branch="$(get_default_branch)"
+    if [ -z "$default_branch" ]; then
+      log_error "Failed to detect default branch from GitHub"
+      exit 2
+    fi
+    ref="$default_branch"
   fi
 
   local latest_info latest_rev latest_date
-  latest_info="$(get_latest_commit_info "$default_branch")"
+  latest_info="$(get_latest_commit_info "$ref")"
   latest_rev="${latest_info%%|*}"
   latest_date="${latest_info##*|}"
   if [ -z "$latest_rev" ] || [ -z "$latest_date" ]; then
@@ -335,10 +348,6 @@ main() {
 
   rm -f "$backup"
 
-  if [ "$update_lock" = true ]; then
-    update_flake_lock
-  fi
-
   show_changes
 
   local scope commit_message
@@ -351,11 +360,7 @@ main() {
     commit_message="$(build_commit_message "$current_version" "$latest_version" "$rehash")"
   fi
 
-  local -a commit_paths=("flake.nix")
-  if [ -f "$pkg_dir/flake.lock" ]; then
-    commit_paths+=("flake.lock")
-  fi
-  maybe_git_commit "$commit_message" "${commit_paths[@]}"
+  maybe_git_commit "$commit_message" "flake.nix"
 
   log_info "Successfully updated fzf-tab-completion to $latest_rev ($latest_version)"
 }
