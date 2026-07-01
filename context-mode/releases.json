@@ -1,0 +1,11 @@
+{
+  "latest": "1.0.169",
+  "versions": {
+    "1.0.169": {
+      "version": "1.0.169",
+      "rev": "1.0.169",
+      "hash": "sha256-CcQeTPd7IVZsdrjqL9vX89gjBV/uLwLCFm/Vu1ddryw=",
+      "npmDepsHash": "sha256-hWyz75C6ED5ETuUPRY4utWvz3Pw0qj4/7r6MsT9Wo4Y="
+    }
+  }
+}
