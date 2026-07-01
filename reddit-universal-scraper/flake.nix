@@ -17,6 +17,14 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -37,9 +45,18 @@
           ]
         );
 
-        reddit-universal-scraper = pkgs.stdenv.mkDerivation rec {
+        # Builder: derive a reddit-universal-scraper package from one
+        # releases.json entry. PRESERVES the original build logic exactly;
+        # only version/rev/hash now come from `entry`.
+        mk =
+          key: entry:
+          let
+            version = entry.version;
+            rev = entry.rev;
+          in
+          pkgs.stdenv.mkDerivation rec {
           pname = "reddit-universal-scraper";
-          version = "unstable-2026-06-11";
+          inherit version;
 
           meta = with lib; {
             description = "Reddit scraper with dashboard, REST API, scheduled scraping, and exports";
@@ -49,13 +66,11 @@
             maintainers = [ ];
           };
 
-          rev = "1a537ff3b1306c0d414a277f4720fe21e09737a4";
-
           src = pkgs.fetchFromGitHub {
             owner = "ksanjeev284";
             repo = "reddit-universal-scraper";
             inherit rev;
-            hash = "sha256-SIL7+CIwWuMZi1uIjRydMyMsvN9NJO+GJT3eyhXA/f4=";
+            hash = entry.hash;
           };
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -85,21 +100,31 @@
           '';
 
         };
+
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+        # One `reddit-universal-scraper_<sanitized-key>` package per entry.
+        versionPackages = builtins.listToAttrs (
+          builtins.map (key: {
+            name = "reddit-universal-scraper_${sanitize key}";
+            value = mk key releases.versions.${key};
+          }) (builtins.attrNames releases.versions)
+        );
       in
       {
-        packages = {
-          default = reddit-universal-scraper;
-          inherit reddit-universal-scraper;
+        packages = versionPackages // {
+          default = latestPkg;
+          reddit-universal-scraper = latestPkg;
         };
 
         apps = {
           default = {
             type = "app";
-            program = "${reddit-universal-scraper}/bin/reddit-universal-scraper";
+            program = "${latestPkg}/bin/reddit-universal-scraper";
           };
           reddit-scraper = {
             type = "app";
-            program = "${reddit-universal-scraper}/bin/reddit-scraper";
+            program = "${latestPkg}/bin/reddit-scraper";
           };
         };
       }
