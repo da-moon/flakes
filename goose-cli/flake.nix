@@ -16,6 +16,47 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+
+        version = "1.38.0";
+
+        # On x86_64-linux we pull the prebuilt release binary from GitHub (fast, no
+        # heavy Rust build). Every other system builds goose-cli from source below.
+        prebuiltBySystem = {
+          "x86_64-linux" = {
+            url = "https://github.com/block/goose/releases/download/v${version}/goose-x86_64-unknown-linux-gnu.tar.gz";
+            sha256 = "sha256-cFMuos59OEYctnDmlvork2dNFhdew5PyqVTvYkFh/50=";
+          };
+        };
+
+        mkPrebuilt =
+          spec:
+          pkgs.stdenv.mkDerivation {
+            pname = "goose-cli";
+            inherit version;
+
+            src = pkgs.fetchurl { inherit (spec) url sha256; };
+            sourceRoot = ".";
+
+            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+            buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+
+            installPhase = ''
+              runHook preInstall
+              install -m755 -D goose $out/bin/goose
+              runHook postInstall
+            '';
+
+            meta = with pkgs.lib; {
+              description = "Open-source AI agent for software development (prebuilt release binary)";
+              homepage = "https://github.com/block/goose";
+              license = licenses.asl20;
+              platforms = [ system ];
+              mainProgram = "goose";
+            };
+          };
+
+        goose-cli-bin = if prebuiltBySystem ? ${system} then mkPrebuilt prebuiltBySystem.${system} else null;
+
         rustyV8ArchiveByTarget = {
           "x86_64-unknown-linux-gnu" = pkgs.fetchurl {
             url = "https://github.com/denoland/rusty_v8/releases/download/v145.0.0/librusty_v8_release_x86_64-unknown-linux-gnu.a.gz";
@@ -32,9 +73,9 @@
           else
             throw "No pre-fetched rusty_v8 archive for target ${pkgs.stdenv.hostPlatform.config}";
 
-        goose-cli = pkgs.rustPlatform.buildRustPackage rec {
+        goose-cli-source = pkgs.rustPlatform.buildRustPackage {
           pname = "goose-cli";
-          version = "1.38.0";
+          inherit version;
 
           meta = with pkgs.lib; {
             description = "Open-source AI agent for software development";
@@ -82,7 +123,7 @@
           ]
           ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
             dbus
-            xorg.libxcb
+            libxcb
           ]
           ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
             pkgs.darwin.apple_sdk.frameworks.Security
@@ -95,11 +136,18 @@
 
         };
 
+        # Default: prebuilt binary on x86_64-linux, build-from-source everywhere else.
+        goose-cli = if system == "x86_64-linux" && goose-cli-bin != null then goose-cli-bin else goose-cli-source;
+
       in
       {
         packages = {
           default = goose-cli;
           goose-cli = goose-cli;
+          goose-cli-source = goose-cli-source;
+        }
+        // pkgs.lib.optionalAttrs (goose-cli-bin != null) {
+          goose-cli-bin = goose-cli-bin;
         };
       }
     );
