@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
         pname = "csso-cli";
         version = "4.0.2";
 
@@ -19,7 +19,7 @@
         # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
         outputHashBySystem = {
           "aarch64-linux" = "sha256-B7tN2eP4EM9S1xpQQaGaQmlgt/QIQkWt55m1YPZtomE=";
-          "x86_64-linux" = "sha256-co+HZkUJMxXqDvSxEi/ElOfRkFnQb1j4Qz9yafnoQ5Y=";
+          "x86_64-linux" = "sha256-14erYw3YR9soFULYDzjIHiWh5YnIqYYKs4a15cKwy3g=";
         };
 
         # Fixed-output derivation to fetch npm package with prod dependencies
