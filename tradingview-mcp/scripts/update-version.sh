@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+# Appends the newest upstream commit of tradesdontlie/tradingview-mcp as a new
+# entry in releases.json (the JSON version table the flake reads). Never
+# hand-edits the version data in flake.nix.
+#
+# tradingview-mcp has NO release tags, so:
+#   key     = short (7-char) upstream commit hash
+#   version = "<base>-unstable-<commit-date>" (base = package.json "version" at
+#             that commit, e.g. "1.0.0"; falls back to the current entry's base)
+#
+# Two fixed-output hashes are recomputed:
+#   - .hash        : fetchFromGitHub source hash (via nix-prefetch-url)
+#   - .npmDepsHash : buildNpmPackage npm-deps FOD hash (fakeHash -> "got:")
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -10,26 +22,58 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
-readonly REPO_URL="https://github.com/tradesdontlie/tradingview-mcp"
-readonly RAW_BASE="https://raw.githubusercontent.com/tradesdontlie/tradingview-mcp"
-readonly ATTR="tradingview-mcp"
+readonly REPO_OWNER="tradesdontlie"
+readonly REPO_NAME="tradingview-mcp"
+readonly REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
+readonly RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}"
+readonly GITHUB_API_BASE="https://api.github.com"
+# lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
+readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
+releases_file="${pkg_dir}/releases.json"
+readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 ensure_tools() {
-  for tool in curl git nix nix-prefetch-url python3 sed; do
+  for tool in curl git nix nix-prefetch-url jq python3; do
     command -v "$tool" >/dev/null 2>&1 || { log_error "$tool is required"; exit 2; }
   done
 }
 
-current_rev() {
-  sed -n 's/^[[:space:]]*rev = "\([^"]*\)".*/\1/p' "$flake_file" | head -n1
+ensure_in_package_directory() {
+  [ -f "$flake_file" ] || { log_error "flake.nix not found in ${pkg_dir}"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at $releases_file"; exit 2; }
 }
 
-latest_rev() {
-  git ls-remote "$REPO_URL.git" HEAD | awk '{ print $1 }'
+# mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
+sanitize_key() {
+  printf '%s' "$1" | tr '.+-' '___'
+}
+
+extract_got_hash() {
+  sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
+}
+
+# Resolve the newest default-branch commit (full 40-char sha + committer date).
+resolve_head() {
+  local ref="$1" sha commit_json full_sha date
+  if [ -n "$ref" ]; then
+    sha="$(git ls-remote "${REPO_URL}.git" "$ref" | awk 'NR==1{print $1}')"
+    [ -n "$sha" ] || sha="$ref"  # allow a raw (possibly short) rev
+  else
+    sha="$(git ls-remote "${REPO_URL}.git" HEAD | awk 'NR==1{print $1}')"
+  fi
+  [ -n "$sha" ] || { log_error "could not resolve upstream rev"; exit 2; }
+  # The commits API accepts short shas and returns the full sha + date, so this
+  # both validates and canonicalises the rev (fetchFromGitHub needs 40 chars).
+  commit_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/commits/$sha")"
+  full_sha="$(printf '%s' "$commit_json" | jq -r '.sha')"
+  date="$(printf '%s' "$commit_json" | jq -r '.commit.committer.date' | cut -dT -f1)"
+  [ -n "$full_sha" ] && [ "$full_sha" != "null" ] || { log_error "could not resolve full sha for $sha"; exit 2; }
+  [ -n "$date" ] && [ "$date" != "null" ] || { log_error "could not resolve commit date for $sha"; exit 2; }
+  printf '%s|%s\n' "$full_sha" "$date"
 }
 
 package_version_for_rev() {
@@ -38,7 +82,10 @@ package_version_for_rev() {
 import json
 import sys
 import urllib.request
-print(json.load(urllib.request.urlopen(sys.argv[1]))["version"])
+try:
+    print(json.load(urllib.request.urlopen(sys.argv[1]))["version"])
+except Exception:
+    print("")
 PY
 }
 
@@ -49,190 +96,192 @@ prefetch_source_hash() {
   nix hash to-sri --type sha256 "$base32"
 }
 
-update_rev_version_hash() {
-  local rev="$1" version="$2" hash="$3"
-  python3 - "$flake_file" "$rev" "$version" "$hash" <<'PY'
-import re
-import sys
-from pathlib import Path
-path = Path(sys.argv[1])
-rev, version, source_hash = sys.argv[2:]
-short_date = "unstable-" + __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
-full_version = f"{version}-{short_date}"
-text = path.read_text()
-text = re.sub(r'(version = ")[^"]+(";)', rf'\g<1>{full_version}\2', text, count=1)
-text = re.sub(r'(rev = ")[^"]+(";)', rf'\g<1>{rev}\2', text, count=1)
-text = re.sub(r'(inherit rev;\n\s*hash = ")[^"]+(";)', rf'\g<1>{source_hash}\2', text, count=1)
-path.write_text(text)
-PY
+# Recompute a fixed-output hash by building the target attr with FAKE_HASH
+# already written into releases.json and parsing nix's "got:" line.
+build_and_get_hash() {
+  local attr="$1" out
+  out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link 2>&1 || true)"
+  printf '%s\n' "$out" | extract_got_hash
 }
 
-set_npm_hash() {
-  local hash="$1"
-  sed -i.bak -E "s|npmDepsHash = \"[^\"]+\";|npmDepsHash = \"${hash}\";|" "$flake_file"
-  rm -f "${flake_file}.bak"
+print_usage() {
+  cat <<'EOF'
+Usage: ./scripts/update-version.sh [OPTIONS]
+
+Appends the newest upstream commit of tradesdontlie/tradingview-mcp to
+releases.json (the JSON version table read by flake.nix) and sets it as .latest.
+Recomputes both the fetchFromGitHub source hash and the buildNpmPackage npmDeps
+FOD hash via jq — the version data in flake.nix is never touched.
+
+Options:
+  --check            Print whether a newer commit exists; exit 1 if it does.
+  --rev VALUE        Pin to a specific git ref/branch/rev instead of HEAD
+                       (aliases: --revision, --version).
+  --rehash           Recompute hashes even if the key already exists.
+  --no-build         Skip the final verification build.
+  --no-commit        Do not auto-commit (default: auto-commit is enabled).
+  --help             Show this help.
+EOF
 }
 
-extract_got_hash() {
-  sed -n 's/.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*/\1/p' | head -n1
-}
-
-compute_npm_hash() {
-  log_info "Computing npm dependency hash..."
-  set_npm_hash "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-  local output got
-  output="$(cd "$pkg_dir" && nix build .#${ATTR} --no-link --no-write-lock-file 2>&1 || true)"
-  got="$(printf '%s\n' "$output" | extract_got_hash)"
-  if [ -z "$got" ]; then
-    log_error "Could not parse npmDepsHash from nix build output"
-    printf '%s\n' "$output" | sed -n '1,160p' >&2
-    exit 1
-  fi
-  set_npm_hash "$got"
-}
-
-verify_build() {
-  log_info "Verifying build..."
-  (cd "$pkg_dir" && nix build .#${ATTR} --no-link --no-write-lock-file)
-}
-
-has_fake_hash() {
-  grep -v '^[[:space:]]*#' "$flake_file" | grep -q 'sha256-AAAA'
-}
-
-restore_on_failure() {
-  local status=$?
-  local backup="$1"
-  if [ -n "$backup" ] && [ -f "$backup" ]; then
-    if [ "$status" -ne 0 ]; then
-      cp "$backup" "$flake_file"
-      log_warn "Update failed; restored original flake.nix"
-    fi
-    rm -f "$backup"
-  fi
-}
-
-build_commit_message() {
-  local previous_version="$1"
-  local new_version="$2"
-  local rehash="${3:-false}"
-
-  local scope
-  scope="$(basename "$pkg_dir")"
-
-  if [ "$previous_version" != "$new_version" ]; then
-    printf 'chore(%s): bump to %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  if [ "$rehash" = true ]; then
-    printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
-    return 0
-  fi
-
-  printf 'chore(%s): update version\n' "$scope"
-}
-
-# Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
+# Parallel-safe auto-commit (flock serialises the git index across updaters).
 maybe_git_commit() {
-  local commit_message="$1"
-  shift
+  local commit_message="$1"; shift
   local -a paths=("$@")
-
-  if ! command -v git >/dev/null 2>&1; then
-    log_warn "git not found; skipping auto-commit"
-    return 0
-  fi
-  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    log_warn "not in a git work tree; skipping auto-commit"
-    return 0
-  fi
-
+  command -v git >/dev/null 2>&1 || { log_warn "git not found; skipping commit"; return 0; }
+  git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+    log_warn "not in a git work tree; skipping commit"; return 0; }
   if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
     && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
     return 0
   fi
-
   local git_dir lock_file
   git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
   lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
-
   (
     if command -v flock >/dev/null 2>&1; then flock 9 || true; fi
     git -C "$pkg_dir" add -- "${paths[@]}"
-    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-      exit 0
-    fi
+    if git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then exit 0; fi
     git -C "$pkg_dir" commit --only -m "$commit_message" -- "${paths[@]}"
     log_info "Committed: $commit_message"
   ) 9>"$lock_file"
 }
 
-usage() {
-  cat <<'EOF'
-Usage: ./scripts/update-version.sh [--rev REV | --version REF] [--check] [--rehash] [--no-build] [--help]
-
-  --rev REV        Git rev/ref to pin (default: repo HEAD)
-  --revision REV   Alias for --rev
-  --version REF    Alias for --rev (value is treated as the git ref/rev to pin)
-  --check          Exit 0 if up to date, 1 otherwise (no writes)
-  --rehash         Recompute npmDepsHash for the current pin
-  --no-build       Skip the verification build
-  --help           Show this help
-EOF
-}
-
 main() {
   ensure_tools
-  local requested_rev="" check=false rehash=false no_build=false
+  ensure_in_package_directory
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
+
+  local check_only=false no_build=false do_commit=true rehash=false target_ref=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --check) check_only=true; shift ;;
+      --no-build) no_build=true; shift ;;
+      --no-commit) do_commit=false; shift ;;
+      --rehash) rehash=true; shift ;;
       --rev|--revision|--version)
         [ $# -ge 2 ] || { log_error "$1 requires an argument"; exit 2; }
-        requested_rev="$2"
-        shift 2
-        ;;
-      --check) check=true; shift ;;
-      --rehash) rehash=true; shift ;;
-      --no-build) no_build=true; shift ;;
-      --help) usage; exit 0 ;;
-      *) log_error "Unknown option: $1"; usage; exit 2 ;;
+        target_ref="$2"; shift 2 ;;
+      --help) print_usage; exit 0 ;;
+      *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
   done
 
-  local current target version source_hash
-  current="$(current_rev)"
-  target="${requested_rev:-$(latest_rev)}"
-  log_info "Current rev: $current"
-  log_info "Target rev:  $target"
+  local cur_latest_key cur_latest_ver base
+  cur_latest_key="$(jq -r '.latest' "$releases_file")"
+  cur_latest_ver="$(jq -r --arg k "$cur_latest_key" '.versions[$k].version' "$releases_file")"
+  # Base = version part before "-unstable-" (e.g. "1.0.0"); nixpkgs uses "0"
+  # once a project is past its last tagged release.
+  base="${cur_latest_ver%%-unstable-*}"
+  [ -n "$base" ] || base="0"
 
-  if [ "$check" = true ]; then
-    if [ "$current" = "$target" ] && ! has_fake_hash; then
-      log_info "Already up to date"
+  local info rev date short_key pkg_ver new_version
+  info="$(resolve_head "$target_ref")"
+  rev="${info%%|*}"
+  date="${info##*|}"
+  short_key="${rev:0:7}"
+  # Prefer the package.json version at that commit; fall back to the current base.
+  pkg_ver="$(package_version_for_rev "$rev")"
+  [ -n "$pkg_ver" ] || pkg_ver="$base"
+  new_version="${pkg_ver}-unstable-${date}"
+
+  log_info "Current latest key: ${cur_latest_key} (${cur_latest_ver})"
+  log_info "Resolved upstream:  ${rev}"
+  log_info "New key:            ${short_key}"
+  log_info "New version:        ${new_version}"
+
+  local already_present=false
+  [ "$(jq -r --arg k "$short_key" '.versions | has($k)' "$releases_file")" = "true" ] && already_present=true
+
+  if [ "$check_only" = true ]; then
+    if [ "$short_key" = "$cur_latest_key" ] && [ "$already_present" = true ]; then
+      log_info "Already up to date (latest is ${cur_latest_key})."
       exit 0
     fi
+    log_info "Update available: ${short_key}"
     exit 1
   fi
 
-  version="$(package_version_for_rev "$target")"
+  if [ "$already_present" = true ] && [ "$short_key" = "$cur_latest_key" ] && [ "$rehash" = false ]; then
+    log_info "Already up to date (latest is ${cur_latest_key}); use --rehash to recompute."
+    exit 0
+  fi
 
   local backup
   backup="$(mktemp)"
-  cp "$flake_file" "$backup"
-  trap 'restore_on_failure "$backup"' EXIT
+  cp "$releases_file" "$backup"
 
-  source_hash="$(prefetch_source_hash "$target")"
-  update_rev_version_hash "$target" "$version" "$source_hash"
-  if [ "$rehash" = true ] || [ "$current" != "$target" ] || has_fake_hash; then
-    compute_npm_hash
+  local attr tmp
+  attr="tradingview-mcp_$(sanitize_key "$short_key")"
+
+  # Seed the entry with fake hashes so nix reveals the real ones on build,
+  # and set it as .latest.
+  tmp="$(mktemp)"
+  jq --arg k "$short_key" \
+     --arg ver "$new_version" \
+     --arg rev "$rev" \
+     --arg fake "$FAKE_HASH" '
+       .versions[$k] = {
+         version: $ver,
+         rev: $rev,
+         hash: $fake,
+         npmDepsHash: $fake
+       }
+       | .latest = $k
+     ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
+
+  # 1) source hash (fetchFromGitHub) — prefetched directly.
+  log_info "Computing fetchFromGitHub source hash..."
+  local src_hash
+  src_hash="$(prefetch_source_hash "$rev")"
+  [ -n "$src_hash" ] || { log_error "failed to prefetch source hash"; cp "$backup" "$releases_file"; rm -f "$backup"; exit 1; }
+  log_info "  src hash: $src_hash"
+  tmp="$(mktemp)"
+  jq --arg k "$short_key" --arg h "$src_hash" '.versions[$k].hash = $h' \
+    "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
+
+  # 2) npmDeps FOD hash (buildNpmPackage) — via fakeHash "got:" parse.
+  log_info "Computing npmDepsHash..."
+  local npm_hash
+  npm_hash="$(build_and_get_hash "$attr")"
+  if [ -z "$npm_hash" ]; then
+    # No mismatch printed => build already succeeded (hash was correct).
+    log_info "  npmDepsHash already correct (no rehash needed)."
+  else
+    log_info "  npmDepsHash: $npm_hash"
+    tmp="$(mktemp)"
+    jq --arg k "$short_key" --arg h "$npm_hash" '.versions[$k].npmDepsHash = $h' \
+      "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
   fi
-  [ "$no_build" = true ] || verify_build
 
-  trap - EXIT
+  if [ "$no_build" = false ]; then
+    log_info "Verifying build of ${attr}..."
+    local out
+    if ! out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
+      log_error "verification build failed; restoring previous releases.json"
+      printf '%s\n' "$out" | tail -n 40 >&2
+      cp "$backup" "$releases_file"
+      rm -f "$backup"
+      exit 1
+    fi
+    log_info "Build OK: $(printf '%s\n' "$out" | tail -n1)"
+  fi
+
   rm -f "$backup"
 
-  log_info "Updated tradingview-mcp to $target"
-  maybe_git_commit "$(build_commit_message "$current" "$target" "$rehash")" "flake.nix"
+  log_info "releases.json now contains:"
+  jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
+
+  if [ "$do_commit" = true ]; then
+    local scope msg
+    scope="$(basename "$pkg_dir")"
+    if [ "$short_key" = "$cur_latest_key" ]; then
+      msg="chore(${scope}): rehash ${new_version} (${short_key})"
+    else
+      msg="chore(${scope}): add ${new_version} (${short_key}) to version table"
+    fi
+    maybe_git_commit "$msg" "releases.json"
+  fi
 }
 
 main "$@"

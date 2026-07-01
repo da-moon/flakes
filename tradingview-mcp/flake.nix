@@ -17,6 +17,14 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Sanitize a JSON key into a valid attribute-name suffix.
+      sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -24,9 +32,14 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_22;
 
-        tradingview-mcp = pkgs.buildNpmPackage rec {
+        # Builder: derive a tradingview-mcp package from one releases.json entry.
+        # PRESERVES the original build logic exactly; only version/rev/hash(es)
+        # now come from `entry` instead of let-bindings.
+        mk =
+          key: entry:
+          pkgs.buildNpmPackage rec {
           pname = "tradingview-mcp";
-          version = "1.0.0-unstable-2026-07-01";
+          version = entry.version;
 
           meta = with pkgs.lib; {
             description = "MCP bridge for TradingView Desktop via Chrome DevTools Protocol";
@@ -42,16 +55,16 @@
             platforms = linuxSystems;
           };
 
-          rev = "4795784a19dd64ff4e2649d2499a536b01bd2d68";
+          rev = entry.rev;
 
           src = pkgs.fetchFromGitHub {
             owner = "tradesdontlie";
             repo = "tradingview-mcp";
             inherit rev;
-            hash = "sha256-BWpFSYnb44nt+BYw4UQi/ar5TBlUKNPxy/T/M2SBjKQ=";
+            hash = entry.hash;
           };
 
-          npmDepsHash = "sha256-7yfQf47RpHUa3zg5fwrFBtek6EVR2TeLKs1oN4eD2W0=";
+          npmDepsHash = entry.npmDepsHash;
           dontNpmBuild = true;
 
           postPatch = ''
@@ -123,21 +136,31 @@ NODE
           '';
 
         };
+
+        latestPkg = mk releases.latest releases.versions.${releases.latest};
+
+        # One `tradingview-mcp_<sanitized-key>` package per entry in the table.
+        versionPackages = builtins.listToAttrs (
+          builtins.map (key: {
+            name = "tradingview-mcp_${sanitizeKey key}";
+            value = mk key releases.versions.${key};
+          }) (builtins.attrNames releases.versions)
+        );
       in
       {
-        packages = {
-          default = tradingview-mcp;
-          inherit tradingview-mcp;
+        packages = versionPackages // {
+          default = latestPkg;
+          tradingview-mcp = latestPkg;
         };
 
         apps = {
           default = {
             type = "app";
-            program = "${tradingview-mcp}/bin/tradingview-mcp";
+            program = "${latestPkg}/bin/tradingview-mcp";
           };
           tv = {
             type = "app";
-            program = "${tradingview-mcp}/bin/tv";
+            program = "${latestPkg}/bin/tv";
           };
         };
       }

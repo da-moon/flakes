@@ -1,0 +1,11 @@
+{
+  "latest": "4795784",
+  "versions": {
+    "4795784": {
+      "version": "1.0.0-unstable-2026-04-04",
+      "rev": "4795784a19dd64ff4e2649d2499a536b01bd2d68",
+      "hash": "sha256-BWpFSYnb44nt+BYw4UQi/ar5TBlUKNPxy/T/M2SBjKQ=",
+      "npmDepsHash": "sha256-7yfQf47RpHUa3zg5fwrFBtek6EVR2TeLKs1oN4eD2W0="
+    }
+  }
+}
