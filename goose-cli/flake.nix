@@ -17,14 +17,14 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        version = "1.38.0";
+        version = "1.39.0";
 
         # On x86_64-linux we pull the prebuilt release binary from GitHub (fast, no
         # heavy Rust build). Every other system builds goose-cli from source below.
         prebuiltBySystem = {
           "x86_64-linux" = {
             url = "https://github.com/block/goose/releases/download/v${version}/goose-x86_64-unknown-linux-gnu.tar.gz";
-            sha256 = "sha256-cFMuos59OEYctnDmlvork2dNFhdew5PyqVTvYkFh/50=";
+            sha256 = "sha256-9K0IZ0MNNCDqYLw7s2po9vVmnAYM5t6VL+mifYp+B2c=";
           };
         };
 
@@ -89,12 +89,13 @@
             owner = "block";
             repo = "goose";
             rev = "v${version}";
-            sha256 = "sha256-bR38jxh379Rp9ZU6Hd+1aKDl+88UkmWF/niwp8uB3aE=";
+            sha256 = "sha256-7CXLvfY2jYUB9IG/Z1lPiqwZ7UwIypq32ZLq1SsnHQI=";
           };
 
           cargoLock = {
             lockFile = ./Cargo.lock;
             outputHashes = {
+              "mlx-lm-0.0.1" = "sha256-iBBF6MN3caKbyaP8yniUxOt2uEgsm4C/DMtdyj7aUfg=";
               "cudaforge-0.1.6" = "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY=";
             };
           };
