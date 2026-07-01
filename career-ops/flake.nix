@@ -22,7 +22,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        nodejs = pkgs.nodejs_20;
+        nodejs = pkgs.nodejs_22;
         pname = "career-ops";
         version = "1.15.0";
         rev = "career-ops-v1.15.0";
