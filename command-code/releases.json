@@ -1,0 +1,14 @@
+{
+  "latest": "0.40.17",
+  "versions": {
+    "0.40.17": {
+      "version": "0.40.17",
+      "rev": "0.40.17",
+      "hash": "sha256-7XP43YTXBWiaSF4oFVL0AGJJFDOrTR3ltUxjotLOYHw=",
+      "npmDepsHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-L9G7CzLgEsBZrOPTXB5mT84NsthBOmzMYxxNAEL1S0Q="
+      }
+    }
+  }
+}
