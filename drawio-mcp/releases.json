@@ -1,5 +1,5 @@
 {
-  "latest": "1.3.3",
+  "latest": "1.3.4",
   "versions": {
     "1.3.3": {
       "version": "1.3.3",
@@ -8,6 +8,15 @@
       "outputHashes": {
         "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "x86_64-linux": "sha256-3QYIvZVhw/6DJ/PQ5h0MWmxV13MByx39Oc0GY8FN9/g="
+      }
+    },
+    "1.3.4": {
+      "version": "1.3.4",
+      "rev": "1.3.4",
+      "hash": "sha256-QELV1veTdtfM//vVVKA3AZyye4zukHYKQzBBh0XefCY=",
+      "outputHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-TMg9t861MkP0CLoHRDzraFLHVrvWohGIqqvh2kGOxOE="
       }
     }
   }
