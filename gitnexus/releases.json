@@ -1,5 +1,5 @@
 {
-  "latest": "1.6.8",
+  "latest": "1.6.9",
   "versions": {
     "1.6.8": {
       "version": "1.6.8",
@@ -8,6 +8,15 @@
       "outputHashes": {
         "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "x86_64-linux": "sha256-g3ys+x7dlr3wo15BV5Jgex98itw5wRuyeEi/Hu3IX8U="
+      }
+    },
+    "1.6.9": {
+      "version": "1.6.9",
+      "rev": "1.6.9",
+      "hash": "sha256-Qykvvu3VtXtiWaA6wewk1nK1zP65RVjtAq7IdKqCXbM=",
+      "outputHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-C7iZj3tjT8zuGhKBTJcBLATYKi1al3sCY3RTncPQ5vs="
       }
     }
   }
