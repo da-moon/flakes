@@ -218,7 +218,7 @@ NODE
                 --set NODE_ENV "production" \
                 --set npm_config_ignore_scripts "true" \
                 --set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD "1" \
-                --set-default GSD_HOME "$HOME/.gsd" \
+                --set-default GSD_HOME "\$HOME/.gsd" \
                 --prefix PATH : ${lib.makeBinPath [
                   pkgs.bash
                   pkgs.coreutils
