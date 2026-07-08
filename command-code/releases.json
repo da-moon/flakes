@@ -1,5 +1,5 @@
 {
-  "latest": "0.41.1",
+  "latest": "0.42.0",
   "versions": {
     "0.40.17": {
       "version": "0.40.17",
@@ -26,6 +26,15 @@
       "npmDepsHashes": {
         "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "x86_64-linux": "sha256-dDB6vOKExXOemenPBq3pC7UqNmDDyhU/MOzkH9p6CZ0="
+      }
+    },
+    "0.42.0": {
+      "version": "0.42.0",
+      "rev": "0.42.0",
+      "hash": "sha256-MeJnBNu8qbbuV4C2Zyt9nZa9iJ6JH1+1OJwVm1/RvCQ=",
+      "npmDepsHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-ETtq+gQq+Z638zJ2ugQeYli8SqKIcdKePNQz5ahbsMk="
       }
     }
   }
