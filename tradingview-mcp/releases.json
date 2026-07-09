@@ -1,11 +1,17 @@
 {
-  "latest": "4795784",
+  "latest": "55534aa",
   "versions": {
     "4795784": {
       "version": "1.0.0-unstable-2026-04-04",
       "rev": "4795784a19dd64ff4e2649d2499a536b01bd2d68",
       "hash": "sha256-BWpFSYnb44nt+BYw4UQi/ar5TBlUKNPxy/T/M2SBjKQ=",
       "npmDepsHash": "sha256-7yfQf47RpHUa3zg5fwrFBtek6EVR2TeLKs1oN4eD2W0="
+    },
+    "55534aa": {
+      "version": "1.0.0-unstable-2026-07-06",
+      "rev": "55534aab8c11f24655b7d8d4de82e6bece14c8b4",
+      "hash": "sha256-7xjaE6BCSsSTZ88FL6URI3GkPwVzoijz7t3uwFZ41MI=",
+      "npmDepsHash": "sha256-iacdL8fQt4CzCZ8T7qrGgjPD3zEh4BRWASlDMq7GmYM="
     }
   }
 }
