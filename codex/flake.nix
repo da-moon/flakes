@@ -26,7 +26,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        # Architecture-specific asset naming (musl release tarballs).
+        # Architecture-specific asset naming (musl release bundles).
         archBySystem = {
           "aarch64-linux" = "aarch64";
           "x86_64-linux" = "x86_64";
@@ -60,10 +60,14 @@
               maintainers = [ ];
             };
 
+            # The `-bundle` asset carries the sidecars the CLI expects to find
+            # beside itself; the plain codex-*.tar.gz ships only `codex`.
             src = pkgs.fetchurl {
-              url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${currentArch}-unknown-linux-musl.tar.gz";
+              url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${currentArch}-unknown-linux-musl-bundle.tar.zst";
               inherit sha256;
             };
+
+            nativeBuildInputs = [ pkgs.zstd ];
 
             sourceRoot = ".";
 
@@ -71,9 +75,14 @@
             dontBuild = true;
             dontConfigure = true;
 
+            # codex resolves `codex-code-mode-host` and `codex-resources/bwrap`
+            # relative to the realpath of its own executable, so both must sit
+            # next to $out/bin/codex.
             installPhase = ''
               runHook preInstall
-              install -m755 -D codex-${currentArch}-unknown-linux-musl $out/bin/codex
+              install -m755 -D codex $out/bin/codex
+              install -m755 -D codex-code-mode-host $out/bin/codex-code-mode-host
+              install -m755 -D codex-resources/bwrap $out/bin/codex-resources/bwrap
               runHook postInstall
             '';
 

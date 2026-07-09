@@ -5,24 +5,24 @@
       "version": "0.142.5",
       "rev": "0.142.5",
       "hashes": {
-        "aarch64-linux": "sha256-sYx1xJZFkY+uI766CrQcBfB5QWAVEKJFG6l/5RlXPDg=",
-        "x86_64-linux": "sha256-y5M+w8thv0tfyI7s9eYUmCn6phclNbbvCvsBVL60qrg="
+        "aarch64-linux": "sha256-P7IBbAc+zkIoe/ePWuFreiMoKDh2dqeZpK4OrzYRO58=",
+        "x86_64-linux": "sha256-BhB05/1ghUMGpeuRu6dvDTppWXcsxbcL2wM8ZfYjpg0="
       }
     },
     "0.143.0": {
       "version": "0.143.0",
       "rev": "0.143.0",
       "hashes": {
-        "aarch64-linux": "sha256-2uxMsY860+VB6JhnY+cwGbPdtybR+GkuUOpfqYjAnXg=",
-        "x86_64-linux": "sha256-2dxzHcZuInsXWxPAcb6eoSbMdnL8rIqHgj2lCw0rL/4="
+        "aarch64-linux": "sha256-iBzaZgFhrfPuCYHzvI42+mHvRuBUZaHykAkPB/r9PZ8=",
+        "x86_64-linux": "sha256-rTqEsA9Ws9DsXviVn4k31upajoneKe71xFVfIGfoV6Q="
       }
     },
     "0.144.0": {
       "version": "0.144.0",
       "rev": "0.144.0",
       "hashes": {
-        "aarch64-linux": "sha256-x8RKeVC9tVXHQ/W7X3rD7C7nwxGXDv/pL9OeguzMa1E=",
-        "x86_64-linux": "sha256-cliD/CCrSvMHKCmqoO320SwhYjj59zFaZla5UPsFyLs="
+        "aarch64-linux": "sha256-gJIpyLUcnDNnEVt25e/+UmciZCsMpM2Td9sCCVNCafI=",
+        "x86_64-linux": "sha256-ETkdAweoXUaTgdRKTDlRfTK+wyu2jTlHyj9yYJNmkok="
       }
     }
   }

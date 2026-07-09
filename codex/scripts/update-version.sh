@@ -2,7 +2,7 @@
 # Appends the newest (or an explicit) openai/codex release to releases.json (the
 # JSON version table the flake reads) as a new entry keyed by version, and sets
 # .latest to it. Existing entries are preserved so consumers can still select
-# past versions. Both per-arch tarball hashes are recomputed via
+# past versions. Both per-arch bundle-tarball hashes are recomputed via
 # `nix store prefetch-file` and written with jq — the version data in flake.nix
 # is never touched.
 #
@@ -98,10 +98,13 @@ verify_build() {
     log_error "nix build failed for codex_${sanitized_key}"
     return 1
   fi
-  if [ -z "$out_path" ] || [ ! -x "$out_path/bin/codex" ]; then
-    log_error "Build succeeded but expected binary not found at: $out_path/bin/codex"
-    return 1
-  fi
+  local rel
+  for rel in bin/codex bin/codex-code-mode-host bin/codex-resources/bwrap; do
+    if [ ! -x "$out_path/$rel" ]; then
+      log_error "Build succeeded but expected binary not found at: $out_path/$rel"
+      return 1
+    fi
+  done
   # default must also resolve (it points at the new .latest).
   if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
     log_error "nix build failed for default"
@@ -257,7 +260,7 @@ main() {
   local hashes_json="{}"
   for system in "${!SYSTEM_TO_ARCH[@]}"; do
     arch="${SYSTEM_TO_ARCH[$system]}"
-    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/codex-${arch}-unknown-linux-musl.tar.gz"
+    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/codex-${arch}-unknown-linux-musl-bundle.tar.zst"
     sri_hash="$(prefetch_sha256_sri "$url")"
     if [ -z "$sri_hash" ]; then
       log_error "Failed to prefetch hash for $arch ($system)"
