@@ -1,5 +1,5 @@
 {
-  "latest": "16.3.14",
+  "latest": "16.4.8",
   "versions": {
     "16.3.2": {
       "version": "16.3.2",
@@ -31,6 +31,14 @@
       "hashes": {
         "aarch64-linux": "sha256-zoBJyPF6Sho25Ax2bxzqi2H5EeSKfP1v9eiwW5i/eIA=",
         "x86_64-linux": "sha256-i3zj/IJJS1uB9DlFTbAzvHnaipTnUUEYLrr+Ed2zlZk="
+      }
+    },
+    "16.4.8": {
+      "version": "16.4.8",
+      "rev": "16.4.8",
+      "hashes": {
+        "aarch64-linux": "sha256-nOVX1ojLTTW6uiImJOt/RgFi4e8BDk5M8C8UIxLGacU=",
+        "x86_64-linux": "sha256-zfB3XgW4jWP52mBt5ULMP8C+7fCoZLSsQvd3lh+GhEw="
       }
     }
   }
