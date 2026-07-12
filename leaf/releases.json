@@ -1,5 +1,5 @@
 {
-  "latest": "1.26.0",
+  "latest": "1.26.1",
   "versions": {
     "1.25.0": {
       "version": "1.25.0",
@@ -15,6 +15,14 @@
       "hashes": {
         "aarch64-linux": "sha256-SYXVY/NPovwdpP76p5XyQq0EQE6tb2bmnFZ5bOEPO90=",
         "x86_64-linux": "sha256-Bo0AtwVMZOkhi1VTg15ZjWhf0PcZwriryxCUHtbnpgM="
+      }
+    },
+    "1.26.1": {
+      "version": "1.26.1",
+      "rev": "1.26.1",
+      "hashes": {
+        "aarch64-linux": "sha256-ID90Tta3hfZipEWCZYsTouCr7WJ5cO6uwIM/w898BTU=",
+        "x86_64-linux": "sha256-vqmKhlh3GnibhVFY2/igURyeDfRIsTg3fe65YNUPFCA="
       }
     }
   }
