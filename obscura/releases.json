@@ -1,5 +1,5 @@
 {
-  "latest": "0.1.9",
+  "latest": "0.1.10",
   "versions": {
     "0.1.9": {
       "version": "0.1.9",
@@ -7,6 +7,14 @@
       "hashes": {
         "x86_64-linux": "sha256-gVj39jB2CmKQYuyHI55vZcE784l71zLaZOisB1q0EB8=",
         "aarch64-linux": "sha256-ENmbG7/VdW/luOZ3dc6I5JW2qB44xb2y+qRJ+atVmBM="
+      }
+    },
+    "0.1.10": {
+      "version": "0.1.10",
+      "rev": "0.1.10",
+      "hashes": {
+        "x86_64-linux": "sha256-fv2dU1Rrae1syEpH1cCO56cEHuh6uV5zEP2nCGCKUJM=",
+        "aarch64-linux": "sha256-pQwVSXCTSvPPn9K+xsilP/dvJbDE2eeMKGzkvDvKCt8="
       }
     }
   }
