@@ -4,10 +4,10 @@
     "8eaa668": {
       "version": "1.0.0-unstable-2024-04-05",
       "rev": "8eaa668f804097221dcc6077edf155a052d1e61b",
-      "hash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "hash": "sha256-s0ZOaDZIhExGh2g+gQzhbQAU6+0+V3iQAKOM9vrNM6k=",
       "npmDepsHashes": {
         "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        "x86_64-linux": "sha256-dxYGqQkayBb6ZM1uI2gGH0EqotBBNeN4ThjlBDqGNvk="
       }
     },
     "24f8d28": {
