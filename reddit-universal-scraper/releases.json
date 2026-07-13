@@ -1,10 +1,15 @@
 {
-  "latest": "1a537ff",
+  "latest": "a174884",
   "versions": {
     "1a537ff": {
       "version": "0-unstable-2026-06-11",
       "rev": "1a537ff3b1306c0d414a277f4720fe21e09737a4",
       "hash": "sha256-SIL7+CIwWuMZi1uIjRydMyMsvN9NJO+GJT3eyhXA/f4="
+    },
+    "a174884": {
+      "version": "0-unstable-2026-07-13",
+      "rev": "a174884380c3b3945870a444b666a84e312ffe04",
+      "hash": "sha256-huLhEx1BVVU8TCOJHKenCR19suXRH1hdx/qL+2eab/k="
     }
   }
 }
