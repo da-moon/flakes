@@ -29,45 +29,25 @@
 
       homeManagerModule =
         { config, lib, pkgs, ... }:
-        let
-          cfg = config.programs.elio;
-        in
         {
-          options.programs.elio = {
-            enable = lib.mkEnableOption "elio terminal music player";
-
-            package = lib.mkOption {
-              type = lib.types.package;
-              default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-              defaultText = lib.literalExpression "inputs.elio.packages.\${pkgs.stdenv.hostPlatform.system}.default";
-              description = "The elio package to use.";
-            };
-
-            enableBashIntegration = lib.mkEnableOption "bash integration" // {
-              default = true;
-            };
-
-            enableZshIntegration = lib.mkEnableOption "zsh integration";
-
-            enableFishIntegration = lib.mkEnableOption "fish integration";
-          };
-
-          config = lib.mkIf cfg.enable {
-            home.packages = [ cfg.package ];
-
-            programs.bash.initExtra = lib.mkIf cfg.enableBashIntegration ''
-              eval "$(${cfg.package}/bin/elio shell init bash)"
-            '';
-
-            programs.zsh.initExtra = lib.mkIf cfg.enableZshIntegration ''
-              eval "$(${cfg.package}/bin/elio shell init zsh)"
-            '';
-
-            programs.fish.interactiveShellInit = lib.mkIf cfg.enableFishIntegration ''
-              ${cfg.package}/bin/elio shell init fish | source
-            '';
-          };
+          imports = [ ./modules/home-manager.nix ];
+          config.programs.elio.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
+
+      nixosModule =
+        { config, lib, pkgs, ... }:
+        {
+          imports = [ ./modules/nixos.nix ];
+          config.programs.elio.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        };
+
+      mkElioConfigLib =
+        { pkgs, cfg }:
+        (import ./modules/elio-lib.nix { inherit pkgs; }).mkElioConfig { inherit cfg; };
+
+      mkElioThemeLib =
+        { pkgs, cfg }:
+        (import ./modules/elio-lib.nix { inherit pkgs; }).mkElioTheme { inherit cfg; };
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -98,53 +78,53 @@
                 or (throw "Missing hashes entry for system: ${system}");
           in
           pkgs.stdenv.mkDerivation rec {
-          pname = "elio";
-          inherit version;
+            pname = "elio";
+            inherit version;
 
-          meta = with lib; {
-            description = "Elio - Snappy, batteries-included terminal file manager with rich previews, inline images, bulk actions, and trash support";
-            homepage = "https://github.com/elio-fm/elio";
-            license = licenses.mit;
-            mainProgram = "elio";
-            platforms = [ "x86_64-linux" ];
-            maintainers = [ ];
+            meta = with lib; {
+              description = "Elio - Snappy, batteries-included terminal file manager with rich previews, inline images, bulk actions, and trash support";
+              homepage = "https://github.com/elio-fm/elio";
+              license = licenses.mit;
+              mainProgram = "elio";
+              platforms = [ "x86_64-linux" ];
+              maintainers = [ ];
+            };
+
+            src = pkgs.fetchurl {
+              url = "https://github.com/elio-fm/elio/releases/download/v${version}/elio-${version}-${currentRelease.target}.tar.gz";
+              hash = binarySha256;
+            };
+
+            sourceRoot = "elio-${version}-${currentRelease.target}";
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+
+            nativeBuildInputs = lib.optionals currentRelease.needsAutoPatchelf [
+              pkgs.autoPatchelfHook
+            ];
+
+            buildInputs = lib.optionals currentRelease.needsAutoPatchelf [
+              pkgs.stdenv.cc.cc.lib
+            ];
+
+            installPhase = ''
+              runHook preInstall
+              install -m755 -D elio $out/bin/elio
+
+              mkdir -p $out/share/applications
+              install -m644 packaging/linux/elio.desktop $out/share/applications/elio.desktop
+
+              for size in 48 128 256 512; do
+                mkdir -p $out/share/icons/hicolor/''${size}x''${size}/apps
+                install -m644 packaging/linux/icons/hicolor/''${size}x''${size}/apps/elio.png \
+                  $out/share/icons/hicolor/''${size}x''${size}/apps/elio.png
+              done
+
+              runHook postInstall
+            '';
+
           };
-
-          src = pkgs.fetchurl {
-            url = "https://github.com/elio-fm/elio/releases/download/v${version}/elio-${version}-${currentRelease.target}.tar.gz";
-            hash = binarySha256;
-          };
-
-          sourceRoot = "elio-${version}-${currentRelease.target}";
-          dontBuild = true;
-          dontConfigure = true;
-          dontStrip = true;
-
-          nativeBuildInputs = lib.optionals currentRelease.needsAutoPatchelf [
-            pkgs.autoPatchelfHook
-          ];
-
-          buildInputs = lib.optionals currentRelease.needsAutoPatchelf [
-            pkgs.stdenv.cc.cc.lib
-          ];
-
-          installPhase = ''
-            runHook preInstall
-            install -m755 -D elio $out/bin/elio
-
-            mkdir -p $out/share/applications
-            install -m644 packaging/linux/elio.desktop $out/share/applications/elio.desktop
-
-            for size in 48 128 256 512; do
-              mkdir -p $out/share/icons/hicolor/''${size}x''${size}/apps
-              install -m644 packaging/linux/icons/hicolor/''${size}x''${size}/apps/elio.png \
-                $out/share/icons/hicolor/''${size}x''${size}/apps/elio.png
-            done
-
-            runHook postInstall
-          '';
-
-        };
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
@@ -175,6 +155,15 @@
       homeManagerModules = {
         default = homeManagerModule;
         elio = homeManagerModule;
+      };
+
+      nixosModules = {
+        default = nixosModule;
+        elio = nixosModule;
+      };
+
+      lib = {
+        inherit mkElioConfigLib mkElioThemeLib;
       };
     };
 }
