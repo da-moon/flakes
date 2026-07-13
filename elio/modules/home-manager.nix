@@ -1,12 +1,11 @@
 # home-manager module for elio.
-self:
 { config, lib, pkgs, ... }:
 let
   helpers = import ./elio-lib.nix { inherit pkgs; };
   cfg = config.programs.elio;
 in
 {
-  imports = [ (import ./elio-options.nix { inherit self; }) ];
+  imports = [ ./elio-options.nix ];
 
   config = lib.mkIf cfg.enable {
     home.packages = [ cfg.package ];

@@ -1,5 +1,4 @@
 # Shared typed options for the elio home-manager and NixOS modules.
-self:
 { config, lib, pkgs, ... }:
 let
   inherit (lib)
@@ -58,8 +57,6 @@ in
 
     package = mkOption {
       type = types.package;
-      default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      defaultText = lib.literalExpression "inputs.elio.packages.\${pkgs.stdenv.hostPlatform.system}.default";
       description = "The elio package to use.";
     };
 
