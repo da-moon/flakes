@@ -1,5 +1,5 @@
 {
-  description = "omp - AI coding agent CLI packaged from GitHub releases";
+  description = "omp - AI coding agent CLI packaged from GitHub releases, with Home Manager and NixOS modules";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -8,6 +8,7 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       flake-utils,
       ...
@@ -17,6 +18,11 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      # Overlay consumed by other flakes that want `omp` in nixpkgs.
+      overlay = final: prev: {
+        omp = self.packages.${prev.stdenv.hostPlatform.system}.omp or (self.packages.${prev.stdenv.hostPlatform.system}.default);
+      };
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -99,7 +105,8 @@
         packages = {
           default = latestPkg;
           omp = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {
@@ -112,5 +119,11 @@
           };
         };
       }
-    );
+    )
+    // {
+      overlays.default = overlay;
+
+      homeManagerModules.default = ./modules/home-manager.nix;
+      nixosModules.default = ./modules/nixos.nix;
+    };
 }
