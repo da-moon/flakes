@@ -1,5 +1,5 @@
 {
-  "latest": "1.19.0",
+  "latest": "1.20.0",
   "versions": {
     "1.15.0": {
       "version": "1.15.0",
@@ -35,6 +35,15 @@
       "npmDepsHashes": {
         "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "x86_64-linux": "sha256-X5QyEXaI/qkcFNapEIcjqYcC7Y3MVyfv7fly+2vB+gg="
+      }
+    },
+    "1.20.0": {
+      "version": "1.20.0",
+      "rev": "career-ops-v1.20.0",
+      "hash": "sha256-C7N2RSRdXAw9L63YewdkIz8JgURS/K6ojH7yLKtxC54=",
+      "npmDepsHashes": {
+        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "x86_64-linux": "sha256-f0XFU0zzQ6Z5p0UnF2lu3JILSPQF1Uzhy1MRXcrKEXA="
       }
     }
   }
