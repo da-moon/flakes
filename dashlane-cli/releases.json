@@ -1,0 +1,14 @@
+{
+  "latest": "6.2628.1",
+  "versions": {
+    "6.2628.1": {
+      "version": "6.2628.1",
+      "rev": "6.2628.1",
+      "hashes": {
+        "x86_64-linux": "sha256-mDq2Q+Ef4tVrFm5w/bWQcsDQMVyYCDwrKXQqaBXkWpM=",
+        "aarch64-darwin": "sha256-XggdEN+RzkgqE9M/PQdKralzIu+ZD0uniICVn3z/uww=",
+        "x86_64-darwin": "sha256-czGG556heoLqRrrRNjinU/3lO5LEfuh666LtnzSOU8A="
+      }
+    }
+  }
+}
