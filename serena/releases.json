@@ -1,0 +1,12 @@
+{
+  "latest": "1.5.3",
+  "versions": {
+    "1.5.3": {
+      "narHash": "sha256-8RHjJG8loqC742LoFK7O3MK7JDEhb1qw8VMBhzj04MM=",
+      "rev": "2449313c0d7427275c4c66aedff7d4881782f713",
+      "schemaSha256": "6b098fff076a14582fa92cac93cdf3e49704fb143970b678174a1bff72678aa9",
+      "tag": "v1.5.3",
+      "version": "1.5.3"
+    }
+  }
+}
