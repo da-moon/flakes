@@ -1,22 +1,52 @@
 {
-  description = "command-code packaged as a Nix flake (npm tarball, offline install)";
+  description = "command-code packaged as a Nix flake (npm tarball, offline install) with Home Manager and project modules";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs =
+    { self
+    , nixpkgs
+    , flake-utils
+    , home-manager
+    , flake-parts
+    , ...
+    }:
     let
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
       # NOT hand-edit the version data in this file.
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
+
+      linuxSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+
+      homeManagerModule =
+        { config, lib, pkgs, ... }:
+        {
+          imports = [ ./modules/home-manager.nix ];
+          config.programs.command-code.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        };
+
+      flakePartsModule = import ./flake-modules/default.nix {
+        mkProjectIntegration = import ./modules/project-integration.nix;
+      };
     in
-    flake-utils.lib.eachDefaultSystem (system:
+    flake-utils.lib.eachSystem linuxSystems (
+      system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        lib = pkgs.lib;
         nodejs = pkgs.nodejs_22;
         pname = "command-code";
 
@@ -153,15 +183,46 @@ NODE
             value = mk key releases.versions.${key};
           }) (builtins.attrNames releases.versions)
         );
+
+        moduleCheck = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            homeManagerModule
+            {
+              home.username = "cc-test";
+              home.homeDirectory = "/home/cc-test";
+              home.stateVersion = "24.11";
+              programs.home-manager.enable = true;
+              programs.command-code.enable = true;
+            }
+          ];
+        };
       in
       {
         packages = versionedPackages // {
           default = latestPkg;
           command-code = latestPkg;
         };
+
         apps.default = {
           type = "app";
           program = "${latestPkg}/bin/command-code";
         };
-      });
+
+        checks = {
+          module-eval = moduleCheck.activationPackage;
+        };
+      }
+    )
+    // {
+      homeManagerModules = {
+        default = homeManagerModule;
+        command-code = homeManagerModule;
+      };
+
+      flakeModules = {
+        default = flakePartsModule;
+        command-code = flakePartsModule;
+      };
+    };
 }

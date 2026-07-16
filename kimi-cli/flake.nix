@@ -1,22 +1,34 @@
 {
-  description = "Kimi Code - native Linux CLI packaged as a Nix flake";
+  description = "Kimi Code - native Linux CLI packaged as a Nix flake with Home Manager hook module";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    {
-      nixpkgs,
-      flake-utils,
-      ...
+    { self
+    , nixpkgs
+    , flake-utils
+    , home-manager
+    , ...
     }:
     let
       linuxSystems = [
         "x86_64-linux"
         "aarch64-linux"
       ];
+
+      homeManagerModule =
+        { config, lib, pkgs, ... }:
+        {
+          imports = [ ./modules/home-manager.nix ];
+          config.programs.kimi-cli.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        };
     in
     flake-utils.lib.eachSystem linuxSystems (
       system:
@@ -94,6 +106,19 @@
           key: entry: lib.nameValuePair "kimi-cli_${sanitizeKey key}" (mk key entry)
         ) releases.versions;
 
+        moduleCheck = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            homeManagerModule
+            {
+              home.username = "kimi-test";
+              home.homeDirectory = "/home/kimi-test";
+              home.stateVersion = "24.11";
+              programs.home-manager.enable = true;
+              programs.kimi-cli.enable = true;
+            }
+          ];
+        };
       in
       {
         packages = {
@@ -111,6 +136,16 @@
             program = "${latestPkg}/bin/kimi";
           };
         };
+
+        checks = {
+          module-eval = moduleCheck.activationPackage;
+        };
       }
-    );
+    )
+    // {
+      homeManagerModules = {
+        default = homeManagerModule;
+        kimi-cli = homeManagerModule;
+      };
+    };
 }
