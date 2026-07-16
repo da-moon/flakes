@@ -157,7 +157,9 @@
                 let
                   hash = releases.versions.${key}.outputHashBySystem.${system} or null;
                 in
-                hash != null && hash != pkgs.lib.fakeHash
+                # fakeHash entries must stay exposed: update-version.sh builds the
+                # attr to learn the real hash from nix's "got:" mismatch line.
+                hash != null
               ) (builtins.attrNames releases.versions)
             )
         );
