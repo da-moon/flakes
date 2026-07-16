@@ -5,6 +5,7 @@ let
     mkOption
     types
     ;
+  hookEvents = (import ./config-schema.nix { inherit lib; }).hookEvents;
 in
 types.submodule {
   options = {
@@ -18,10 +19,11 @@ types.submodule {
     };
 
     event = mkOption {
-      type = types.str;
+      type = types.enum hookEvents;
       default = "PreToolUse";
       description = ''
-        The Kimi hook event this hook belongs to.
+        The Kimi hook event (stage) this hook belongs to. One of the 16
+        documented events: ${builtins.concatStringsSep ", " hookEvents}.
       '';
     };
 
@@ -29,16 +31,17 @@ types.submodule {
       type = types.nullOr types.str;
       default = null;
       description = ''
-        Optional matcher string (e.g. "WebSearch", "FetchURL"). When
-        null, the hook runs for every tool in the event.
+        Optional regular expression to filter event targets (e.g. "Bash",
+        "startup|resume"). When null, the hook runs for every target in the
+        event.
       '';
     };
 
     timeout = mkOption {
-      type = types.int;
-      default = 5;
+      type = types.ints.between 1 600;
+      default = 30;
       description = ''
-        Hook timeout in seconds.
+        Hook timeout in seconds (documented range 1-600, upstream default 30).
       '';
     };
 

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "test-server": {
+      "bearerTokenEnvVar": "TEST_TOKEN",
+      "url": "https://example.com/mcp"
+    }
+  }
+}
