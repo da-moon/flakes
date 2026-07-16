@@ -1,4 +1,4 @@
-# Typed options for the kimi-cli Home Manager module.
+# Typed options for the kimi-code Home Manager module.
 { config, lib, pkgs, ... }:
 let
   inherit (lib)
@@ -11,12 +11,12 @@ let
   schema = import ./config-schema.nix { inherit lib; };
 in
 {
-  options.programs.kimi-cli = {
+  options.programs.kimi-code = {
     enable = mkEnableOption "Kimi Code CLI";
 
     package = mkOption {
       type = types.package;
-      description = "The kimi-cli package to use.";
+      description = "The kimi-code package to use.";
     };
 
     settings = mkOption {

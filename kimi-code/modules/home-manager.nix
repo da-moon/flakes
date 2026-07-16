@@ -1,11 +1,11 @@
-# Home Manager module for kimi-cli: declarative management of the global
+# Home Manager module for kimi-code: declarative management of the global
 # ~/.kimi-code data directory (config.toml, tui.toml, mcp.json, hooks).
 { config, lib, pkgs, ... }:
 let
   helpers = import ./lib.nix { inherit pkgs; };
   render = import ./render.nix { inherit lib; };
   schema = import ./config-schema.nix { inherit lib; };
-  cfg = config.programs.kimi-cli;
+  cfg = config.programs.kimi-code;
 
   hooksPackage = helpers.mkHooksPackage { hooks = cfg.hooks; };
   managedHooksJson = helpers.mkManagedHooksJson {
@@ -31,7 +31,7 @@ let
         {
           assertion = (s.command == null) != (s.url == null);
           message = ''
-            programs.kimi-cli.mcpServers."${name}": exactly one of `command`
+            programs.kimi-code.mcpServers."${name}": exactly one of `command`
             (stdio server) or `url` (HTTP/SSE server) must be set.
           '';
         }

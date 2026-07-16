@@ -1,4 +1,4 @@
-# kimi-cli flake
+# kimi-code flake
 
 [Kimi Code](https://www.kimi.com/code/docs/en/) CLI packaged as a Nix flake,
 with Nix-managed configuration at two levels:
@@ -15,13 +15,13 @@ versions; `scripts/update-version.sh` appends new ones).
 
 ## Outputs
 
-- `packages.{default, kimi-cli, kimi-cli_<version>}` — the `kimi` binary
-  (one versioned attr per `releases.json` entry, e.g. `kimi-cli_0_26_0`).
+- `packages.{default, kimi-code, kimi-code_<version>}` — the `kimi` binary
+  (one versioned attr per `releases.json` entry, e.g. `kimi-code_0_26_0`).
 - `apps.{default, kimi}` — `nix run` the latest package.
-- `homeManagerModules.{default, kimi-cli, kimi-cli_<version>}` — the
+- `homeManagerModules.{default, kimi-code, kimi-code_<version>}` — the
   Home Manager module; the versioned aliases pair the module with a pinned
   package version explicitly.
-- `flakeModules.{default, kimi-cli}` — the flake-parts project module.
+- `flakeModules.{default, kimi-code}` — the flake-parts project module.
 - `lib.{mkProjectIntegration, mkGlobalConfig, mkProjectConfig, configSchema,
   tuiConfigSchema, projectModule}` — consumer API.
 - `checks.{module-eval, config-merge, kimi-project-integration,
@@ -31,23 +31,23 @@ versions; `scripts/update-version.sh` appends new ones).
 
 ```nix
 {
-  inputs.kimi-cli = {
-    url = "git+https://github.com/da-moon/flakes.git?dir=kimi-cli";
+  inputs.kimi-code = {
+    url = "git+https://github.com/da-moon/flakes.git?dir=kimi-code";
     inputs = {
       nixpkgs.follows = "nixpkgs";
       flake-utils.follows = "flake-utils";
     };
   };
 
-  outputs = { home-manager, kimi-cli, ... }: {
+  outputs = { home-manager, kimi-code, ... }: {
     homeConfigurations.you = home-manager.lib.homeManagerConfiguration {
       # ...
       modules = [
-        kimi-cli.homeManagerModules.kimi-cli_0_26_0
+        kimi-code.homeManagerModules.kimi-code_0_26_0
         ({ pkgs, ... }: {
-          programs.kimi-cli = {
+          programs.kimi-code = {
             enable = true;
-            package = kimi-cli.packages.${pkgs.system}.kimi-cli_0_26_0;
+            package = kimi-code.packages.${pkgs.system}.kimi-code_0_26_0;
 
             # ~/.kimi-code/config.toml (declarative core, see semantics below)
             settings = {
@@ -154,13 +154,13 @@ into the live files with declarative-core semantics:
 
 ```nix
 {
-  inputs.kimi-cli.url = "git+https://github.com/da-moon/flakes.git?dir=kimi-cli";
+  inputs.kimi-code.url = "git+https://github.com/da-moon/flakes.git?dir=kimi-code";
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
 
-  outputs = inputs@{ flake-parts, kimi-cli, ... }:
+  outputs = inputs@{ flake-parts, kimi-code, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" ];
-      imports = [ kimi-cli.flakeModules.default ];
+      imports = [ kimi-code.flakeModules.default ];
 
       kimi.project = {
         enable = true;
@@ -211,10 +211,10 @@ without isolation (project entries override user-level ones by name).
 
 ```nix
 {
-  outputs = { self, nixpkgs, kimi-cli, ... }:
+  outputs = { self, nixpkgs, kimi-code, ... }:
     let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      integration = kimi-cli.lib.mkProjectIntegration {
+      integration = kimi-code.lib.mkProjectIntegration {
         inherit pkgs;
         sourceRoot = self.outPath;      # enables the drift check
         projectRoot = ".";              # or "packages/api"

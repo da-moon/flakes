@@ -117,8 +117,8 @@ verify_build() {
   local sanitized_key="$1"
   log_info "Verifying build..."
   local out_path
-  if ! out_path="$(cd "$pkg_dir" && nix build ".#kimi-cli_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
-    log_error "nix build failed for kimi-cli_${sanitized_key}"
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#kimi-code_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)"; then
+    log_error "nix build failed for kimi-code_${sanitized_key}"
     return 1
   fi
   if [ -z "$out_path" ] || [ ! -x "$out_path/bin/kimi" ]; then
@@ -185,7 +185,7 @@ print_usage() {
   cat <<'EOF'
 Usage: ./scripts/update-version.sh [OPTIONS]
 
-Appends the newest (or an explicit) kimi-cli release to releases.json as a new
+Appends the newest (or an explicit) kimi-code release to releases.json as a new
 version-table entry (keyed by version) and sets .latest to it. Existing entries
 are preserved so consumers can still select past versions.
 
@@ -328,7 +328,7 @@ main() {
 
   maybe_git_commit "chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}" "releases.json"
 
-  log_info "Successfully appended kimi-cli $latest_version (latest was $current_version)"
+  log_info "Successfully appended kimi-code $latest_version (latest was $current_version)"
 }
 
 main "$@"

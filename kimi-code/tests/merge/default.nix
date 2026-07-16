@@ -136,7 +136,7 @@ in
 
       [[hooks]]
       event = "PreToolUse"
-      command = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-kimi-cli-hooks/bin/redirect-web-tools.sh"
+      command = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-kimi-code-hooks/bin/redirect-web-tools.sh"
       timeout = 5
       EOF
 

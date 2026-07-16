@@ -48,7 +48,7 @@
         }:
         {
           imports = [ ./modules/home-manager.nix ];
-          config.programs.kimi-cli.package =
+          config.programs.kimi-code.package =
             lib.mkDefault
               self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
@@ -56,7 +56,7 @@
       # One versioned alias per releases.json key (serena convention): lets a
       # pinned consumer pair the module with its package version explicitly.
       versionedHomeManagerModules = nixpkgs.lib.mapAttrs' (
-        key: _: nixpkgs.lib.nameValuePair "kimi-cli_${sanitizeKey key}" homeManagerModule
+        key: _: nixpkgs.lib.nameValuePair "kimi-code_${sanitizeKey key}" homeManagerModule
       ) releases.versions;
 
       mkProjectIntegration =
@@ -119,7 +119,7 @@
 
         releasePlatform = releasePlatformBySystem.${system};
 
-        # Builder: derive a kimi-cli package from one releases.json entry.
+        # Builder: derive a kimi-code package from one releases.json entry.
         mk =
           key: entry:
           let
@@ -127,7 +127,7 @@
             binarySha256 = entry.hashes.${system};
           in
           pkgs.stdenv.mkDerivation rec {
-            pname = "kimi-cli";
+            pname = "kimi-code";
             inherit version;
 
             meta = with lib; {
@@ -169,9 +169,9 @@
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-        # One `kimi-cli_<sanitized-key>` package per entry in the table.
+        # One `kimi-code_<sanitized-key>` package per entry in the table.
         versionPackages = lib.mapAttrs' (
-          key: entry: lib.nameValuePair "kimi-cli_${sanitizeKey key}" (mk key entry)
+          key: entry: lib.nameValuePair "kimi-code_${sanitizeKey key}" (mk key entry)
         ) releases.versions;
 
         # HM module evaluation exercising every typed surface.
@@ -185,7 +185,7 @@
                 if pkgs.stdenv.hostPlatform.isDarwin then "/Users/kimi-test" else "/home/kimi-test";
               home.stateVersion = "24.11";
               programs.home-manager.enable = true;
-              programs.kimi-cli = {
+              programs.kimi-code = {
                 enable = true;
                 settings = {
                   defaultModel = "kimi-code/k3";
@@ -300,7 +300,7 @@
       {
         packages = {
           default = latestPkg;
-          kimi-cli = latestPkg;
+          kimi-code = latestPkg;
         }
         // versionPackages;
 
@@ -325,13 +325,13 @@
     // {
       homeManagerModules = {
         default = homeManagerModule;
-        kimi-cli = homeManagerModule;
+        kimi-code = homeManagerModule;
       }
       // versionedHomeManagerModules;
 
       flakeModules = {
         default = flakePartsModule;
-        kimi-cli = flakePartsModule;
+        kimi-code = flakePartsModule;
       };
 
       lib = {

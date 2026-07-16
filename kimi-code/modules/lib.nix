@@ -26,7 +26,7 @@ let
   mkHooksPackage =
     { hooks }:
     pkgs.symlinkJoin {
-      name = "kimi-cli-hooks";
+      name = "kimi-code-hooks";
       paths = map (h: mkHookScript { inherit (h) name script runtimeInputs; }) hooks;
     };
 

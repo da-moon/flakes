@@ -1,4 +1,4 @@
-# Project-level integration for kimi-cli.
+# Project-level integration for kimi-code.
 #
 # Factory used by the flake-parts module (flake-modules/project.nix) and by
 # plain consuming flakes via lib.mkProjectIntegration. Manages the project
@@ -9,7 +9,7 @@
 # declarative config.toml / tui.toml / mcp.json / [[hooks]] (gitignored).
 {
   pkgs
-, kimiPackage # default kimi-cli package (dependency-injected by flake.nix)
+, kimiPackage # default kimi-code package (dependency-injected by flake.nix)
 , sourceRoot ? null # consuming flake's self.outPath (enables the drift check)
 , projectRoot ? "."
 , package ? null

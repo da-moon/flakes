@@ -1,7 +1,7 @@
-# Reusable flake-parts project module for kimi-cli.
+# Reusable flake-parts project module for kimi-code.
 #
 # A consuming project flake does:
-#   imports = [ inputs.kimi-cli.flakeModules.default ];
+#   imports = [ inputs.kimi-code.flakeModules.default ];
 #   kimi.project = {
 #     enable = true;
 #     mcpServers = { ... };
@@ -108,7 +108,7 @@ in
         package = mkOption {
           type = types.nullOr types.package;
           default = kimiPackage pkgs;
-          description = "The kimi-cli package to expose in the project shell.";
+          description = "The kimi-code package to expose in the project shell.";
         };
 
         extraPackages = mkOption {

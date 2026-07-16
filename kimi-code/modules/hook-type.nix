@@ -1,4 +1,4 @@
-# Shared hook submodule type for kimi-cli (does not need pkgs).
+# Shared hook submodule type for kimi-code (does not need pkgs).
 { lib }:
 let
   inherit (lib)
