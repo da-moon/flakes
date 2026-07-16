@@ -40,6 +40,7 @@
 
       flakePartsModule = import ./flake-modules/default.nix {
         mkProjectIntegration = import ./modules/project-integration.nix;
+        commandCodePackage = pkgs: self.packages.${pkgs.stdenv.hostPlatform.system}.default;
       };
     in
     flake-utils.lib.eachSystem linuxSystems (
