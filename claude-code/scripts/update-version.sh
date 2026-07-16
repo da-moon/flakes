@@ -14,6 +14,8 @@ readonly DOWNLOAD_BASE_URL="https://downloads.claude.ai/claude-code-releases"
 declare -Ar SYSTEM_TO_RELEASE_PLATFORM=(
   [x86_64-linux]="linux-x64"
   [aarch64-linux]="linux-arm64"
+  [x86_64-darwin]="darwin-x64"
+  [aarch64-darwin]="darwin-arm64"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

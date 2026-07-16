@@ -6,7 +6,9 @@
       "rev": "0.1.9",
       "hashes": {
         "x86_64-linux": "sha256-gVj39jB2CmKQYuyHI55vZcE784l71zLaZOisB1q0EB8=",
-        "aarch64-linux": "sha256-ENmbG7/VdW/luOZ3dc6I5JW2qB44xb2y+qRJ+atVmBM="
+        "aarch64-linux": "sha256-ENmbG7/VdW/luOZ3dc6I5JW2qB44xb2y+qRJ+atVmBM=",
+        "x86_64-darwin": "sha256-FhY62KFjX49VHUZDvxrVlIuxry9NeuSwSfOH4CgRR1E=",
+        "aarch64-darwin": "sha256-5HAAfn0L5PlvFboAsh6g6Q3SbfA7O+pLtUf0Bgcv714="
       }
     },
     "0.1.10": {
@@ -14,7 +16,9 @@
       "rev": "0.1.10",
       "hashes": {
         "x86_64-linux": "sha256-fv2dU1Rrae1syEpH1cCO56cEHuh6uV5zEP2nCGCKUJM=",
-        "aarch64-linux": "sha256-pQwVSXCTSvPPn9K+xsilP/dvJbDE2eeMKGzkvDvKCt8="
+        "aarch64-linux": "sha256-pQwVSXCTSvPPn9K+xsilP/dvJbDE2eeMKGzkvDvKCt8=",
+        "x86_64-darwin": "sha256-z9dPd3vn3M6+DtH8SyZPjE37DlLPkp2IrN6FNlxOKWE=",
+        "aarch64-darwin": "sha256-pKhozt8vuV8rOvLcnazyNe7wg5jwcDh7mgLmX68fk+M="
       }
     }
   }

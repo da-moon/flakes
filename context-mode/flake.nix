@@ -1,5 +1,5 @@
 {
-  description = "Context Mode - MCP plugin for context-efficient coding on Linux";
+  description = "Context Mode - cross-platform MCP plugin for context-efficient coding";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,12 +28,12 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         lib = nixpkgs.lib;
 
-        # Use Node 22 on Linux so runtime falls back to built-in node:sqlite
+        # Use Node 22 so runtime falls back to built-in node:sqlite
         # instead of needing the optional better-sqlite3 native addon.
         pname = "context-mode";
         pkgs = import nixpkgs {
@@ -39,6 +41,26 @@
           config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ pname ];
         };
         nodejs = pkgs.nodejs_22;
+        dependencyPlatform =
+          {
+            "x86_64-linux" = {
+              os = "linux";
+              cpu = "x64";
+            };
+            "aarch64-linux" = {
+              os = "linux";
+              cpu = "arm64";
+            };
+            "x86_64-darwin" = {
+              os = "darwin";
+              cpu = "x64";
+            };
+            "aarch64-darwin" = {
+              os = "darwin";
+              cpu = "arm64";
+            };
+          }
+          .${system};
 
         # Builder: derive a context-mode package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/src-url/hash(es)
@@ -66,7 +88,7 @@
 
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
-              outputHash = entry.npmDepsHash;
+              outputHash = entry.npmDepsHashes.${system};
 
               buildPhase = ''
                 runHook preBuild
@@ -107,7 +129,9 @@
                   fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
                 '
 
-                pnpm install --prod --ignore-scripts --shamefully-hoist
+                pnpm install --prod --ignore-scripts --shamefully-hoist \
+                  --os ${dependencyPlatform.os} \
+                  --cpu ${dependencyPlatform.cpu}
 
                 runHook postBuild
               '';
@@ -128,7 +152,7 @@
               homepage = "https://github.com/mksglu/context-mode";
               license = licenses.elastic20;
               mainProgram = "context-mode";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -149,13 +173,15 @@
                 --add-flags "$out/lib/${pname}/cli.bundle.mjs" \
                 --set NODE_PATH "$out/lib/${pname}/node_modules" \
                 --set NODE_ENV "production" \
-                --prefix PATH : ${lib.makeBinPath [
-                  pkgs.git
-                  pkgs.bash
-                  pkgs.coreutils
-                  pkgs.findutils
-                  pkgs.ripgrep
-                ]}
+                --prefix PATH : ${
+                  lib.makeBinPath [
+                    pkgs.git
+                    pkgs.bash
+                    pkgs.coreutils
+                    pkgs.findutils
+                    pkgs.ripgrep
+                  ]
+                }
 
               cat > $out/bin/context-mode <<'EOF'
               #!/usr/bin/env bash
@@ -197,10 +223,20 @@
 
         # One `context-mode_<sanitized-key>` package per entry in the table.
         versionPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "context-mode_${sanitize key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "context-mode_${sanitize key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.npmDepsHashes.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {

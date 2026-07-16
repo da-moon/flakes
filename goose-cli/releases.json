@@ -5,7 +5,9 @@
       "version": "1.39.0",
       "rev": "v1.39.0",
       "prebuiltHashes": {
-        "x86_64-linux": "sha256-9K0IZ0MNNCDqYLw7s2po9vVmnAYM5t6VL+mifYp+B2c="
+        "x86_64-linux": "sha256-9K0IZ0MNNCDqYLw7s2po9vVmnAYM5t6VL+mifYp+B2c=",
+        "x86_64-darwin": "sha256-gYILbaYXFyE5p6UzCTCudNXyBSM2EClnnhet7ncRpNU=",
+        "aarch64-darwin": "sha256-JH659gP0PFwctVj+PhbEZp+AJUUT+9zwKib/yZZygwc="
       },
       "srcHash": "sha256-7CXLvfY2jYUB9IG/Z1lPiqwZ7UwIypq32ZLq1SsnHQI=",
       "cargoOutputHashes": {
@@ -17,7 +19,9 @@
       "version": "1.40.0",
       "rev": "v1.40.0",
       "prebuiltHashes": {
-        "x86_64-linux": "sha256-6aDb3L5Mde9PpM/Kl+UH9TyGuuGaPgx25oB+qqBKBbg="
+        "x86_64-linux": "sha256-6aDb3L5Mde9PpM/Kl+UH9TyGuuGaPgx25oB+qqBKBbg=",
+        "x86_64-darwin": "sha256-ZG1W0kZ4qSwlpqCeXQ1Y/XRSV4bJMPtDCmcB1IIpxJg=",
+        "aarch64-darwin": "sha256-F5IlbYlHv9N4oXSddqId+eHPW9YTydxV7eoz7DefPPQ="
       },
       "srcHash": "sha256-C3MLJOcSeAXzCWq1SQLki4ZT5nwy8g5nTUQwncpTl0o=",
       "cargoOutputHashes": {
@@ -29,7 +33,9 @@
       "version": "1.41.0",
       "rev": "v1.41.0",
       "prebuiltHashes": {
-        "x86_64-linux": "sha256-zY54RVc01ozEOrxtrOqOOK4AFg/BJFzpWcNVj9YYmKU="
+        "x86_64-linux": "sha256-zY54RVc01ozEOrxtrOqOOK4AFg/BJFzpWcNVj9YYmKU=",
+        "x86_64-darwin": "sha256-cDmeDq/gQV0ei5qHb/MZBOW3ktbpqpWNBGJWTKb6ENo=",
+        "aarch64-darwin": "sha256-GRCYR64rx/4sEkpP0G8C8pGEd7uxxNyQumIJYUJ3pnw="
       },
       "srcHash": "sha256-6hTjZnrTyFOhWLTLN/sa7IAXQVcQ/08gWz21KEGANAE=",
       "cargoOutputHashes": {
@@ -41,7 +47,9 @@
       "version": "1.43.0",
       "rev": "v1.43.0",
       "prebuiltHashes": {
-        "x86_64-linux": "sha256-qalvVZqLXyCxFZe3jkqluwubKXluxPgIykZqP1ml7CA="
+        "x86_64-linux": "sha256-qalvVZqLXyCxFZe3jkqluwubKXluxPgIykZqP1ml7CA=",
+        "x86_64-darwin": "sha256-ViECwCGkzov/kI4OMFiktT4SlQxcq66Ej2R7TRDbFYs=",
+        "aarch64-darwin": "sha256-YZvmqN5CPnEimma/WVWN0zYl2Df51q3A6uKgfx6+n+Y="
       },
       "srcHash": "sha256-lmeS+iOyZ262H9NykK3GFIEA7ipOnqnurRKPY8xbwKw=",
       "cargoOutputHashes": {

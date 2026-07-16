@@ -15,8 +15,10 @@
       "rev": "1.6.9",
       "hash": "sha256-Qykvvu3VtXtiWaA6wewk1nK1zP65RVjtAq7IdKqCXbM=",
       "outputHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-C7iZj3tjT8zuGhKBTJcBLATYKi1al3sCY3RTncPQ5vs="
+        "aarch64-darwin": "sha256-SReApNHPuUuiKCUUndz2+JjhwS1NgkbFEsIKpsJO+m8=",
+        "aarch64-linux": "sha256-ViG3sLSrYOQrtOrUuEGAmDVigtrVqqQMeupoVX/iDrg=",
+        "x86_64-darwin": "sha256-Mqf24Iy+6lMVfcHpfK25WWot/tfqqN3uMV4anCVR2+U=",
+        "x86_64-linux": "sha256-UNPdTGT4cxzYS88D19a6KLwAJ+T/zNTYg9kXfNo3FYM="
       }
     }
   }

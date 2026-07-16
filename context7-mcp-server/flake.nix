@@ -48,15 +48,18 @@
                 hash = entry.hash;
               };
 
-              nativeBuildInputs = [ nodejs pkgs.cacert ];
+              nativeBuildInputs = [
+                nodejs
+                pkgs.cacert
+              ];
               dontPatchShebangs = true;
 
               # FOD settings - allows network access, output is content-addressed
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
               # Get this hash by first building with pkgs.lib.fakeHash
-              outputHash = outputHashBySystem.${system}
-                or (throw "Missing outputHashBySystem entry for system: ${system}");
+              outputHash =
+                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
 
               buildPhase = ''
                 runHook preBuild
@@ -114,7 +117,9 @@
 
                 fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
                 NODE
-                npm install --production --ignore-scripts
+                npm install --production --ignore-scripts \
+                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
+                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
 
                 runHook postBuild
               '';
@@ -166,10 +171,20 @@
 
         # One `context7-mcp-server_<sanitized-key>` package per entry in the table.
         versionedPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "context7-mcp-server_${sanitize key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "context7-mcp-server_${sanitize key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.outputHashBySystem.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {

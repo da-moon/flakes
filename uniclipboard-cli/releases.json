@@ -1,0 +1,15 @@
+{
+  "latest": "0.18.0",
+  "versions": {
+    "0.18.0": {
+      "version": "0.18.0",
+      "rev": "0.18.0",
+      "hashes": {
+        "aarch64-darwin": "sha256-lKmVRwQUB5xGybR7x2LbeOk8qOBaXEzsKqVZi7cjNn0=",
+        "aarch64-linux": "sha256-yoXNmKilJsg3cJA8m5XC61mfrX42iWYXNRCupdm4VO8=",
+        "x86_64-darwin": "sha256-AnYKUEXSI5xpV/rerUhslUHDQvIt9IgSOKJnbtrpi48=",
+        "x86_64-linux": "sha256-Tn/49x/tWCabsr2E9kJ7qCld5ObMzTGAJtGbQU0q71g="
+      }
+    }
+  }
+}

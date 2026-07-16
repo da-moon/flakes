@@ -47,7 +47,11 @@
                 hash = entry.hash;
               };
 
-              nativeBuildInputs = [ nodejs pkgs.pnpm pkgs.cacert ];
+              nativeBuildInputs = [
+                nodejs
+                pkgs.pnpm
+                pkgs.cacert
+              ];
 
               # Don't patch shebangs in FOD - it would add store references
               # Shebangs will be patched in the main derivation
@@ -55,8 +59,8 @@
 
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
-              outputHash = outputHashBySystem.${system}
-                or (throw "Missing outputHashBySystem entry for system: ${system}");
+              outputHash =
+                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
 
               buildPhase = ''
                 runHook preBuild
@@ -101,7 +105,9 @@
 
                 # Use pnpm instead of npm because npm crashes with "double free or corruption"
                 # on aarch64-linux (Android/nix-on-droid)
-                pnpm install --prod --ignore-scripts --shamefully-hoist
+                pnpm install --prod --ignore-scripts --shamefully-hoist \
+                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
+                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
 
                 runHook postBuild
               '';
@@ -152,10 +158,20 @@
 
         # One `firecrawl-cli_<sanitized-key>` package per entry in the table.
         versionedPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "${pname}_${sanitize key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "${pname}_${sanitize key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.outputHashes.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {

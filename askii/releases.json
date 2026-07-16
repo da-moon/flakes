@@ -4,7 +4,10 @@
     "0.6.0": {
       "version": "0.6.0",
       "rev": "0.6.0",
-      "hash": "sha256-J5pIr+qUA/M0h4FPgUOX9R9ocdJtL8PVoolh+xFnJmA="
+      "hashes": {
+        "x86_64-linux": "sha256-J5pIr+qUA/M0h4FPgUOX9R9ocdJtL8PVoolh+xFnJmA=",
+        "x86_64-darwin": "sha256-AjouurLXOoTpQtO5ZISer7m17Y63njcNSbS8+2l3dUA="
+      }
     }
   }
 }

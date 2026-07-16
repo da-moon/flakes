@@ -6,10 +6,7 @@
 # honeclaw ships tagged GitHub releases, so:
 #   key     = the version (e.g. "0.12.4"), kind=tag-based
 #   version = the same version string
-#   hash    = the SRI hash of honeclaw-linux-x86_64.tar.gz
-#
-# Upstream ships only a linux-x86_64 asset (plus darwin), so the entry carries
-# a single `hash`. The version data in flake.nix is never touched — jq upserts.
+#   hashes  = per-system SRI hashes for the Linux and macOS archives
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -24,6 +21,11 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly REPO_OWNER="B-M-Capital-Research"
 readonly REPO_NAME="honeclaw"
 readonly BIN_NAME="hone-cli"
+declare -Ar ASSET_BY_SYSTEM=(
+  [x86_64-linux]="honeclaw-linux-x86_64.tar.gz"
+  [x86_64-darwin]="honeclaw-darwin-x86_64.tar.gz"
+  [aarch64-darwin]="honeclaw-darwin-aarch64.tar.gz"
+)
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -67,7 +69,9 @@ tag_to_version() {
 
 asset_url() {
   local version="$1"
-  printf 'https://github.com/%s/%s/releases/download/v%s/honeclaw-linux-x86_64.tar.gz\n' "$REPO_OWNER" "$REPO_NAME" "$version"
+  local asset="$2"
+  printf 'https://github.com/%s/%s/releases/download/v%s/%s\n' \
+    "$REPO_OWNER" "$REPO_NAME" "$version" "$asset"
 }
 
 prefetch_sha256_sri() {
@@ -229,18 +233,26 @@ main() {
     exit 0
   fi
 
-  log_info "Prefetching honeclaw-linux-x86_64.tar.gz"
-  local hash
-  hash="$(prefetch_sha256_sri "$(asset_url "$latest_version")")"
-  [ -n "$hash" ] && [ "$hash" != "null" ] || { log_error "failed to extract sha256 from prefetch output"; exit 1; }
-  log_info "x86_64-linux hash: $hash"
+  local system asset hash
+  local hashes_json='{}'
+  for system in "${!ASSET_BY_SYSTEM[@]}"; do
+    asset="${ASSET_BY_SYSTEM[$system]}"
+    log_info "Prefetching $asset ($system)"
+    hash="$(prefetch_sha256_sri "$(asset_url "$latest_version" "$asset")")"
+    [ -n "$hash" ] && [ "$hash" != "null" ] || {
+      log_error "failed to extract sha256 for $asset"
+      exit 1
+    }
+    hashes_json="$(jq -n --argjson hashes "$hashes_json" --arg system "$system" --arg hash "$hash" \
+      '$hashes + {($system): $hash}')"
+  done
 
   local entry_json
   entry_json="$(jq -n \
     --arg v "$latest_version" \
     --arg rev "$latest_version" \
-    --arg hash "$hash" \
-    '{version: $v, rev: $rev, hash: $hash}')"
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
 
   local backup
   backup="$(mktemp -t releases.json.backup.XXXXXX)"

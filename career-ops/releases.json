@@ -42,7 +42,9 @@
       "rev": "career-ops-v1.20.0",
       "hash": "sha256-C7N2RSRdXAw9L63YewdkIz8JgURS/K6ojH7yLKtxC54=",
       "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "aarch64-darwin": "sha256-8X3rS8q2f0eMwOAlBxIp5ZwSTf5A4H7ezyrErg8CMJs=",
+        "aarch64-linux": "sha256-f0XFU0zzQ6Z5p0UnF2lu3JILSPQF1Uzhy1MRXcrKEXA=",
+        "x86_64-darwin": "sha256-8X3rS8q2f0eMwOAlBxIp5ZwSTf5A4H7ezyrErg8CMJs=",
         "x86_64-linux": "sha256-f0XFU0zzQ6Z5p0UnF2lu3JILSPQF1Uzhy1MRXcrKEXA="
       }
     }

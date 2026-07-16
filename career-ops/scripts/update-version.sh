@@ -213,12 +213,11 @@ main() {
   backup="$(mktemp -t releases.json.backup.XXXXXX)"
   cp "$releases_file" "$backup"
 
-  # Preserve an existing aarch64 npmDeps hash if present, else seed a fakeHash
-  # there (that arch is not built here; its hash stays fake until built on aarch64).
-  local aarch_hash
-  aarch_hash="$(jq -r --arg k "$version" \
-    '.versions[$k].npmDepsHashes["aarch64-linux"] // empty' "$releases_file")"
-  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
+  # Preserve every known target hash. Missing targets stay hidden by the flake
+  # until this updater is run on that platform (or their hash is cross-probed).
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$version" \
+    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
 
   # 1) source hash (prefetch — deterministic, no build needed)
   log_info "Prefetching fetchFromGitHub source hash..."
@@ -236,9 +235,14 @@ main() {
     --arg h "$src_hash" \
     --arg fake "$FAKE_HASH" \
     --arg bsys "$BUILD_SYSTEM" \
-    --arg aarch "$aarch_hash" \
+    --argjson prior "$prior_hashes" \
     '{version: $v, rev: $rev, hash: $h,
-      npmDepsHashes: ({ "aarch64-linux": $aarch } + { ($bsys): $fake })}')"
+      npmDepsHashes: ({
+        "x86_64-linux": $fake,
+        "aarch64-linux": $fake,
+        "x86_64-darwin": $fake,
+        "aarch64-darwin": $fake
+      } + $prior + { ($bsys): $fake })}')"
   upsert_release_entry "$version" "$entry_json"
 
   # 2) npmDeps FOD hash (for the build system)

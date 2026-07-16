@@ -22,88 +22,86 @@
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_22;
         pname = "dd-cli";
-        patchPackageJsonExactVersions =
-          node:
-          ''
-            ${node}/bin/node <<'NODE'
-            const fs = require("fs");
+        patchPackageJsonExactVersions = node: ''
+                      ${node}/bin/node <<'NODE'
+                      const fs = require("fs");
 
-            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+                      const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
-            function escapeRegExp(value) {
-              return value
-                .split("")
-                .map((char) => ("\\^$*+?.()|{}[]".includes(char) ? "\\" + char : char))
-                .join("");
-            }
+                      function escapeRegExp(value) {
+                        return value
+                          .split("")
+                          .map((char) => ("\\^$*+?.()|{}[]".includes(char) ? "\\" + char : char))
+                          .join("");
+                      }
 
-            function exactFromPackageLock(name) {
-              if (!fs.existsSync("package-lock.json")) return null;
-              const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
-              const lockedPackage = lock.packages && lock.packages["node_modules/" + name];
-              if (lockedPackage && lockedPackage.version) return lockedPackage.version;
-              const lockedDependency = lock.dependencies && lock.dependencies[name];
-              return lockedDependency && lockedDependency.version ? lockedDependency.version : null;
-            }
+                      function exactFromPackageLock(name) {
+                        if (!fs.existsSync("package-lock.json")) return null;
+                        const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+                        const lockedPackage = lock.packages && lock.packages["node_modules/" + name];
+                        if (lockedPackage && lockedPackage.version) return lockedPackage.version;
+                        const lockedDependency = lock.dependencies && lock.dependencies[name];
+                        return lockedDependency && lockedDependency.version ? lockedDependency.version : null;
+                      }
 
-            function exactFromYarnLock(name, spec) {
-              if (!fs.existsSync("yarn.lock")) return null;
-              const selector = name + "@" + spec;
-              const stanzas = fs.readFileSync("yarn.lock", "utf8").split(/\n(?=\S)/);
-              for (const stanza of stanzas) {
-                const header = (stanza.split("\n")[0] || "").replace(/:$/, "");
-                const selectors = header
-                  .split(/,\s*/)
-                  .map((entry) => entry.trim().replace(/^"|"$/g, ""));
-                if (selectors.includes(selector)) {
-                  const match = stanza.match(/\n\s+version "([^"]+)"/);
-                  if (match) return match[1];
-                }
-              }
-              return null;
-            }
+                      function exactFromYarnLock(name, spec) {
+                        if (!fs.existsSync("yarn.lock")) return null;
+                        const selector = name + "@" + spec;
+                        const stanzas = fs.readFileSync("yarn.lock", "utf8").split(/\n(?=\S)/);
+                        for (const stanza of stanzas) {
+                          const header = (stanza.split("\n")[0] || "").replace(/:$/, "");
+                          const selectors = header
+                            .split(/,\s*/)
+                            .map((entry) => entry.trim().replace(/^"|"$/g, ""));
+                          if (selectors.includes(selector)) {
+                            const match = stanza.match(/\n\s+version "([^"]+)"/);
+                            if (match) return match[1];
+                          }
+                        }
+                        return null;
+                      }
 
-            function exactFromPnpmLock(name) {
-              if (!fs.existsSync("pnpm-lock.yaml")) return null;
-              const escapedName = escapeRegExp(name);
-              const match = fs
-                .readFileSync("pnpm-lock.yaml", "utf8")
-                .match(new RegExp("\\n\\s{4}" + escapedName + ":\\n(?:\\s{6}[^\\n]+\\n)*?\\s{6}version:\\s*([^\\s()]+)"));
-              return match ? match[1].replace(/^['"]|['"]$/g, "") : null;
-            }
+                      function exactFromPnpmLock(name) {
+                        if (!fs.existsSync("pnpm-lock.yaml")) return null;
+                        const escapedName = escapeRegExp(name);
+                        const match = fs
+                          .readFileSync("pnpm-lock.yaml", "utf8")
+                          .match(new RegExp("\\n\\s{4}" + escapedName + ":\\n(?:\\s{6}[^\\n]+\\n)*?\\s{6}version:\\s*([^\\s()]+)"));
+                        return match ? match[1].replace(/^['"]|['"]$/g, "") : null;
+                      }
 
-            function exactSpec(name, spec) {
-              if (typeof spec !== "string") return spec;
-              if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-              const locked = exactFromPackageLock(name) || exactFromYarnLock(name, spec) || exactFromPnpmLock(name);
-              if (locked) return locked;
-              const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-              return bare ? bare[1] : spec;
-            }
+                      function exactSpec(name, spec) {
+                        if (typeof spec !== "string") return spec;
+                        if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+                        const locked = exactFromPackageLock(name) || exactFromYarnLock(name, spec) || exactFromPnpmLock(name);
+                        if (locked) return locked;
+                        const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+                        return bare ? bare[1] : spec;
+                      }
 
-            function isExactInstallSpec(spec) {
-              return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-            }
+                      function isExactInstallSpec(spec) {
+                        return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                          || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+                      }
 
-            const unresolved = [];
-            for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-              for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                const next = exactSpec(name, spec);
-                pkg[field][name] = next;
-                if (typeof next === "string" && !isExactInstallSpec(next)) {
-                  unresolved.push(field + "." + name + "=" + next);
-                }
-              }
-            }
+                      const unresolved = [];
+                      for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+                        for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                          const next = exactSpec(name, spec);
+                          pkg[field][name] = next;
+                          if (typeof next === "string" && !isExactInstallSpec(next)) {
+                            unresolved.push(field + "." + name + "=" + next);
+                          }
+                        }
+                      }
 
-            if (unresolved.length > 0) {
-              throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-            }
+                      if (unresolved.length > 0) {
+                        throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+                      }
 
-            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-NODE
-          '';
+                      fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          NODE
+        '';
 
         # Builder: turns one releases.json entry into the dd-cli derivation.
         # PRESERVES the original build logic exactly; only version/src/hash(es)
@@ -135,8 +133,7 @@ NODE
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
               outputHash =
-                entry.npmDepsHashes.${system}
-                  or (throw "Missing npmDepsHashes entry for system: ${system}");
+                entry.npmDepsHashes.${system} or (throw "Missing npmDepsHashes entry for system: ${system}");
 
               buildPhase = ''
                 runHook preBuild
@@ -150,7 +147,10 @@ NODE
 
                 # Upstream's yarn.lock omits the direct typescript devDependency.
                 ${patchPackageJsonExactVersions nodejs}
-                yarn install --ignore-scripts --non-interactive
+                # Yarn Classic cannot target a foreign platform. Installing all
+                # optional platform packages makes this FOD byte-identical on
+                # Linux and Darwin; runtime packages select their native binary.
+                yarn install --ignore-scripts --ignore-platform --non-interactive
 
                 runHook postBuild
               '';
@@ -212,10 +212,20 @@ NODE
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
         versionedPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "${pname}_${sanitize key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "${pname}_${sanitize key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.npmDepsHashes.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {

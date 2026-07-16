@@ -13,9 +13,10 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,7 +27,7 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -108,40 +109,40 @@
             codeReviewGraphWheelHash = entry.hash;
           in
           py.buildPythonApplication rec {
-          inherit pname version;
+            inherit pname version;
 
-          meta = with lib; {
-            description = "Persistent incremental knowledge graph for token-efficient code reviews";
-            homepage = "https://github.com/tirth8205/code-review-graph";
-            license = licenses.mit;
-            mainProgram = "code-review-graph";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "Persistent incremental knowledge graph for token-efficient code reviews";
+              homepage = "https://github.com/tirth8205/code-review-graph";
+              license = licenses.mit;
+              mainProgram = "code-review-graph";
+              platforms = systems;
+              maintainers = [ ];
+            };
+
+            format = "wheel";
+            # The published wheel metadata lags behind the current upstream
+            # pyproject constraints, so rely on the explicit dependency set below.
+            dontCheckRuntimeDeps = true;
+
+            src = pkgs.fetchurl {
+              url = codeReviewGraphWheelUrl;
+              hash = codeReviewGraphWheelHash;
+            };
+
+            propagatedBuildInputs = [
+              fastmcp
+              py.mcp
+              py.networkx
+              py.tree-sitter
+              py."tree-sitter-language-pack"
+              py.watchdog
+            ];
+
+            doCheck = false;
+            pythonImportsCheck = [ "code_review_graph" ];
+
           };
-
-          format = "wheel";
-          # The published wheel metadata lags behind the current upstream
-          # pyproject constraints, so rely on the explicit dependency set below.
-          dontCheckRuntimeDeps = true;
-
-          src = pkgs.fetchurl {
-            url = codeReviewGraphWheelUrl;
-            hash = codeReviewGraphWheelHash;
-          };
-
-          propagatedBuildInputs = [
-            fastmcp
-            py.mcp
-            py.networkx
-            py.tree-sitter
-            py."tree-sitter-language-pack"
-            py.watchdog
-          ];
-
-          doCheck = false;
-          pythonImportsCheck = [ "code_review_graph" ];
-
-        };
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
@@ -154,7 +155,8 @@
         packages = {
           default = latestPkg;
           "code-review-graph" = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

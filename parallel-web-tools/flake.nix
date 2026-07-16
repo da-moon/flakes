@@ -13,6 +13,13 @@
       flake-utils,
     }:
     let
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
+
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
       # NOT hand-edit the version data in this file.
@@ -22,7 +29,7 @@
       # updater's sanitize_key).
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachDefaultSystem (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -31,6 +38,8 @@
         archBySystem = {
           "aarch64-linux" = "linux-arm64";
           "x86_64-linux" = "linux-x64";
+          "aarch64-darwin" = "darwin-arm64";
+          "x86_64-darwin" = "darwin-x64";
         };
 
         # Builder: derive a parallel-cli package from one releases.json entry.
@@ -41,9 +50,8 @@
           let
             version = entry.version;
 
-            # Get arch string + hash for current system, fallback to x86_64 if unknown.
-            arch = archBySystem.${system} or archBySystem."x86_64-linux";
-            sha256 = entry.hashes.${system} or entry.hashes."x86_64-linux";
+            arch = archBySystem.${system};
+            sha256 = entry.hashes.${system};
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "parallel-cli";
@@ -52,7 +60,7 @@
             meta = with pkgs.lib; {
               description = "CLI for web search, content extraction, and deep research via the Parallel API";
               homepage = "https://github.com/parallel-web/parallel-web-tools";
-              platforms = [ "aarch64-linux" "x86_64-linux" ];
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -62,11 +70,13 @@
               stripRoot = true;
             };
 
-            # autoPatchelfHook fixes ELF interpreter/rpath for NixOS
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+            # autoPatchelfHook is only for the Linux PyInstaller bundles.
+            nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
 
             # Runtime libraries needed by PyInstaller bundle
-            buildInputs = [
+            buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.stdenv.cc.cc.lib # libstdc++
               pkgs.zlib
             ];
@@ -93,9 +103,13 @@
 
         # One `parallel-cli_<key>` (and alias `parallel-web-tools_<key>`)
         # package per entry in the table.
-        versionPackages = builtins.foldl' (acc: key:
-          let pkg = mk key releases.versions.${key};
-          in acc // {
+        versionPackages = builtins.foldl' (
+          acc: key:
+          let
+            pkg = mk key releases.versions.${key};
+          in
+          acc
+          // {
             "parallel-cli_${sanitizeKey key}" = pkg;
             "parallel-web-tools_${sanitizeKey key}" = pkg;
           }

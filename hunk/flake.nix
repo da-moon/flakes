@@ -13,12 +13,14 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -39,11 +41,17 @@
             asset = "hunkdiff-linux-arm64.tar.gz";
             sourceRoot = "hunkdiff-linux-arm64";
           };
+          "x86_64-darwin" = {
+            asset = "hunkdiff-darwin-x64.tar.gz";
+            sourceRoot = "hunkdiff-darwin-x64";
+          };
+          "aarch64-darwin" = {
+            asset = "hunkdiff-darwin-arm64.tar.gz";
+            sourceRoot = "hunkdiff-darwin-arm64";
+          };
         };
 
-        systemAsset =
-          assetBySystem.${system}
-            or (throw "Unsupported system for hunk: ${system}");
+        systemAsset = assetBySystem.${system} or (throw "Unsupported system for hunk: ${system}");
 
         # Builder: derive a hunk package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/hash(es)
@@ -52,9 +60,7 @@
           key: entry:
           let
             version = entry.version;
-            binarySha256 =
-              entry.hashes.${system}
-                or (throw "Missing hash for system ${system} in hunk ${key}");
+            binarySha256 = entry.hashes.${system} or (throw "Missing hash for system ${system} in hunk ${key}");
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "hunk";
@@ -64,7 +70,7 @@
               description = "AI-friendly diff review CLI";
               homepage = "https://github.com/modem-dev/hunk";
               mainProgram = "hunk";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -78,8 +84,12 @@
             dontConfigure = true;
             dontStrip = true;
 
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+            nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              (lib.getLib pkgs.stdenv.cc.cc)
+            ];
 
             installPhase = ''
               runHook preInstall
@@ -103,7 +113,8 @@
         packages = {
           default = latestPkg;
           hunk = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

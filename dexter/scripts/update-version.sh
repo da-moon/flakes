@@ -194,12 +194,9 @@ main() {
     || { log_error "failed to prefetch source for v${target}"; exit 1; }
   log_info "  src hash: $src_hash"
 
-  # Preserve an existing aarch64 hash if present, else seed a fakeHash there
-  # (that arch is not built here; its hash stays fake until built on aarch64).
-  local aarch_hash
-  aarch_hash="$(jq -r --arg k "$target" \
-    '.versions[$k].npmDepsHashes["aarch64-linux"] // empty' "$releases_file")"
-  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$target" \
+    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
 
   # Seed the entry: real source hash + fake npmDeps hash for the build system
   # so nix reveals the real npm FOD hash on build.
@@ -212,12 +209,17 @@ main() {
      --arg hash "$src_hash" \
      --arg fake "$FAKE_HASH" \
      --arg bsys "$BUILD_SYSTEM" \
-     --arg aarch "$aarch_hash" '
+     --argjson prior "$prior_hashes" '
        .versions[$k] = {
          version: $ver,
          rev: $rev,
          hash: $hash,
-         npmDepsHashes: ({ "aarch64-linux": $aarch } + { ($bsys): $fake })
+         npmDepsHashes: ({
+           "x86_64-linux": $fake,
+           "aarch64-linux": $fake,
+           "x86_64-darwin": $fake,
+           "aarch64-darwin": $fake
+         } + $prior + { ($bsys): $fake })
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"

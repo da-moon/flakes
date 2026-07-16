@@ -6,7 +6,9 @@
       "rev": "v2026.6.9",
       "hash": "sha256-TtwDqTRtB+vX+UkgW8FIDQLwSz10mIzaHX75Lqx7ETM=",
       "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "aarch64-darwin": "sha256-v8UkibSmEl5uO1aqUBfiBvE55HV21vo5Sq3p9KKfB0M=",
+        "aarch64-linux": "sha256-MkRcd63Nt1fK5eUsv55cJgu4oNT2AvcuNjqoX3IjlPw=",
+        "x86_64-darwin": "sha256-q1ScdaamI2j7gErw831NoU6giI7aIqflFtGPmfSVzjc=",
         "x86_64-linux": "sha256-Kkpga37g2x8SKPOpsCFUnNE9fzAS09ZEfjgsi3NwK08="
       }
     }

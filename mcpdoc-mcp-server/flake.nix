@@ -7,7 +7,11 @@
   };
 
   outputs =
-    { self, nixpkgs, flake-utils }:
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
     let
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
@@ -36,7 +40,7 @@
               description = "Server llms-txt documentation over MCP";
               homepage = "https://github.com/langchain-ai/mcpdoc";
               license = licenses.mit;
-              platforms = [ "aarch64-linux" "x86_64-linux" ];
+              platforms = platforms.unix;
               mainProgram = pname;
             };
 

@@ -13,9 +13,10 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,7 +27,7 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -55,51 +56,56 @@
             rev = entry.rev;
           in
           pkgs.stdenv.mkDerivation rec {
-          pname = "reddit-universal-scraper";
-          inherit version;
+            pname = "reddit-universal-scraper";
+            inherit version;
 
-          meta = with lib; {
-            description = "Reddit scraper with dashboard, REST API, scheduled scraping, and exports";
-            homepage = "https://github.com/ksanjeev284/reddit-universal-scraper";
-            mainProgram = "reddit-universal-scraper";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "Reddit scraper with dashboard, REST API, scheduled scraping, and exports";
+              homepage = "https://github.com/ksanjeev284/reddit-universal-scraper";
+              mainProgram = "reddit-universal-scraper";
+              platforms = systems;
+              maintainers = [ ];
+            };
+
+            src = pkgs.fetchFromGitHub {
+              owner = "ksanjeev284";
+              repo = "reddit-universal-scraper";
+              inherit rev;
+              hash = entry.hash;
+            };
+
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            dontBuild = true;
+            dontConfigure = true;
+
+            postPatch = ''
+              substituteInPlace main.py \
+                --replace 'os.system("streamlit run dashboard/app.py")' \
+                          'subprocess.call(["streamlit", "run", str(Path(__file__).resolve().parent / "dashboard" / "app.py")])'
+            '';
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/lib/${pname} $out/bin
+              cp -R . $out/lib/${pname}/
+
+              makeWrapper ${pythonEnv}/bin/python $out/bin/reddit-universal-scraper \
+                --add-flags "$out/lib/${pname}/main.py" \
+                --prefix PATH : ${
+                  lib.makeBinPath [
+                    pythonEnv
+                    pkgs.ffmpeg
+                  ]
+                } \
+                --prefix PYTHONPATH : "$out/lib/${pname}"
+
+              ln -s $out/bin/reddit-universal-scraper $out/bin/reddit-scraper
+
+              runHook postInstall
+            '';
+
           };
-
-          src = pkgs.fetchFromGitHub {
-            owner = "ksanjeev284";
-            repo = "reddit-universal-scraper";
-            inherit rev;
-            hash = entry.hash;
-          };
-
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-          dontBuild = true;
-          dontConfigure = true;
-
-          postPatch = ''
-            substituteInPlace main.py \
-              --replace 'os.system("streamlit run dashboard/app.py")' \
-                        'subprocess.call(["streamlit", "run", str(Path(__file__).resolve().parent / "dashboard" / "app.py")])'
-          '';
-
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/lib/${pname} $out/bin
-            cp -R . $out/lib/${pname}/
-
-            makeWrapper ${pythonEnv}/bin/python $out/bin/reddit-universal-scraper \
-              --add-flags "$out/lib/${pname}/main.py" \
-              --prefix PATH : ${lib.makeBinPath [ pythonEnv pkgs.ffmpeg ]} \
-              --prefix PYTHONPATH : "$out/lib/${pname}"
-
-            ln -s $out/bin/reddit-universal-scraper $out/bin/reddit-scraper
-
-            runHook postInstall
-          '';
-
-        };
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 

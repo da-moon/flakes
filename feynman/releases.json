@@ -4,7 +4,11 @@
     "0.3.5": {
       "version": "0.3.5",
       "rev": "0.3.5",
-      "hash": "sha256-5JsKBXzBqMnGIQw6l/nl0GSTN9urvxA7gpaSfSaA6BI="
+      "hashes": {
+        "x86_64-linux": "sha256-5JsKBXzBqMnGIQw6l/nl0GSTN9urvxA7gpaSfSaA6BI=",
+        "x86_64-darwin": "sha256-eaD+cKe8vSbIDpTxHZsTI8ZIrJiuCenuhpnDDRLCYH8=",
+        "aarch64-darwin": "sha256-yDdSWL+1wPz9PY4EJrlAylcxUue/rf3rbYBNSwK9J5g="
+      }
     }
   }
 }

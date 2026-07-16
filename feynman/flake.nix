@@ -13,7 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [ "x86_64-linux" ];
+      systems = [
+        "x86_64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
 
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
@@ -23,11 +27,17 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
+
+        releaseBySystem = {
+          "x86_64-linux" = "linux-x64";
+          "x86_64-darwin" = "darwin-x64";
+          "aarch64-darwin" = "darwin-arm64";
+        };
 
         # Builder: derive a feynman package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/src-url/hash
@@ -36,6 +46,7 @@
           key: entry:
           let
             version = entry.version;
+            release = releaseBySystem.${system};
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "feynman";
@@ -45,25 +56,29 @@
               description = "Open source AI research agent CLI";
               homepage = "https://github.com/getcompanion-ai/feynman";
               mainProgram = "feynman";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
             src = pkgs.fetchurl {
-              url = "https://github.com/getcompanion-ai/feynman/releases/download/v${version}/feynman-${version}-linux-x64.tar.gz";
-              hash = entry.hash;
+              url = "https://github.com/getcompanion-ai/feynman/releases/download/v${version}/feynman-${version}-${release}.tar.gz";
+              hash = entry.hashes.${system};
             };
 
-            sourceRoot = "feynman-${version}-linux-x64";
+            sourceRoot = "feynman-${version}-${release}";
             dontBuild = true;
             dontConfigure = true;
             dontStrip = true;
 
             nativeBuildInputs = [
-              pkgs.autoPatchelfHook
               pkgs.makeWrapper
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
             ];
-            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              (lib.getLib pkgs.stdenv.cc.cc)
+            ];
             autoPatchelfIgnoreMissingDeps = [ "libc.musl-x86_64.so.1" ];
 
             installPhase = ''
@@ -91,7 +106,8 @@
         packages = {
           default = latestPkg;
           feynman = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

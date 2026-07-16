@@ -25,11 +25,12 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="h4ckf0r0day"
 readonly REPO_NAME="obscura"
-# Linux systems we track. Each maps to a per-arch release asset named
-# obscura-<system>.tar.gz (upstream's asset names match nix system names).
-readonly SYSTEMS=(
-  "x86_64-linux"
-  "aarch64-linux"
+# Supported systems and their upstream asset names.
+declare -Ar ASSET_BY_SYSTEM=(
+  [x86_64-linux]="obscura-x86_64-linux.tar.gz"
+  [aarch64-linux]="obscura-aarch64-linux.tar.gz"
+  [x86_64-darwin]="obscura-x86_64-macos.tar.gz"
+  [aarch64-darwin]="obscura-aarch64-macos.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -78,9 +79,9 @@ tag_to_version() {
 }
 
 asset_url() {
-  local tag="$1" system="$2"
-  printf 'https://github.com/%s/%s/releases/download/%s/obscura-%s.tar.gz\n' \
-    "$REPO_OWNER" "$REPO_NAME" "$tag" "$system"
+  local tag="$1" asset="$2"
+  printf 'https://github.com/%s/%s/releases/download/%s/%s\n' \
+    "$REPO_OWNER" "$REPO_NAME" "$tag" "$asset"
 }
 
 prefetch_sha256_sri() {
@@ -273,10 +274,11 @@ main() {
   fi
 
   # Compute one SRI hash per system from the per-arch release asset.
-  local system url sri_hash
+  local system asset url sri_hash
   local hashes_json="{}"
-  for system in "${SYSTEMS[@]}"; do
-    url="$(asset_url "$latest_tag" "$system")"
+  for system in "${!ASSET_BY_SYSTEM[@]}"; do
+    asset="${ASSET_BY_SYSTEM[$system]}"
+    url="$(asset_url "$latest_tag" "$asset")"
     log_info "Prefetching $system tarball hash..."
     sri_hash="$(prefetch_sha256_sri "$url")" || true
     if [ -z "$sri_hash" ]; then

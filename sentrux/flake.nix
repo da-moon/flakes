@@ -13,9 +13,10 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -30,13 +31,15 @@
       binaryAssetBySystem = {
         "x86_64-linux" = "sentrux-linux-x86_64";
         "aarch64-linux" = "sentrux-linux-aarch64";
+        "aarch64-darwin" = "sentrux-darwin-arm64";
       };
       grammarAssetBySystem = {
         "x86_64-linux" = "grammars-linux-x86_64.tar.gz";
         "aarch64-linux" = "grammars-linux-aarch64.tar.gz";
+        "aarch64-darwin" = "grammars-darwin-arm64.tar.gz";
       };
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -50,18 +53,13 @@
           let
             version = entry.version;
 
-            binaryAsset =
-              binaryAssetBySystem.${system}
-                or (throw "Unsupported system for sentrux: ${system}");
+            binaryAsset = binaryAssetBySystem.${system} or (throw "Unsupported system for sentrux: ${system}");
             grammarAsset =
-              grammarAssetBySystem.${system}
-                or (throw "Unsupported system for sentrux: ${system}");
+              grammarAssetBySystem.${system} or (throw "Unsupported system for sentrux: ${system}");
             binaryHash =
-              entry.binaryHashes.${system}
-                or (throw "Missing binaryHashes entry for system: ${system}");
+              entry.binaryHashes.${system} or (throw "Missing binaryHashes entry for system: ${system}");
             grammarHash =
-              entry.grammarHashes.${system}
-                or (throw "Missing grammarHashes entry for system: ${system}");
+              entry.grammarHashes.${system} or (throw "Missing grammarHashes entry for system: ${system}");
 
             grammars = pkgs.fetchurl {
               url = "https://github.com/sentrux/sentrux/releases/download/v${version}/${grammarAsset}";
@@ -76,7 +74,7 @@
               description = "Code intelligence and repository visualization tool";
               homepage = "https://github.com/sentrux/sentrux";
               mainProgram = "sentrux";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -91,39 +89,44 @@
             dontStrip = true;
 
             nativeBuildInputs = [
-              pkgs.autoPatchelfHook
               pkgs.makeWrapper
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
             ];
 
-            buildInputs = with pkgs; [
-              gtk3
-              glib
-              openssl
-              zlib
-              libxkbcommon
-              wayland
-              libglvnd
-              cairo
-              pango
-              harfbuzz
-              gdk-pixbuf
-              atk
-              at-spi2-atk
-              libepoxy
-              dbus
-              fontconfig
-              freetype
-              (lib.getLib stdenv.cc.cc)
-              libx11
-              libxext
-              libxi
-              libxcursor
-              libxrandr
-              libxinerama
-              libxdamage
-              libxcomposite
-              libxfixes
-            ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux (
+              with pkgs;
+              [
+                gtk3
+                glib
+                openssl
+                zlib
+                libxkbcommon
+                wayland
+                libglvnd
+                cairo
+                pango
+                harfbuzz
+                gdk-pixbuf
+                atk
+                at-spi2-atk
+                libepoxy
+                dbus
+                fontconfig
+                freetype
+                (lib.getLib stdenv.cc.cc)
+                libx11
+                libxext
+                libxi
+                libxcursor
+                libxrandr
+                libxinerama
+                libxdamage
+                libxcomposite
+                libxfixes
+              ]
+            );
 
             installPhase = ''
               runHook preInstall
@@ -151,7 +154,8 @@
         packages = {
           default = latestPkg;
           sentrux = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

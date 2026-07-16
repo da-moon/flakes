@@ -98,6 +98,7 @@ consumers can still select past versions.
 Options:
   --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
+  --rehash            Recompute hashes for the current latest version
   --no-build          Skip the final verification build
   --no-commit         Do not auto-commit (default: auto-commit is enabled)
   --help              Show this help message
@@ -137,13 +138,14 @@ main() {
   ensure_in_package_directory
   log_info "Updating package: ${PACKAGE_DIR_NAME} (build system: ${BUILD_SYSTEM})"
 
-  local target_version="" check_only=false no_build=false do_commit=true
+  local target_version="" check_only=false rehash=false no_build=false do_commit=true
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
         [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
         target_version="$2"; shift 2 ;;
       --check) check_only=true; shift ;;
+      --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
       --no-commit) do_commit=false; shift ;;
       --help) print_usage; exit 0 ;;
@@ -176,7 +178,7 @@ main() {
     exit 1
   fi
 
-  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] && [ "$rehash" != true ]; then
     log_info "Already up to date!"
     exit 0
   fi
@@ -189,12 +191,9 @@ main() {
   [ -n "$tarball_hash" ] || { log_error "Failed to prefetch tarball hash"; exit 1; }
   log_info "  tarball hash: $tarball_hash"
 
-  # Preserve an existing aarch64 outputHash if present, else seed a fakeHash
-  # (that arch is not built here; its hash stays fake until built on aarch64).
-  local aarch_hash
-  aarch_hash="$(jq -r --arg k "$latest_version" \
-    '.versions[$k].outputHashes["aarch64-linux"] // empty' "$releases_file")"
-  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$latest_version" \
+    '.versions[$k].outputHashes // {}' "$releases_file")"
 
   # Seed the entry: real tarball hash + fake build-system outputHash so nix
   # reveals the real pnpm FOD hash on build. Set it as .latest.
@@ -206,12 +205,17 @@ main() {
      --arg th "$tarball_hash" \
      --arg fake "$FAKE_HASH" \
      --arg bsys "$BUILD_SYSTEM" \
-     --arg aarch "$aarch_hash" '
+     --argjson prior "$prior_hashes" '
        .versions[$k] = {
          version: $ver,
          rev: $ver,
          hash: $th,
-         outputHashes: ({ "aarch64-linux": $aarch } + { ($bsys): $fake })
+         outputHashes: ({
+           "x86_64-linux": $fake,
+           "aarch64-linux": $fake,
+           "x86_64-darwin": $fake,
+           "aarch64-darwin": $fake
+         } + $prior + { ($bsys): $fake })
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
@@ -253,7 +257,7 @@ main() {
   log_info "releases.json now contains:"
   jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
 
-  log_warn "Only ${BUILD_SYSTEM} outputHash was refreshed; re-run on other Linux architectures if needed."
+  log_warn "Only ${BUILD_SYSTEM} outputHash was refreshed; re-run on other supported systems if needed."
 
   if [ "$do_commit" = true ]; then
     local scope msg

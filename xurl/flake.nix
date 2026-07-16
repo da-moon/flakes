@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,7 +28,7 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -36,6 +38,8 @@
         assetBySystem = {
           "aarch64-linux" = "xurl_Linux_arm64.tar.gz";
           "x86_64-linux" = "xurl_Linux_x86_64.tar.gz";
+          "aarch64-darwin" = "xurl_Darwin_arm64.tar.gz";
+          "x86_64-darwin" = "xurl_Darwin_x86_64.tar.gz";
         };
 
         # Builder: derive an xurl package from one releases.json entry.
@@ -45,12 +49,9 @@
           key: entry:
           let
             version = entry.version;
-            asset =
-              assetBySystem.${system}
-                or (throw "Unsupported system for xurl flake: ${system}");
+            asset = assetBySystem.${system} or (throw "Unsupported system for xurl flake: ${system}");
             sha256 =
-              entry.hashes.${system}
-                or (throw "Missing hash for system ${system} in xurl release ${key}");
+              entry.hashes.${system} or (throw "Missing hash for system ${system} in xurl release ${key}");
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "xurl";
@@ -61,7 +62,7 @@
               homepage = "https://github.com/xdevplatform/xurl";
               license = licenses.mit;
               mainProgram = "xurl";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -95,7 +96,8 @@
         packages = {
           default = latestPkg;
           xurl = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

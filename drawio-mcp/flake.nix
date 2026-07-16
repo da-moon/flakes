@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,7 +28,7 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -63,8 +65,7 @@
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
               outputHash =
-                entry.outputHashes.${system}
-                  or (throw "Missing outputHashes entry for system: ${system}");
+                entry.outputHashes.${system} or (throw "Missing outputHashes entry for system: ${system}");
 
               buildPhase = ''
                 runHook preBuild
@@ -106,7 +107,9 @@
                   fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
                 '
 
-                pnpm install --prod --ignore-scripts --shamefully-hoist
+                pnpm install --prod --ignore-scripts --shamefully-hoist \
+                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
+                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
 
                 runHook postBuild
               '';
@@ -127,7 +130,7 @@
               homepage = "https://github.com/jgraph/drawio-mcp";
               license = licenses.asl20;
               mainProgram = "drawio-mcp";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -158,10 +161,20 @@
 
         # One `drawio-mcp_<sanitized-key>` package per entry in the table.
         versionPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "${pname}_${sanitizeKey key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "${pname}_${sanitizeKey key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.outputHashes.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {

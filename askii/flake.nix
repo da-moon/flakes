@@ -13,7 +13,10 @@
       ...
     }:
     let
-      linuxSystems = [ "x86_64-linux" ];
+      systems = [
+        "x86_64-linux"
+        "x86_64-darwin"
+      ];
 
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
@@ -23,11 +26,16 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
+
+        assetBySystem = {
+          "x86_64-linux" = "askii";
+          "x86_64-darwin" = "askii-osx";
+        };
 
         # Builder: derive an askii package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/src-url/hash
@@ -36,6 +44,7 @@
           key: entry:
           let
             version = entry.version;
+            asset = assetBySystem.${system};
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "askii";
@@ -46,13 +55,13 @@
               homepage = "https://github.com/nytopop/askii";
               license = licenses.mit;
               mainProgram = "askii";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
             src = pkgs.fetchurl {
-              url = "https://github.com/nytopop/askii/releases/download/v${version}/askii";
-              hash = entry.hash;
+              url = "https://github.com/nytopop/askii/releases/download/v${version}/${asset}";
+              hash = entry.hashes.${system};
             };
 
             dontUnpack = true;
@@ -60,8 +69,10 @@
             dontConfigure = true;
             dontStrip = true;
 
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-            buildInputs = [
+            nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               (lib.getLib pkgs.stdenv.cc.cc)
               pkgs.libbsd
               pkgs.libmd
@@ -89,7 +100,8 @@
         packages = {
           default = latestPkg;
           askii = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

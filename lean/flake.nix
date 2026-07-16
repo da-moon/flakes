@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,7 +28,7 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -43,7 +45,7 @@
               description = "Python type stubs for the QuantConnect LEAN API";
               homepage = "https://github.com/QuantConnect/Lean";
               license = licenses.asl20;
-              platforms = linuxSystems;
+              platforms = systems;
             };
 
             format = "wheel";
@@ -95,7 +97,7 @@
               homepage = "https://github.com/QuantConnect/lean-cli";
               license = licenses.asl20;
               mainProgram = "lean";
-              platforms = linuxSystems;
+              platforms = systems;
             };
 
             format = "setuptools";
@@ -146,7 +148,8 @@
           default = latestPkg;
           lean = latestPkg;
           quantconnect-stubs = mkStubs latestEntry;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps.default = {
           type = "app";

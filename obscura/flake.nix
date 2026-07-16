@@ -1,5 +1,5 @@
 {
-  description = "Obscura - lightweight headless browser for Linux";
+  description = "Obscura - lightweight cross-platform headless browser";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -13,12 +13,14 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -28,6 +30,13 @@
         # New entries are appended by scripts/update-version.sh via jq — do
         # NOT hand-edit the version data in this file.
         releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+        assetBySystem = {
+          "x86_64-linux" = "obscura-x86_64-linux.tar.gz";
+          "aarch64-linux" = "obscura-aarch64-linux.tar.gz";
+          "x86_64-darwin" = "obscura-x86_64-macos.tar.gz";
+          "aarch64-darwin" = "obscura-aarch64-macos.tar.gz";
+        };
 
         # Builder: derive an obscura package from one releases.json entry.
         mk =
@@ -46,12 +55,12 @@
               homepage = "https://github.com/h4ckf0r0day/obscura";
               license = licenses.asl20;
               mainProgram = "obscura";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
             src = pkgs.fetchurl {
-              url = "https://github.com/h4ckf0r0day/obscura/releases/download/v${rev}/obscura-${system}.tar.gz";
+              url = "https://github.com/h4ckf0r0day/obscura/releases/download/v${rev}/${assetBySystem.${system}}";
               hash = binaryHash;
             };
 
@@ -60,8 +69,12 @@
             dontConfigure = true;
             dontStrip = true;
 
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+            nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              (lib.getLib pkgs.stdenv.cc.cc)
+            ];
 
             installPhase = ''
               runHook preInstall
@@ -86,7 +99,8 @@
         packages = {
           default = latestPkg;
           obscura = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

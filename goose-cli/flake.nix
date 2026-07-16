@@ -36,12 +36,20 @@
             version = entry.version;
             rev = entry.rev;
 
-            # On x86_64-linux we pull the prebuilt release binary from GitHub (fast, no
-            # heavy Rust build). Every other system builds goose-cli from source below.
+            # Prefer upstream release binaries wherever they exist. aarch64-linux
+            # remains a source build because upstream's glibc binary is not used here.
             prebuiltBySystem = {
               "x86_64-linux" = {
                 url = "https://github.com/block/goose/releases/download/${rev}/goose-x86_64-unknown-linux-gnu.tar.gz";
                 sha256 = entry.prebuiltHashes."x86_64-linux";
+              };
+              "x86_64-darwin" = {
+                url = "https://github.com/block/goose/releases/download/${rev}/goose-x86_64-apple-darwin.tar.gz";
+                sha256 = entry.prebuiltHashes."x86_64-darwin";
+              };
+              "aarch64-darwin" = {
+                url = "https://github.com/block/goose/releases/download/${rev}/goose-aarch64-apple-darwin.tar.gz";
+                sha256 = entry.prebuiltHashes."aarch64-darwin";
               };
             };
 
@@ -54,8 +62,15 @@
                 src = pkgs.fetchurl { inherit (spec) url sha256; };
                 sourceRoot = ".";
 
-                nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-                buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+                dontStrip = true;
+                dontPatchELF = pkgs.stdenv.hostPlatform.isDarwin;
+
+                nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                  pkgs.autoPatchelfHook
+                ];
+                buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                  pkgs.stdenv.cc.cc.lib
+                ];
 
                 installPhase = ''
                   runHook preInstall
@@ -134,17 +149,15 @@
                 cacert
               ];
 
-              buildInputs = with pkgs; [
-                openssl
-              ]
-              ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-                dbus
-                libxcb
-              ]
-              ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
-                pkgs.darwin.apple_sdk.frameworks.Security
-                pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-              ];
+              buildInputs =
+                with pkgs;
+                [
+                  openssl
+                ]
+                ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                  dbus
+                  libxcb
+                ];
 
               preBuild = ''
                 export RUSTY_V8_ARCHIVE="${rustyV8Archive}"
@@ -152,8 +165,8 @@
 
             };
 
-            # Default: prebuilt binary on x86_64-linux, build-from-source everywhere else.
-            goose-cli = if system == "x86_64-linux" && goose-cli-bin != null then goose-cli-bin else goose-cli-source;
+            # Default: prebuilt where available, build from source elsewhere.
+            goose-cli = if goose-cli-bin != null then goose-cli-bin else goose-cli-source;
           in
           {
             inherit goose-cli goose-cli-bin goose-cli-source;
@@ -175,6 +188,8 @@
         packages = {
           default = latestPkg;
           goose-cli = latestPkg;
+        }
+        // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           goose-cli-source = latestParts.goose-cli-source;
         }
         // pkgs.lib.optionalAttrs (latestParts.goose-cli-bin != null) {

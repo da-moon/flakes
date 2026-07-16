@@ -7,7 +7,7 @@
 #
 # leaf ships tagged GitHub releases with per-arch prebuilt binaries, so:
 #   key   = the release version (e.g. "1.25.0")
-#   entry = { version, rev, hashes: { x86_64-linux, aarch64-linux } }
+#   entry = { version, rev, hashes: { <supported nix system>: <SRI hash> } }
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -28,6 +28,8 @@ readonly TAG_PREFIX=""
 declare -Ar ASSET_BY_SYSTEM=(
   [x86_64-linux]="leaf-linux-x86_64"
   [aarch64-linux]="leaf-linux-arm64"
+  [x86_64-darwin]="leaf-macos-x86_64"
+  [aarch64-darwin]="leaf-macos-arm64"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

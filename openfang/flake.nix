@@ -13,12 +13,14 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -32,11 +34,11 @@
         targetBySystem = {
           "x86_64-linux" = "x86_64-unknown-linux-gnu";
           "aarch64-linux" = "aarch64-unknown-linux-gnu";
+          "x86_64-darwin" = "x86_64-apple-darwin";
+          "aarch64-darwin" = "aarch64-apple-darwin";
         };
 
-        target =
-          targetBySystem.${system}
-            or (throw "Unsupported system for openfang: ${system}");
+        target = targetBySystem.${system} or (throw "Unsupported system for openfang: ${system}");
 
         # Sanitize a JSON key into a valid attribute-name suffix.
         sanitizeKey = key: builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ] key;
@@ -46,9 +48,7 @@
           key: entry:
           let
             version = entry.version;
-            hash =
-              entry.hashes.${system}
-                or (throw "Missing hashes entry for system: ${system}");
+            hash = entry.hashes.${system} or (throw "Missing hashes entry for system: ${system}");
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "openfang";
@@ -58,7 +58,7 @@
               description = "OpenFang CLI";
               homepage = "https://github.com/RightNow-AI/openfang";
               mainProgram = "openfang";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -72,8 +72,12 @@
             dontConfigure = true;
             dontStrip = true;
 
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+            nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              (lib.getLib pkgs.stdenv.cc.cc)
+            ];
 
             installPhase = ''
               runHook preInstall
@@ -94,7 +98,8 @@
         packages = {
           default = latestPkg;
           openfang = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

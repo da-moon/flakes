@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,11 +28,21 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python312;
+        # Plyer is pure Python and carries a macOS notification backend, but
+        # nixpkgs marks it broken on Darwin because its own test suite is not
+        # reliable there. PolyTerm only imports it at runtime, so keep checks
+        # disabled and clear that metadata gate for this package closure.
+        plyerForPolyterm = python.pkgs.plyer.overrideAttrs (old: {
+          doCheck = false;
+          meta = old.meta // {
+            broken = false;
+          };
+        });
 
         # Builder: derive a polyterm package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/rev/hash
@@ -46,7 +58,7 @@
               homepage = "https://github.com/NYTEMODEONLY/polyterm";
               license = licenses.mit;
               mainProgram = "polyterm";
-              platforms = linuxSystems;
+              platforms = systems;
             };
 
             format = "setuptools";
@@ -64,7 +76,7 @@
               gql
               packaging
               pandas
-              plyer
+              plyerForPolyterm
               pytest
               pytest-asyncio
               pytest-mock

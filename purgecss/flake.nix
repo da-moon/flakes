@@ -19,7 +19,8 @@
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachDefaultSystem (system:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         nodejs = pkgs.nodejs_22;
@@ -46,55 +47,60 @@
                 hash = entry.hash;
               };
 
-              nativeBuildInputs = [ nodejs pkgs.cacert ];
+              nativeBuildInputs = [
+                nodejs
+                pkgs.cacert
+              ];
               dontPatchShebangs = true;
 
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
-              outputHash = outputHashBySystem.${system}
-                or (throw "Missing outputHashBySystem entry for system: ${system}");
+              outputHash =
+                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
 
               buildPhase = ''
-                runHook preBuild
-                export HOME=$TMPDIR
-                export npm_config_cache=$TMPDIR/.npm
-                tar -xzf $src
-                cd package
-                ${nodejs}/bin/node <<'NODE'
-                const fs = require("fs");
-                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+                                runHook preBuild
+                                export HOME=$TMPDIR
+                                export npm_config_cache=$TMPDIR/.npm
+                                tar -xzf $src
+                                cd package
+                                ${nodejs}/bin/node <<'NODE'
+                                const fs = require("fs");
+                                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
-                function exactSpec(spec) {
-                  if (typeof spec !== "string") return spec;
-                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                  return bare ? bare[1] : spec;
-                }
+                                function exactSpec(spec) {
+                                  if (typeof spec !== "string") return spec;
+                                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+                                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+                                  return bare ? bare[1] : spec;
+                                }
 
-                function isExactInstallSpec(spec) {
-                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                }
+                                function isExactInstallSpec(spec) {
+                                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+                                }
 
-                const unresolved = [];
-                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                    const next = exactSpec(spec);
-                    pkg[field][name] = next;
-                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                      unresolved.push(field + "." + name + "=" + next);
-                    }
-                  }
-                }
+                                const unresolved = [];
+                                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+                                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                                    const next = exactSpec(spec);
+                                    pkg[field][name] = next;
+                                    if (typeof next === "string" && !isExactInstallSpec(next)) {
+                                      unresolved.push(field + "." + name + "=" + next);
+                                    }
+                                  }
+                                }
 
-                if (unresolved.length > 0) {
-                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                }
+                                if (unresolved.length > 0) {
+                                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+                                }
 
-                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-NODE
-                npm install --production --ignore-scripts
-                runHook postBuild
+                                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+                NODE
+                                npm install --production --ignore-scripts \
+                                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
+                                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
+                                runHook postBuild
               '';
 
               installPhase = ''
@@ -138,10 +144,20 @@ NODE
 
         # One `purgecss_<sanitized-key>` package per entry in the table.
         versionedPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "${pname}_${sanitize key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "${pname}_${sanitize key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.outputHashBySystem.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {
@@ -153,5 +169,6 @@ NODE
           type = "app";
           program = "${latestPkg}/bin/purgecss";
         };
-      });
+      }
+    );
 }

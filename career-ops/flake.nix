@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,7 +28,7 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -62,8 +64,7 @@
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
               outputHash =
-                entry.npmDepsHashes.${system}
-                  or (throw "Missing npmDepsHashes entry for system: ${system}");
+                entry.npmDepsHashes.${system} or (throw "Missing npmDepsHashes entry for system: ${system}");
 
               buildPhase = ''
                 runHook preBuild
@@ -109,7 +110,9 @@
 
                 fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
                 NODE
-                npm install --omit=dev --ignore-scripts
+                npm install --omit=dev --ignore-scripts \
+                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
+                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
 
                 runHook postBuild
               '';
@@ -132,7 +135,7 @@
               homepage = "https://github.com/santifer/career-ops";
               license = licenses.mit;
               mainProgram = "career-ops";
-              platforms = linuxSystems;
+              platforms = systems;
             };
 
             src = npmDeps;
@@ -221,10 +224,20 @@
 
         # One `career-ops_<sanitized-key>` package per entry in the table.
         versionPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "${pname}_${sanitize key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "${pname}_${sanitize key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.npmDepsHashes.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {

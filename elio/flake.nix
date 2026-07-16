@@ -14,9 +14,9 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
-        "aarch64-linux"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -28,17 +28,31 @@
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
 
       homeManagerModule =
-        { config, lib, pkgs, ... }:
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
         {
           imports = [ ./modules/home-manager.nix ];
-          config.programs.elio.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          config.programs.elio.package =
+            lib.mkDefault
+              self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
 
       nixosModule =
-        { config, lib, pkgs, ... }:
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
         {
           imports = [ ./modules/nixos.nix ];
-          config.programs.elio.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          config.programs.elio.package =
+            lib.mkDefault
+              self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
 
       mkElioConfigLib =
@@ -49,7 +63,7 @@
         { pkgs, cfg }:
         (import ./modules/elio-lib.nix { inherit pkgs; }).mkElioTheme { inherit cfg; };
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -62,20 +76,21 @@
             target = "x86_64-unknown-linux-gnu";
             needsAutoPatchelf = true;
           };
+          "aarch64-darwin" = {
+            target = "aarch64-apple-darwin";
+            needsAutoPatchelf = false;
+          };
         };
 
         currentRelease =
-          releaseBySystem.${system}
-            or (throw "Unsupported system for elio flake: ${system}");
+          releaseBySystem.${system} or (throw "Unsupported system for elio flake: ${system}");
 
         # Builder: derive an elio package from one releases.json entry.
         mk =
           key: entry:
           let
             version = entry.version;
-            binarySha256 =
-              entry.hashes.${system}
-                or (throw "Missing hashes entry for system: ${system}");
+            binarySha256 = entry.hashes.${system} or (throw "Missing hashes entry for system: ${system}");
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "elio";
@@ -86,7 +101,7 @@
               homepage = "https://github.com/elio-fm/elio";
               license = licenses.mit;
               mainProgram = "elio";
-              platforms = [ "x86_64-linux" ];
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -112,14 +127,16 @@
               runHook preInstall
               install -m755 -D elio $out/bin/elio
 
-              mkdir -p $out/share/applications
-              install -m644 packaging/linux/elio.desktop $out/share/applications/elio.desktop
+              ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                mkdir -p $out/share/applications
+                install -m644 packaging/linux/elio.desktop $out/share/applications/elio.desktop
 
-              for size in 48 128 256 512; do
-                mkdir -p $out/share/icons/hicolor/''${size}x''${size}/apps
-                install -m644 packaging/linux/icons/hicolor/''${size}x''${size}/apps/elio.png \
-                  $out/share/icons/hicolor/''${size}x''${size}/apps/elio.png
-              done
+                for size in 48 128 256 512; do
+                  mkdir -p $out/share/icons/hicolor/''${size}x''${size}/apps
+                  install -m644 packaging/linux/icons/hicolor/''${size}x''${size}/apps/elio.png \
+                    $out/share/icons/hicolor/''${size}x''${size}/apps/elio.png
+                done
+              ''}
 
               runHook postInstall
             '';
@@ -137,7 +154,8 @@
         packages = {
           default = latestPkg;
           elio = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

@@ -225,12 +225,9 @@ main() {
   [ -n "$tarball_hash" ] || { log_error "Failed to prefetch tarball hash"; exit 1; }
   log_info "  tarball hash: $tarball_hash"
 
-  # Preserve an existing aarch64 hash if present, else seed a fakeHash there
-  # (that arch is not built here; its hash stays fake until built on aarch64).
-  local aarch_hash
-  aarch_hash="$(jq -r --arg k "$latest_version" \
-    '.versions[$k].npmDepsHashes["aarch64-linux"] // empty' "$releases_file")"
-  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$latest_version" \
+    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
 
   local backup tmp
   backup="$(mktemp -t releases.json.backup.XXXXXX)"
@@ -245,12 +242,17 @@ main() {
      --arg hash "$tarball_hash" \
      --arg fake "$FAKE_HASH" \
      --arg bsys "$BUILD_SYSTEM" \
-     --arg aarch "$aarch_hash" '
+     --argjson prior "$prior_hashes" '
        .versions[$k] = {
          version: $ver,
          rev: $rev,
          hash: $hash,
-         npmDepsHashes: ({ "aarch64-linux": $aarch } + { ($bsys): $fake })
+         npmDepsHashes: ({
+           "x86_64-linux": $fake,
+           "aarch64-linux": $fake,
+           "x86_64-darwin": $fake,
+           "aarch64-darwin": $fake
+         } + $prior + { ($bsys): $fake })
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
@@ -313,7 +315,7 @@ main() {
     maybe_git_commit "$msg" "releases.json"
   fi
 
-  log_warn "Only ${BUILD_SYSTEM} npmDeps hash was refreshed; re-run on other Linux architectures if needed."
+  log_warn "Only ${BUILD_SYSTEM} npmDeps hash was refreshed; re-run on other supported systems if needed."
 }
 
 main "$@"

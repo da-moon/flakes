@@ -9,8 +9,7 @@
 #   key     = the version (e.g. "0.3.5")
 #   version = the same version
 #
-# Upstream only ships a linux-x64 prebuilt asset (no linux-arm64), so this is
-# an x86_64-linux-only package with a single asset hash.
+# Upstream ships x86_64 Linux plus Intel and Apple-silicon macOS archives.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -25,6 +24,11 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly REPO_OWNER="getcompanion-ai"
 readonly REPO_NAME="feynman"
 readonly BIN_NAME="feynman"
+declare -Ar RELEASE_BY_SYSTEM=(
+  [x86_64-linux]="linux-x64"
+  [x86_64-darwin]="darwin-x64"
+  [aarch64-darwin]="darwin-arm64"
+)
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -73,7 +77,9 @@ tag_to_version() {
 
 asset_url() {
   local version="$1"
-  printf 'https://github.com/%s/%s/releases/download/v%s/feynman-%s-linux-x64.tar.gz\n' "$REPO_OWNER" "$REPO_NAME" "$version" "$version"
+  local release="$2"
+  printf 'https://github.com/%s/%s/releases/download/v%s/feynman-%s-%s.tar.gz\n' \
+    "$REPO_OWNER" "$REPO_NAME" "$version" "$version" "$release"
 }
 
 prefetch_sha256_sri() {
@@ -230,17 +236,22 @@ main() {
     exit 0
   fi
 
-  log_info "Prefetching feynman-${latest_version}-linux-x64.tar.gz"
-  local hash
-  hash="$(prefetch_sha256_sri "$(asset_url "$latest_version")")"
-  log_info "  asset hash: $hash"
+  local system release hash
+  local hashes_json='{}'
+  for system in "${!RELEASE_BY_SYSTEM[@]}"; do
+    release="${RELEASE_BY_SYSTEM[$system]}"
+    log_info "Prefetching feynman-${latest_version}-${release}.tar.gz"
+    hash="$(prefetch_sha256_sri "$(asset_url "$latest_version" "$release")")"
+    hashes_json="$(jq -n --argjson hashes "$hashes_json" --arg system "$system" --arg hash "$hash" \
+      '$hashes + {($system): $hash}')"
+  done
 
   local entry_json
   entry_json="$(jq -n \
     --arg v "$latest_version" \
     --arg rev "$latest_version" \
-    --arg hash "$hash" \
-    '{version: $v, rev: $rev, hash: $hash}')"
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
 
   local backup
   backup="$(mktemp -t releases.json.backup.XXXXXX)"

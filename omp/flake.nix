@@ -14,17 +14,21 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Overlay consumed by other flakes that want `omp` in nixpkgs.
       overlay = final: prev: {
-        omp = self.packages.${prev.stdenv.hostPlatform.system}.omp or (self.packages.${prev.stdenv.hostPlatform.system}.default);
+        omp =
+          self.packages.${prev.stdenv.hostPlatform.system}.omp
+            or (self.packages.${prev.stdenv.hostPlatform.system}.default);
       };
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -38,6 +42,8 @@
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
           aarch64-linux = "linux-arm64";
+          x86_64-darwin = "darwin-x64";
+          aarch64-darwin = "darwin-arm64";
         };
 
         releasePlatform = releasePlatformBySystem.${system};
@@ -58,7 +64,7 @@
               homepage = "https://github.com/can1357/oh-my-pi";
               license = licenses.mit;
               mainProgram = "omp";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -72,11 +78,11 @@
             dontConfigure = true;
             dontStrip = true;
 
-            nativeBuildInputs = with pkgs; [
-              autoPatchelfHook
+            nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
             ];
 
-            buildInputs = [
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.stdenv.cc.cc.lib
             ];
 

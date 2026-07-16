@@ -5,7 +5,8 @@
       "version": "1.10.0",
       "rev": "1.10.0",
       "hashes": {
-        "x86_64-linux": "sha256-PRH/4hHe8IVkf6CRrjQaqMvw2i/SW8Cr3IhQtAF/008="
+        "x86_64-linux": "sha256-PRH/4hHe8IVkf6CRrjQaqMvw2i/SW8Cr3IhQtAF/008=",
+        "aarch64-darwin": "sha256-pAu9sQRgwflxIz0JMBTUQUu9kVHVpIaO4AOXfbWydnE="
       }
     }
   }

@@ -258,7 +258,7 @@ main() {
   attr="firecrawl-mcp-server_${sanitized_key}"
 
   # Seed the entry: keep existing hashes, force the build system's to fakeHash so
-  # nix reveals the real one, and ensure aarch64-linux at least exists.
+  # nix reveals the real one, and ensure every supported target is represented.
   tmp="$(mktemp)"
   jq --arg k "$latest_version" \
      --arg tar "$tarball_hash" \
@@ -270,7 +270,12 @@ main() {
          rev: $k,
          hash: $tar,
          outputHashBySystem: (
-           { "aarch64-linux": $fake }
+           {
+             "x86_64-linux": $fake,
+             "aarch64-linux": $fake,
+             "x86_64-darwin": $fake,
+             "aarch64-darwin": $fake
+           }
            + $ohbs
            + { ($bsys): $fake }
          )
@@ -293,8 +298,14 @@ main() {
   fi
   log_info "outputHash (${BUILD_SYSTEM}): $got_hash"
   tmp="$(mktemp)"
-  jq --arg k "$latest_version" --arg bsys "$BUILD_SYSTEM" --arg h "$got_hash" \
-    '.versions[$k].outputHashBySystem[$bsys] = $h' \
+  jq --arg k "$latest_version" --arg h "$got_hash" '
+    .versions[$k].outputHashBySystem = {
+      "x86_64-linux": $h,
+      "aarch64-linux": $h,
+      "x86_64-darwin": $h,
+      "aarch64-darwin": $h
+    }
+  ' \
     "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
 
   if [ "$no_build" != true ]; then

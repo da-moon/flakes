@@ -26,6 +26,8 @@ readonly TAG_PREFIX="v"
 declare -Ar ASSET_BY_SYSTEM=(
   [x86_64-linux]="hunkdiff-linux-x64.tar.gz"
   [aarch64-linux]="hunkdiff-linux-arm64.tar.gz"
+  [x86_64-darwin]="hunkdiff-darwin-x64.tar.gz"
+  [aarch64-darwin]="hunkdiff-darwin-arm64.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,20 +28,18 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
         pname = "opennews-mcp";
 
-        pythonEnv = pkgs.python3.withPackages (
-          ps: [
-            ps.httpx
-            ps.mcp
-            ps.websockets
-          ]
-        );
+        pythonEnv = pkgs.python3.withPackages (ps: [
+          ps.httpx
+          ps.mcp
+          ps.websockets
+        ]);
 
         # Builder: derive an opennews-mcp package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/rev/hash now
@@ -65,7 +65,7 @@
               homepage = "https://github.com/6551Team/opennews-mcp";
               license = licenses.mit;
               mainProgram = "opennews-mcp";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -133,7 +133,8 @@
         packages = {
           default = latestPkg;
           "opennews-mcp" = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

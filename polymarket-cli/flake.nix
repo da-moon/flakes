@@ -14,9 +14,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Portable config-file generator, exposed at the flake's top-level `lib`
@@ -132,7 +134,7 @@
           };
         };
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -148,6 +150,8 @@
         rustTripleBySystem = {
           x86_64-linux = "x86_64-unknown-linux-gnu";
           aarch64-linux = "aarch64-unknown-linux-gnu";
+          x86_64-darwin = "x86_64-apple-darwin";
+          aarch64-darwin = "aarch64-apple-darwin";
         };
 
         rustTriple = rustTripleBySystem.${system};
@@ -176,7 +180,7 @@
               '';
               homepage = "https://github.com/Polymarket/polymarket-cli";
               mainProgram = "polymarket";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -192,17 +196,18 @@
             dontBuild = true;
             dontConfigure = true;
 
-            nativeBuildInputs = with pkgs; [
-              autoPatchelfHook
-              makeWrapper
-              gnutar
-              gzip
+            nativeBuildInputs = [
+              pkgs.gnutar
+              pkgs.gzip
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
             ];
 
             # Dynamic GNU binary: autoPatchelfHook rewrites the interpreter and
             # RPATH. libgcc_s comes from the compiler runtime; glibc (libc/libm)
             # is supplied automatically.
-            buildInputs = [
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.stdenv.cc.cc.lib
             ];
 
@@ -234,7 +239,8 @@
         packages = {
           default = latestPkg;
           polymarket-cli = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [

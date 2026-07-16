@@ -3,11 +3,10 @@
 # new version-table entry (keyed by version) and sets .latest to it. Existing
 # entries are preserved so consumers can still select past versions.
 #
-# askii ships a single prebuilt x86_64-linux `askii` binary per release (tagged
-# vN.N.N), so:
+# askii ships prebuilt x86_64 Linux and macOS binaries per release, so:
 #   key     = the release version (tag with the leading "v" stripped)
 #   version = same
-#   hash    = SRI hash of the release asset (prefetched)
+#   hashes  = SRI hashes of the release assets (prefetched)
 #
 # The version data in flake.nix is never touched; only releases.json is jq-edited.
 set -euo pipefail
@@ -25,6 +24,10 @@ readonly REPO_OWNER="nytopop"
 readonly REPO_NAME="askii"
 readonly BIN_NAME="askii"
 readonly TAG_PREFIX="v"
+declare -Ar ASSET_BY_SYSTEM=(
+  [x86_64-linux]="askii"
+  [x86_64-darwin]="askii-osx"
+)
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -68,7 +71,9 @@ tag_to_version() {
 
 asset_url() {
   local version="$1"
-  printf 'https://github.com/%s/%s/releases/download/%s%s/askii\n' "$REPO_OWNER" "$REPO_NAME" "$TAG_PREFIX" "$version"
+  local asset="$2"
+  printf 'https://github.com/%s/%s/releases/download/%s%s/%s\n' \
+    "$REPO_OWNER" "$REPO_NAME" "$TAG_PREFIX" "$version" "$asset"
 }
 
 prefetch_sha256_sri() {
@@ -247,18 +252,26 @@ main() {
     exit 0
   fi
 
-  log_info "Prefetching askii asset..."
-  local hash
-  hash="$(prefetch_sha256_sri "$(asset_url "$latest_version")")"
-  [ -n "$hash" ] && [ "$hash" != "null" ] || { log_error "Failed to prefetch askii"; exit 2; }
-  log_info "  hash: $hash"
+  local system asset hash
+  local hashes_json='{}'
+  for system in "${!ASSET_BY_SYSTEM[@]}"; do
+    asset="${ASSET_BY_SYSTEM[$system]}"
+    log_info "Prefetching $asset ($system)..."
+    hash="$(prefetch_sha256_sri "$(asset_url "$latest_version" "$asset")")"
+    [ -n "$hash" ] && [ "$hash" != "null" ] || {
+      log_error "Failed to prefetch $asset"
+      exit 2
+    }
+    hashes_json="$(jq -n --argjson hashes "$hashes_json" --arg system "$system" --arg hash "$hash" \
+      '$hashes + {($system): $hash}')"
+  done
 
   local entry_json
   entry_json="$(jq -n \
     --arg v "$latest_version" \
     --arg rev "$latest_version" \
-    --arg h "$hash" \
-    '{version: $v, rev: $rev, hash: $h}')"
+    --argjson hashes "$hashes_json" \
+    '{version: $v, rev: $rev, hashes: $hashes}')"
 
   local backup
   backup="$(mktemp -t releases.json.backup.XXXXXX)"

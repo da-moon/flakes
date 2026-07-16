@@ -43,11 +43,8 @@
           key: entry:
           let
             version = entry.version;
-            # Fall back to x86_64-linux target if the current system is unknown.
-            target = targetBySystem.${system} or targetBySystem."x86_64-linux";
-            sha256 =
-              entry.hashes.${system}
-                or entry.hashes."x86_64-linux";
+            target = targetBySystem.${system};
+            sha256 = entry.hashes.${system};
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "fff-mcp";

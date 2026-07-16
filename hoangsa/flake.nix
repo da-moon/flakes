@@ -13,12 +13,13 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "aarch64-darwin"
       ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -39,11 +40,13 @@
             asset = "hoangsa-linux-arm64.tar.gz";
             sourceRoot = "hoangsa-linux-arm64";
           };
+          "aarch64-darwin" = {
+            asset = "hoangsa-darwin-arm64.tar.gz";
+            sourceRoot = "hoangsa-darwin-arm64";
+          };
         };
 
-        release =
-          releaseBySystem.${system}
-            or (throw "Unsupported system for hoangsa: ${system}");
+        release = releaseBySystem.${system} or (throw "Unsupported system for hoangsa: ${system}");
 
         # Builder: derive a hoangsa package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/src-url/hash
@@ -62,7 +65,7 @@
               description = "Hoangsa workflow and memory CLI";
               homepage = "https://github.com/unknown-studio-dev/hoangsa";
               mainProgram = "hoangsa-cli";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -77,10 +80,14 @@
             dontStrip = true;
 
             nativeBuildInputs = [
-              pkgs.autoPatchelfHook
               pkgs.makeWrapper
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
             ];
-            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              (lib.getLib pkgs.stdenv.cc.cc)
+            ];
 
             installPhase = ''
               runHook preInstall
@@ -112,7 +119,8 @@
         packages = {
           default = latestPkg;
           hoangsa = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

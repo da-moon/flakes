@@ -25,6 +25,8 @@ readonly REPO_NAME="xurl"
 declare -Ar ASSET_NAME_BY_SYSTEM=(
   [aarch64-linux]="xurl_Linux_arm64.tar.gz"
   [x86_64-linux]="xurl_Linux_x86_64.tar.gz"
+  [aarch64-darwin]="xurl_Darwin_arm64.tar.gz"
+  [x86_64-darwin]="xurl_Darwin_x86_64.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -181,19 +183,20 @@ main() {
   checksums="$(get_release_checksums "$latest_tag" "$latest_version")"
   [ -n "$checksums" ] || { log_error "Failed to fetch release checksums"; exit 2; }
 
-  local hex_hash_aarch64 hex_hash_x86_64
-  hex_hash_aarch64="$(get_hex_checksum_for_asset "$checksums" "${ASSET_NAME_BY_SYSTEM[aarch64-linux]}")"
-  hex_hash_x86_64="$(get_hex_checksum_for_asset "$checksums" "${ASSET_NAME_BY_SYSTEM[x86_64-linux]}")"
-  if [ -z "$hex_hash_aarch64" ] || [ -z "$hex_hash_x86_64" ]; then
-    log_error "Failed to locate one or more asset checksums"
-    exit 2
-  fi
-
-  local hash_aarch64 hash_x86_64
-  hash_aarch64="$(hex_sha256_to_sri "$hex_hash_aarch64")"
-  hash_x86_64="$(hex_sha256_to_sri "$hex_hash_x86_64")"
-  log_info "aarch64 hash: $hash_aarch64"
-  log_info "x86_64 hash:  $hash_x86_64"
+  local system asset hex_hash hash
+  local hashes_json='{}'
+  for system in "${!ASSET_NAME_BY_SYSTEM[@]}"; do
+    asset="${ASSET_NAME_BY_SYSTEM[$system]}"
+    hex_hash="$(get_hex_checksum_for_asset "$checksums" "$asset")"
+    if [ -z "$hex_hash" ]; then
+      log_error "Failed to locate checksum for $asset ($system)"
+      exit 2
+    fi
+    hash="$(hex_sha256_to_sri "$hex_hash")"
+    log_info "$system hash: $hash"
+    hashes_json="$(jq -n --argjson hashes "$hashes_json" --arg system "$system" --arg hash "$hash" \
+      '$hashes + {($system): $hash}')"
+  done
 
   # jq-upsert the entry and set .latest — flake.nix is never touched.
   local tmp
@@ -201,15 +204,11 @@ main() {
   jq --arg k "$latest_version" \
      --arg ver "$latest_version" \
      --arg rev "$latest_tag" \
-     --arg hx86 "$hash_x86_64" \
-     --arg haarch "$hash_aarch64" '
+     --argjson hashes "$hashes_json" '
        .versions[$k] = {
          version: $ver,
          rev: $rev,
-         hashes: {
-           "x86_64-linux": $hx86,
-           "aarch64-linux": $haarch
-         }
+         hashes: $hashes
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"

@@ -176,12 +176,9 @@ main() {
     exit 1
   fi
 
-  # Preserve an existing aarch64 hash if present, else seed a fakeHash there
-  # (that arch is not built here; its hash stays fake until built on aarch64).
-  local aarch_hash
-  aarch_hash="$(jq -r --arg k "$short_key" \
-    '.versions[$k].npmDepsHashes["aarch64-linux"] // empty' "$releases_file")"
-  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$short_key" \
+    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
 
   # Seed the entry with fake hashes so nix reveals the real ones on build.
   local attr tmp
@@ -192,12 +189,17 @@ main() {
      --arg rev "$rev" \
      --arg fake "$FAKE_HASH" \
      --arg bsys "$BUILD_SYSTEM" \
-     --arg aarch "$aarch_hash" '
+     --argjson prior "$prior_hashes" '
        .versions[$k] = {
          version: $ver,
          rev: $rev,
          hash: $fake,
-         npmDepsHashes: ({ "aarch64-linux": $aarch } + { ($bsys): $fake })
+         npmDepsHashes: ({
+           "x86_64-linux": $fake,
+           "aarch64-linux": $fake,
+           "x86_64-darwin": $fake,
+           "aarch64-darwin": $fake
+         } + $prior + { ($bsys): $fake })
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
@@ -222,8 +224,14 @@ main() {
   else
     log_info "  npmDeps hash: $npm_hash"
     tmp="$(mktemp)"
-    jq --arg k "$short_key" --arg bsys "$BUILD_SYSTEM" --arg h "$npm_hash" \
-      '.versions[$k].npmDepsHashes[$bsys] = $h' \
+    jq --arg k "$short_key" --arg h "$npm_hash" '
+      .versions[$k].npmDepsHashes = {
+        "x86_64-linux": $h,
+        "aarch64-linux": $h,
+        "x86_64-darwin": $h,
+        "aarch64-darwin": $h
+      }
+    ' \
       "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
   fi
 

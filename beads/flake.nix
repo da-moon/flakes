@@ -13,21 +13,42 @@
       flake-utils,
     }:
     let
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
+
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
       # NOT hand-edit the version data in this file.
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachDefaultSystem (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        # Map a nix system to the upstream release-asset arch token.
-        releaseArchBySystem = {
-          "aarch64-linux" = "arm64";
-          "x86_64-linux" = "amd64";
+        # Map a nix system to the upstream release-asset OS/arch tokens.
+        releaseBySystem = {
+          "aarch64-linux" = {
+            os = "linux";
+            arch = "arm64";
+          };
+          "x86_64-linux" = {
+            os = "linux";
+            arch = "amd64";
+          };
+          "aarch64-darwin" = {
+            os = "darwin";
+            arch = "arm64";
+          };
+          "x86_64-darwin" = {
+            os = "darwin";
+            arch = "amd64";
+          };
         };
 
         # Builder: derive a beads package from one releases.json entry.
@@ -37,10 +58,8 @@
           key: entry:
           let
             version = entry.version;
-            arch = releaseArchBySystem.${system} or releaseArchBySystem."x86_64-linux";
-            binarySha256 =
-              entry.hashes.${system}
-                or (throw "Missing hashes entry for system: ${system}");
+            release = releaseBySystem.${system};
+            binarySha256 = entry.hashes.${system} or (throw "Missing hashes entry for system: ${system}");
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "beads";
@@ -55,21 +74,24 @@
                 tracking, ready work detection, and git-based distribution.
               '';
               homepage = "https://github.com/steveyegge/beads";
-              platforms = [ "aarch64-linux" "x86_64-linux" ];
+              platforms = systems;
               maintainers = [ ];
             };
 
             src = pkgs.fetchurl {
-              url = "https://github.com/steveyegge/beads/releases/download/v${version}/beads_${version}_linux_${arch}.tar.gz";
+              url = "https://github.com/steveyegge/beads/releases/download/v${version}/beads_${version}_${release.os}_${release.arch}.tar.gz";
               sha256 = binarySha256;
             };
 
             sourceRoot = ".";
 
-            # Use autoPatchelfHook to fix dynamic linker path
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+            # Linux release binaries are dynamically linked; signed Darwin
+            # binaries must remain byte-for-byte unchanged.
+            nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
             # Beads 1.0.0 links against ICU 74 and libstdc++/libgcc at runtime.
-            buildInputs = [
+            buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.icu74
               (pkgs.lib.getLib pkgs.stdenv.cc.cc)
             ];

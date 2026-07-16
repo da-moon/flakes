@@ -1,5 +1,5 @@
 {
-  description = "Claude Code - native Linux CLI packaged as a Nix flake";
+  description = "Claude Code - native CLI packaged as a cross-platform Nix flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -13,12 +13,14 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -32,6 +34,8 @@
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
           aarch64-linux = "linux-arm64";
+          x86_64-darwin = "darwin-x64";
+          aarch64-darwin = "darwin-arm64";
         };
 
         releasePlatform = releasePlatformBySystem.${system};
@@ -44,73 +48,79 @@
             binarySha256 = entry.hashes.${system};
           in
           pkgs.stdenv.mkDerivation rec {
-          pname = "claude-code";
-          inherit version;
+            pname = "claude-code";
+            inherit version;
 
-          meta = with lib; {
-            description = "Claude Code - AI coding assistant CLI for terminal";
-            longDescription = ''
-              Claude Code is an agentic coding tool that lives in your terminal,
-              understands your codebase, and helps you code faster by executing
-              routine tasks, explaining complex code, and handling git workflows
-              through natural language commands.
+            meta = with lib; {
+              description = "Claude Code - AI coding assistant CLI for terminal";
+              longDescription = ''
+                Claude Code is an agentic coding tool that lives in your terminal,
+                understands your codebase, and helps you code faster by executing
+                routine tasks, explaining complex code, and handling git workflows
+                through natural language commands.
 
-              This package uses Anthropic's native Linux release binary and keeps
-              updates pinned through the flake rather than using the built-in
-              updater automatically.
+                This package uses Anthropic's native release binary and keeps
+                updates pinned through the flake rather than using the built-in
+                updater automatically.
+              '';
+              homepage = "https://code.claude.com/docs";
+              mainProgram = "claude";
+              platforms = systems;
+              maintainers = [ ];
+            };
+
+            src = pkgs.fetchurl {
+              url = "https://downloads.claude.ai/claude-code-releases/${version}/${releasePlatform}/claude";
+              sha256 = binarySha256;
+            };
+
+            dontUnpack = true;
+            dontBuild = true;
+            dontConfigure = true;
+
+            nativeBuildInputs = [
+              pkgs.makeWrapper
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
+
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.stdenv.cc.cc.lib
+            ];
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/bin $out/libexec
+
+              install -m755 $src $out/libexec/claude
+
+              # This package is Nix-managed, so bypass native-installer checks and updates.
+              makeWrapper $out/libexec/claude $out/bin/claude \
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--prefix LD_LIBRARY_PATH : ${
+                  lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
+                } \\"}
+                --set DISABLE_INSTALLATION_CHECKS 1 \
+                --set DISABLE_UPDATES 1 \
+                --set DISABLE_UPGRADE_COMMAND 1 \
+                --set DISABLE_AUTOUPDATER 1
+
+              makeWrapper $out/libexec/claude $out/bin/claude-direct \
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--prefix LD_LIBRARY_PATH : ${
+                  lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
+                } \\"}
+                --set DISABLE_INSTALLATION_CHECKS 1 \
+                --set DISABLE_UPDATES 1 \
+                --set DISABLE_UPGRADE_COMMAND 1 \
+                --set DISABLE_AUTOUPDATER 1
+
+              runHook postInstall
             '';
-            homepage = "https://code.claude.com/docs";
-            mainProgram = "claude";
-            platforms = linuxSystems;
-            maintainers = [ ];
+
+            dontStrip = true;
+
           };
-
-          src = pkgs.fetchurl {
-            url = "https://downloads.claude.ai/claude-code-releases/${version}/${releasePlatform}/claude";
-            sha256 = binarySha256;
-          };
-
-          dontUnpack = true;
-          dontBuild = true;
-          dontConfigure = true;
-
-          nativeBuildInputs = with pkgs; [
-            autoPatchelfHook
-            makeWrapper
-          ];
-
-          buildInputs = [
-            pkgs.stdenv.cc.cc.lib
-          ];
-
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/bin $out/libexec
-
-            install -m755 $src $out/libexec/claude
-
-            # This package is Nix-managed, so bypass native-installer checks and updates.
-            makeWrapper $out/libexec/claude $out/bin/claude \
-              --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]} \
-              --set DISABLE_INSTALLATION_CHECKS 1 \
-              --set DISABLE_UPDATES 1 \
-              --set DISABLE_UPGRADE_COMMAND 1 \
-              --set DISABLE_AUTOUPDATER 1
-
-            makeWrapper $out/libexec/claude $out/bin/claude-direct \
-              --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]} \
-              --set DISABLE_INSTALLATION_CHECKS 1 \
-              --set DISABLE_UPDATES 1 \
-              --set DISABLE_UPGRADE_COMMAND 1 \
-              --set DISABLE_AUTOUPDATER 1
-
-            runHook postInstall
-          '';
-
-          dontStrip = true;
-
-        };
 
         # Sanitize a JSON key into a valid attribute-name suffix.
         sanitizeKey = key: builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ] key;
@@ -127,7 +137,8 @@
         packages = {
           default = latestPkg;
           claude-code = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [

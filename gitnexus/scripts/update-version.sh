@@ -258,13 +258,9 @@ main() {
   fi
   log_info "Tarball hash: $tarball_hash"
 
-  # Preserve an existing non-build-system outputHash if present, else seed
-  # fakeHash there (that arch is not built here; its hash stays fake until built
-  # on that arch).
-  local aarch_hash
-  aarch_hash="$(jq -r --arg k "$latest_version" \
-    '.versions[$k].outputHashes["aarch64-linux"] // empty' "$releases_file")"
-  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$latest_version" \
+    '.versions[$k].outputHashes // {}' "$releases_file")"
 
   # Seed the entry with the real tarball hash and a fake outputHash for the build
   # system so nix reveals the real one on build.
@@ -281,12 +277,17 @@ main() {
      --arg hash "$tarball_hash" \
      --arg fake "$FAKE_HASH" \
      --arg bsys "$BUILD_SYSTEM" \
-     --arg aarch "$aarch_hash" '
+     --argjson prior "$prior_hashes" '
        .versions[$k] = {
          version: $ver,
          rev: $rev,
          hash: $hash,
-         outputHashes: ({ "aarch64-linux": $aarch } + { ($bsys): $fake })
+         outputHashes: ({
+           "x86_64-linux": $fake,
+           "aarch64-linux": $fake,
+           "x86_64-darwin": $fake,
+           "aarch64-darwin": $fake
+         } + $prior + { ($bsys): $fake })
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
@@ -316,8 +317,12 @@ main() {
 
   rm -f "$backup"
 
-  if [ "$aarch_hash" = "$FAKE_HASH" ]; then
-    log_warn "aarch64-linux outputHash is a placeholder; re-run this script on aarch64-linux to fill it."
+  local missing_systems
+  missing_systems="$(jq -r --arg k "$latest_version" --arg fake "$FAKE_HASH" \
+    '.versions[$k].outputHashes | to_entries[] | select(.value == $fake) | .key' \
+    "$releases_file" | tr '\n' ' ' | sed -E 's/[[:space:]]+$//')"
+  if [ -n "$missing_systems" ]; then
+    log_warn "Placeholder outputHashes remain for: ${missing_systems}"
   fi
 
   log_info "releases.json now contains:"

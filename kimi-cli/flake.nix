@@ -1,5 +1,5 @@
 {
-  description = "Kimi Code - native Linux CLI packaged as a Nix flake with Home Manager hook module";
+  description = "Kimi Code - native cross-platform CLI packaged as a Nix flake with Home Manager hook module";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -11,26 +11,36 @@
   };
 
   outputs =
-    { self
-    , nixpkgs
-    , flake-utils
-    , home-manager
-    , ...
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      home-manager,
+      ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       homeManagerModule =
-        { config, lib, pkgs, ... }:
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
         {
           imports = [ ./modules/home-manager.nix ];
-          config.programs.kimi-cli.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          config.programs.kimi-cli.package =
+            lib.mkDefault
+              self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -44,6 +54,8 @@
         releasePlatformBySystem = {
           x86_64-linux = "linux-x64";
           aarch64-linux = "linux-arm64";
+          x86_64-darwin = "darwin-x64";
+          aarch64-darwin = "darwin-arm64";
         };
 
         releasePlatform = releasePlatformBySystem.${system};
@@ -64,7 +76,7 @@
               homepage = "https://code.kimi.com";
               license = licenses.asl20;
               mainProgram = "kimi";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -78,11 +90,11 @@
             dontConfigure = true;
             dontStrip = true;
 
-            nativeBuildInputs = with pkgs; [
-              autoPatchelfHook
+            nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
             ];
 
-            buildInputs = [
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.stdenv.cc.cc.lib
             ];
 
@@ -112,7 +124,8 @@
             homeManagerModule
             {
               home.username = "kimi-test";
-              home.homeDirectory = "/home/kimi-test";
+              home.homeDirectory =
+                if pkgs.stdenv.hostPlatform.isDarwin then "/Users/kimi-test" else "/home/kimi-test";
               home.stateVersion = "24.11";
               programs.home-manager.enable = true;
               programs.kimi-cli.enable = true;
@@ -124,7 +137,8 @@
         packages = {
           default = latestPkg;
           kimi-cli = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

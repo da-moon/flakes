@@ -51,8 +51,10 @@
       "rev": "0.44.1",
       "hash": "sha256-IT+24KqGJciXOogk77Qn5/flWBojnOuXNOcyh60nVFA=",
       "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-RRniulEE/bcpxf2Ab25/bnVoV6lhfA33On+/EjeOJ00="
+        "aarch64-darwin": "sha256-+bnXou/ibYZw6/X6SAz46AdD30d/4ylHUDMIOdom2PM=",
+        "aarch64-linux": "sha256-5Vg96T8sGaLY5MKYsERK4CkqOGtPuDHS6S+/76anLHA=",
+        "x86_64-darwin": "sha256-mwnN7qfEMw1BIUrTKznna5Afy5wdMGamIkn2E/CXL7Y=",
+        "x86_64-linux": "sha256-nDvfzRM01/t07yIEp6YshNMOOVrOqXrMv1NX9/uPInw="
       }
     }
   }

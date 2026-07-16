@@ -6,7 +6,12 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
     let
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
@@ -43,56 +48,62 @@
               name = "${pname}-${version}-npm-deps";
 
               src = source;
-              nativeBuildInputs = [ pkgs.bun pkgs.python3 pkgs.cacert ];
+              nativeBuildInputs = [
+                pkgs.bun
+                pkgs.python3
+                pkgs.cacert
+              ];
               dontPatchShebangs = true;
 
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
-              outputHash = entry.outputHashes.${system}
-                or (throw "Missing outputHashes entry for system ${system}");
+              outputHash =
+                entry.outputHashes.${system} or (throw "Missing outputHashes entry for system ${system}");
 
               buildPhase = ''
-                export HOME=$TMPDIR
-                export BUN_INSTALL=$TMPDIR/.bun
-                export BUN_INSTALL_GLOBAL_DIR=$TMPDIR/.bun-global
-                export BUN_INSTALL_CACHE_DIR=$TMPDIR/.bun-cache
+                                export HOME=$TMPDIR
+                                export BUN_INSTALL=$TMPDIR/.bun
+                                export BUN_INSTALL_GLOBAL_DIR=$TMPDIR/.bun-global
+                                export BUN_INSTALL_CACHE_DIR=$TMPDIR/.bun-cache
 
-                tar -xzf $src
-                cd qmd-${version}
-                ${pkgs.nodejs_22}/bin/node <<'NODE'
-                const fs = require("fs");
-                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+                                tar -xzf $src
+                                cd qmd-${version}
+                                ${pkgs.nodejs_22}/bin/node <<'NODE'
+                                const fs = require("fs");
+                                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
-                function exactSpec(spec) {
-                  if (typeof spec !== "string") return spec;
-                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                  return bare ? bare[1] : spec;
-                }
+                                function exactSpec(spec) {
+                                  if (typeof spec !== "string") return spec;
+                                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+                                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+                                  return bare ? bare[1] : spec;
+                                }
 
-                function isExactInstallSpec(spec) {
-                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                }
+                                function isExactInstallSpec(spec) {
+                                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+                                }
 
-                const unresolved = [];
-                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                    const next = exactSpec(spec);
-                    pkg[field][name] = next;
-                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                      unresolved.push(field + "." + name + "=" + next);
-                    }
-                  }
-                }
+                                const unresolved = [];
+                                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+                                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                                    const next = exactSpec(spec);
+                                    pkg[field][name] = next;
+                                    if (typeof next === "string" && !isExactInstallSpec(next)) {
+                                      unresolved.push(field + "." + name + "=" + next);
+                                    }
+                                  }
+                                }
 
-                if (unresolved.length > 0) {
-                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                }
+                                if (unresolved.length > 0) {
+                                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+                                }
 
-                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-NODE
-                bun install --ignore-scripts --backend=copyfile
+                                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+                NODE
+                                bun install --ignore-scripts --backend=copyfile \
+                                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
+                                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
               '';
 
               installPhase = ''
@@ -111,6 +122,8 @@ NODE
                 platforms = [
                   "aarch64-linux"
                   "x86_64-linux"
+                  "aarch64-darwin"
+                  "x86_64-darwin"
                 ];
                 mainProgram = "qmd";
               };
@@ -139,10 +152,12 @@ NODE
                   --set NODE_LLAMA_CPP_SKIP_DOWNLOAD "true" \
                   --run "mkdir -p /tmp/node-llama-cpp/localBuilds" \
                   --set DYLD_LIBRARY_PATH "${sqliteWithExtensions.out}/lib" \
-                  --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath [
-                    sqliteWithExtensions
-                    pkgs.stdenv.cc.cc.lib
-                  ]}"
+                  --set LD_LIBRARY_PATH "${
+                    pkgs.lib.makeLibraryPath [
+                      sqliteWithExtensions
+                      pkgs.stdenv.cc.cc.lib
+                    ]
+                  }"
               '';
 
             };
@@ -153,10 +168,20 @@ NODE
 
         # One `qmd_<sanitized-key>` package per entry in the table.
         versionedPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "${pname}_${sanitizeKey key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "${pname}_${sanitizeKey key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.outputHashes.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
 
       in

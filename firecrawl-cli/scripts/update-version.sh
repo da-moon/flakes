@@ -307,7 +307,12 @@ main() {
          version: $ver,
          rev: $rev,
          hash: $thash,
-         outputHashes: ({ "aarch64-linux": $fake } + $prior + { ($bsys): $fake })
+         outputHashes: ({
+           "x86_64-linux": $fake,
+           "aarch64-linux": $fake,
+           "x86_64-darwin": $fake,
+           "aarch64-darwin": $fake
+         } + $prior + { ($bsys): $fake })
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"

@@ -26,6 +26,7 @@ readonly TAG_PREFIX="v"
 declare -Ar ASSET_BY_SYSTEM=(
   [x86_64-linux]="hoangsa-linux-x64.tar.gz"
   [aarch64-linux]="hoangsa-linux-arm64.tar.gz"
+  [aarch64-darwin]="hoangsa-darwin-arm64.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

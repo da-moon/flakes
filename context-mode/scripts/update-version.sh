@@ -9,8 +9,8 @@
 #
 # Two hashes are recorded per entry:
 #   - .hash        : the npm tarball fetchurl hash (prefetched)
-#   - .npmDepsHash : the pnpm store fixed-output derivation hash, recomputed
-#                    via the reliable fakeHash -> nix build -> parse "got:" method
+#   - .npmDepsHashes.* : per-system pnpm store fixed-output derivation hashes,
+#                        recomputed via fakeHash -> nix build -> parse "got:"
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -29,6 +29,7 @@ readonly PACKAGE_ATTR_BASE="context-mode"
 readonly BIN_NAME="context-mode"
 # lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
 readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+BUILD_SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo x86_64-linux)"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -99,11 +100,11 @@ upsert_release_entry() {
   mv "$tmp" "$releases_file"
 }
 
-set_entry_field() {
-  local key="$1" field="$2" value="$3" tmp
+set_entry_system_hash() {
+  local key="$1" system="$2" value="$3" tmp
   tmp="$(mktemp)"
-  jq --arg k "$key" --arg f "$field" --arg v "$value" \
-    '.versions[$k][$f] = $v' "$releases_file" >"$tmp"
+  jq --arg k "$key" --arg s "$system" --arg v "$value" \
+    '.versions[$k].npmDepsHashes[$s] = $v' "$releases_file" >"$tmp"
   mv "$tmp" "$releases_file"
 }
 
@@ -218,7 +219,7 @@ EOF
 main() {
   ensure_required_tools_installed
   ensure_in_package_directory
-  log_info "Updating package: ${PACKAGE_DIR_NAME}"
+  log_info "Updating package: ${PACKAGE_DIR_NAME} (build system: ${BUILD_SYSTEM})"
 
   local target_version=""
   local check_only=false
@@ -308,26 +309,37 @@ main() {
   backup="$(mktemp -t releases.json.backup.XXXXXX)"
   cp "$releases_file" "$backup"
 
-  # Seed the entry with the real tarball hash and a fake npmDepsHash so nix
-  # reveals the real FOD hash on build.
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$latest_version" \
+    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
+
+  # Preserve known targets and force the current target to fakeHash so Nix
+  # reveals its real FOD hash. Missing targets remain unavailable until filled.
   local entry_json
   entry_json="$(jq -n \
     --arg v "$latest_version" \
     --arg rev "$latest_version" \
     --arg hash "$tarball_hash" \
     --arg fake "$FAKE_HASH" \
-    '{version: $v, rev: $rev, hash: $hash, npmDepsHash: $fake}')"
+    --arg bsys "$BUILD_SYSTEM" \
+    --argjson prior "$prior_hashes" \
+    '{version: $v, rev: $rev, hash: $hash, npmDepsHashes: ({
+      "x86_64-linux": $fake,
+      "aarch64-linux": $fake,
+      "x86_64-darwin": $fake,
+      "aarch64-darwin": $fake
+    } + $prior + { ($bsys): $fake })}')"
   upsert_release_entry "$latest_version" "$entry_json"
 
-  log_info "Computing npmDeps (pnpm store) FOD hash..."
+  log_info "Computing npmDeps (pnpm store) FOD hash for ${BUILD_SYSTEM}..."
   local npm_hash
   npm_hash="$(build_and_get_hash "$attr")"
   if [ -z "$npm_hash" ]; then
     # No mismatch printed => build already succeeded (hash was correct).
-    log_info "  npmDepsHash already correct (no rehash needed)."
+    log_info "  npmDeps hash already correct (no rehash needed)."
   else
-    log_info "  npmDepsHash: $npm_hash"
-    set_entry_field "$latest_version" "npmDepsHash" "$npm_hash"
+    log_info "  npmDeps hash: $npm_hash"
+    set_entry_system_hash "$latest_version" "$BUILD_SYSTEM" "$npm_hash"
   fi
 
   if [ "$no_build" != true ]; then

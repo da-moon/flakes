@@ -24,11 +24,13 @@ readonly REPO_NAME="sentrux"
 declare -Ar BINARY_ASSET_BY_SYSTEM=(
   [x86_64-linux]="sentrux-linux-x86_64"
   [aarch64-linux]="sentrux-linux-aarch64"
+  [aarch64-darwin]="sentrux-darwin-arm64"
 )
 
 declare -Ar GRAMMAR_ASSET_BY_SYSTEM=(
   [x86_64-linux]="grammars-linux-x86_64.tar.gz"
   [aarch64-linux]="grammars-linux-aarch64.tar.gz"
+  [aarch64-darwin]="grammars-darwin-arm64.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

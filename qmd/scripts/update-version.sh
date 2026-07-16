@@ -11,8 +11,8 @@
 #   - .hash            : fetchurl source-tarball hash (arch-agnostic, single)
 #   - .outputHashes.*  : per-system bun/npm fixed-output-derivation hash,
 #                        computed via the reliable fakeHash -> nix build ->
-#                        parse "got:" method (only for the build system; the
-#                        other arch keeps its recorded/fake hash).
+#                        parse "got:" method (only for the build system; other
+#                        supported systems keep their recorded/fake hashes).
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -239,20 +239,9 @@ main() {
   [ -n "$source_hash" ] || { log_error "Failed to prefetch source hash"; exit 2; }
   log_info "  source hash: $source_hash"
 
-  # Preserve an existing outputHash for the other arch if present, else seed a
-  # fakeHash there (that arch is not built here; its hash stays fake until built).
-  local aarch_hash x86_hash
-  aarch_hash="$(jq -r --arg k "$new_key" '.versions[$k].outputHashes["aarch64-linux"] // empty' "$releases_file")"
-  [ -n "$aarch_hash" ] || aarch_hash="$FAKE_HASH"
-  x86_hash="$(jq -r --arg k "$new_key" '.versions[$k].outputHashes["x86_64-linux"] // empty' "$releases_file")"
-  [ -n "$x86_hash" ] || x86_hash="$FAKE_HASH"
-
-  # Build-system hash starts fake so nix reveals the real one; other arch preserved.
-  local build_hash="$FAKE_HASH" other_map
-  case "$BUILD_SYSTEM" in
-    aarch64-linux) other_map="$(jq -n --arg h "$x86_hash" '{ "x86_64-linux": $h }')" ;;
-    *)             other_map="$(jq -n --arg h "$aarch_hash" '{ "aarch64-linux": $h }')" ;;
-  esac
+  local prior_hashes
+  prior_hashes="$(jq -c --arg k "$new_key" \
+    '.versions[$k].outputHashes // {}' "$releases_file")"
 
   # 2) upsert the entry with fake build-system hash + preserved other-arch hash.
   local attr tmp
@@ -262,14 +251,19 @@ main() {
      --arg ver "$new_version" \
      --arg rev "$new_version" \
      --arg src "$source_hash" \
-     --arg build "$build_hash" \
+     --arg fake "$FAKE_HASH" \
      --arg bsys "$BUILD_SYSTEM" \
-     --argjson other "$other_map" '
+     --argjson prior "$prior_hashes" '
        .versions[$k] = {
          version: $ver,
          rev: $rev,
          hash: $src,
-         outputHashes: ($other + { ($bsys): $build })
+         outputHashes: ({
+           "x86_64-linux": $fake,
+           "aarch64-linux": $fake,
+           "x86_64-darwin": $fake,
+           "aarch64-darwin": $fake
+         } + $prior + { ($bsys): $fake })
        }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"

@@ -13,9 +13,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -26,7 +28,7 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -43,11 +45,18 @@
             target = "x86_64-unknown-linux-musl";
             needsAutoPatchelf = false;
           };
+          "aarch64-darwin" = {
+            target = "aarch64-apple-darwin";
+            needsAutoPatchelf = false;
+          };
+          "x86_64-darwin" = {
+            target = "x86_64-apple-darwin";
+            needsAutoPatchelf = false;
+          };
         };
 
         currentConfig =
-          releaseConfigBySystem.${system}
-            or (throw "Unsupported system for rtk flake: ${system}");
+          releaseConfigBySystem.${system} or (throw "Unsupported system for rtk flake: ${system}");
 
         # Builder: derive an rtk package from one releases.json entry.
         mk =
@@ -55,8 +64,7 @@
           let
             version = entry.version;
             binarySha256 =
-              entry.hashes.${system}
-                or (throw "Missing hash for system ${system} in rtk release ${key}");
+              entry.hashes.${system} or (throw "Missing hash for system ${system} in rtk release ${key}");
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "rtk";
@@ -67,7 +75,7 @@
               homepage = "https://github.com/rtk-ai/rtk";
               license = licenses.mit;
               mainProgram = "rtk";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -111,7 +119,8 @@
         packages = {
           default = latestPkg;
           rtk = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

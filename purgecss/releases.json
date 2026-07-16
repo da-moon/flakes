@@ -6,8 +6,10 @@
       "rev": "8.0.0",
       "hash": "sha256-YU1mDinFNKLTr5qtnjQz61xz49XOFo7aqHv0MNBYtVg=",
       "outputHashBySystem": {
-        "aarch64-linux": "sha256-+OfpurXKdhc6ejCcmmwpbEsYkwnzZAcOOcnpga0T9NU=",
-        "x86_64-linux": "sha256-UoVnbh3CGeXveNlWQOyF/DWK76WI0nrTD7NPNSTV1nA="
+        "aarch64-darwin": "sha256-j4TtXcoUh5vP2VaRdjyTe3Hxr2DXGEorLcgtbhzauCk=",
+        "aarch64-linux": "sha256-j4TtXcoUh5vP2VaRdjyTe3Hxr2DXGEorLcgtbhzauCk=",
+        "x86_64-darwin": "sha256-j4TtXcoUh5vP2VaRdjyTe3Hxr2DXGEorLcgtbhzauCk=",
+        "x86_64-linux": "sha256-j4TtXcoUh5vP2VaRdjyTe3Hxr2DXGEorLcgtbhzauCk="
       }
     }
   }

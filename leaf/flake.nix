@@ -13,12 +13,14 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -33,6 +35,8 @@
         assetBySystem = {
           "x86_64-linux" = "leaf-linux-x86_64";
           "aarch64-linux" = "leaf-linux-arm64";
+          "x86_64-darwin" = "leaf-macos-x86_64";
+          "aarch64-darwin" = "leaf-macos-arm64";
         };
 
         # Builder: derive a leaf package from one releases.json entry.
@@ -42,12 +46,8 @@
           key: entry:
           let
             version = entry.version;
-            asset =
-              assetBySystem.${system}
-                or (throw "Unsupported system for leaf: ${system}");
-            hash =
-              entry.hashes.${system}
-                or (throw "Missing hash for system: ${system}");
+            asset = assetBySystem.${system} or (throw "Unsupported system for leaf: ${system}");
+            hash = entry.hashes.${system} or (throw "Missing hash for system: ${system}");
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "leaf";
@@ -57,7 +57,7 @@
               description = "Terminal Markdown previewer with a GUI-like experience";
               homepage = "https://github.com/RivoLink/leaf";
               mainProgram = "leaf";
-              platforms = linuxSystems;
+              platforms = systems;
               maintainers = [ ];
             };
 
@@ -71,8 +71,12 @@
             dontConfigure = true;
             dontStrip = true;
 
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-            buildInputs = [ (lib.getLib pkgs.stdenv.cc.cc) ];
+            nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
+            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              (lib.getLib pkgs.stdenv.cc.cc)
+            ];
 
             installPhase = ''
               runHook preInstall
@@ -96,7 +100,8 @@
         packages = {
           default = latestPkg;
           leaf = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

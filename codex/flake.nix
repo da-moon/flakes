@@ -13,6 +13,13 @@
       flake-utils,
     }:
     let
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
+
       # Version table: consumers select the latest OR any past version.
       # New entries are appended by scripts/update-version.sh via jq — do
       # NOT hand-edit the version data in this file.
@@ -21,19 +28,33 @@
       # Sanitize a JSON key into a valid attribute-name suffix.
       sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
     in
-    flake-utils.lib.eachDefaultSystem (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        # Architecture-specific asset naming (musl release bundles).
-        archBySystem = {
-          "aarch64-linux" = "aarch64";
-          "x86_64-linux" = "x86_64";
+        # Linux ships a ready-to-flatten bundle. Darwin's package archive has
+        # the same binaries under bin/ plus signed native resources.
+        releaseBySystem = {
+          "aarch64-linux" = {
+            asset = "codex-aarch64-unknown-linux-musl-bundle.tar.zst";
+            packageLayout = false;
+          };
+          "x86_64-linux" = {
+            asset = "codex-x86_64-unknown-linux-musl-bundle.tar.zst";
+            packageLayout = false;
+          };
+          "aarch64-darwin" = {
+            asset = "codex-package-aarch64-apple-darwin.tar.gz";
+            packageLayout = true;
+          };
+          "x86_64-darwin" = {
+            asset = "codex-package-x86_64-apple-darwin.tar.gz";
+            packageLayout = true;
+          };
         };
 
-        # Get arch for current system, fallback to x86_64 if unknown
-        currentArch = archBySystem.${system} or "x86_64";
+        release = releaseBySystem.${system};
 
         # Builder: derive a codex package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/src-url/hash
@@ -42,7 +63,7 @@
           key: entry:
           let
             version = entry.version;
-            sha256 = entry.hashes.${system} or entry.hashes."x86_64-linux";
+            sha256 = entry.hashes.${system};
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "codex";
@@ -56,14 +77,15 @@
                 and help you with various coding tasks through natural language.
               '';
               homepage = "https://github.com/openai/codex";
-              platforms = [ "aarch64-linux" "x86_64-linux" ];
+              platforms = systems;
+              mainProgram = "codex";
               maintainers = [ ];
             };
 
             # The `-bundle` asset carries the sidecars the CLI expects to find
             # beside itself; the plain codex-*.tar.gz ships only `codex`.
             src = pkgs.fetchurl {
-              url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${currentArch}-unknown-linux-musl-bundle.tar.zst";
+              url = "https://github.com/openai/codex/releases/download/rust-v${version}/${release.asset}";
               inherit sha256;
             };
 
@@ -80,9 +102,20 @@
             # next to $out/bin/codex.
             installPhase = ''
               runHook preInstall
-              install -m755 -D codex $out/bin/codex
-              install -m755 -D codex-code-mode-host $out/bin/codex-code-mode-host
-              install -m755 -D codex-resources/bwrap $out/bin/codex-resources/bwrap
+              ${
+                if release.packageLayout then
+                  ''
+                    install -m755 -D bin/codex $out/bin/codex
+                    install -m755 -D bin/codex-code-mode-host $out/bin/codex-code-mode-host
+                    cp -R codex-resources $out/bin/codex-resources
+                  ''
+                else
+                  ''
+                    install -m755 -D codex $out/bin/codex
+                    install -m755 -D codex-code-mode-host $out/bin/codex-code-mode-host
+                    cp -R codex-resources $out/bin/codex-resources
+                  ''
+              }
               runHook postInstall
             '';
 

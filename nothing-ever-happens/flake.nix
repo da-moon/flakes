@@ -14,9 +14,11 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
@@ -124,6 +126,11 @@
           // cfg.extraEnvironment;
 
           startScript = pkgs.writeShellScript "nothing-ever-happens-start" ''
+            ${lib.optionalString (cfg.envFile != null) ''
+              set -a
+              . ${escapeShellArg cfg.envFile}
+              set +a
+            ''}
             ${concatStringsSep "\n" (
               mapAttrsToList (
                 name: value: "export ${name}=${escapeShellArg (toEnvValue value)}"
@@ -311,10 +318,6 @@
           config = mkIf cfg.enable {
             assertions = [
               {
-                assertion = pkgs.stdenv.hostPlatform.isLinux;
-                message = "services.nothing-ever-happens is only supported on Linux user systemd.";
-              }
-              {
                 assertion = cfg.mode != "live" || cfg.envFile != null;
                 message = "services.nothing-ever-happens.envFile is required when mode = \"live\".";
               }
@@ -332,7 +335,7 @@
               run mkdir -m 700 -p ${escapeShellArg cfg.stateDir}
             '';
 
-            systemd.user.services.nothing-ever-happens = {
+            systemd.user.services.nothing-ever-happens = mkIf pkgs.stdenv.hostPlatform.isLinux {
               Unit = {
                 Description = "Nothing Ever Happens Polymarket bot";
                 After = [ "network.target" ];
@@ -348,10 +351,26 @@
               };
               Install.WantedBy = [ "default.target" ];
             };
+
+            launchd.agents.nothing-ever-happens = mkIf pkgs.stdenv.hostPlatform.isDarwin {
+              enable = true;
+              config = {
+                ProgramArguments = [ "${startScript}" ];
+                WorkingDirectory = cfg.stateDir;
+                RunAtLoad = true;
+                KeepAlive = {
+                  Crashed = true;
+                  SuccessfulExit = false;
+                };
+                ProcessType = "Background";
+                StandardOutPath = "${cfg.stateDir}/service.log";
+                StandardErrorPath = "${cfg.stateDir}/service.log";
+              };
+            };
           };
         };
 
-      perSystem = flake-utils.lib.eachSystem linuxSystems (
+      perSystem = flake-utils.lib.eachSystem systems (
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
@@ -474,107 +493,107 @@
               };
             in
             pkgs.stdenv.mkDerivation {
-            inherit pname version src;
+              inherit pname version src;
 
-            meta = with lib; {
-              description = "Async Polymarket bot that buys NO on standalone yes/no markets";
-              homepage = "https://github.com/sterlingcrispin/nothing-ever-happens";
-              license = licenses.cc0;
-              mainProgram = "nothing-ever-happens";
-              platforms = linuxSystems;
-              maintainers = [ ];
+              meta = with lib; {
+                description = "Async Polymarket bot that buys NO on standalone yes/no markets";
+                homepage = "https://github.com/sterlingcrispin/nothing-ever-happens";
+                license = licenses.cc0;
+                mainProgram = "nothing-ever-happens";
+                platforms = systems;
+                maintainers = [ ];
+              };
+
+              nativeBuildInputs = [
+                pkgs.makeWrapper
+                pkgs.patch
+              ];
+              dontBuild = true;
+              dontConfigure = true;
+
+              installPhase = ''
+                runHook preInstall
+
+                mkdir -p $out/lib/${pname}
+                mkdir -p $out/bin
+                cp -r $src/. $out/lib/${pname}/
+                chmod -R u+w $out/lib/${pname}
+
+                substituteInPlace $out/lib/${pname}/bot/exchange/paper.py \
+                  --replace-fail $'import time' $'import os\nimport time' \
+                  --replace-fail "        initial_collateral_balance: float = 100.0," "        initial_collateral_balance: float | None = None," \
+                  --replace-fail $'        self._collateral_balance = float(initial_collateral_balance)' $'        if initial_collateral_balance is None:\n            initial_collateral_balance = float(os.getenv("PM_PAPER_INITIAL_COLLATERAL_BALANCE", "100.0"))\n        self._collateral_balance = float(initial_collateral_balance)'
+
+                substituteInPlace $out/lib/${pname}/bot/standalone_markets.py \
+                  --replace-fail $'import json' $'import json\nimport os' \
+                  --replace-fail "    cutoff = now + timedelta(days=max_end_date_months * 30)" $'    max_end_date_days = int(os.getenv("PM_NH_MAX_END_DATE_DAYS", str(max_end_date_months * 30)))\n    cutoff = now + timedelta(days=max(1, max_end_date_days))' \
+                  --replace-fail $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:' $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 422 and offset > 0:\n                logger.info(\n                    "gamma_markets_pagination_exhausted offset=%d status=%s",\n                    offset,\n                    exc.status,\n                )\n                return\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:'
+
+                substituteInPlace $out/lib/${pname}/bot/strategy/nothing_happens.py \
+                  --replace-fail $'    def _position_target_reached(self) -> bool:\n        new_entry_capacity = self._remaining_new_entry_capacity()\n        if new_entry_capacity is not None and new_entry_capacity <= 0:\n            return True\n        target = self._current_target_open_positions()\n        return target is not None and (len(self._positions_by_slug) + len(self._recovery_blocked_slugs)) >= target' $'    def _position_target_reached(self) -> bool:\n        if not self._uses_manual_target_override() and self.cfg.max_new_positions >= 0:\n            remaining_new_entries = (\n                self.cfg.max_new_positions\n                - self._opened_position_count\n                - len(self._recovery_blocked_slugs)\n            )\n            if remaining_new_entries <= 0:\n                return True\n        target = self._current_target_open_positions()\n        return target is not None and (len(self._positions_by_slug) + len(self._recovery_blocked_slugs)) >= target'
+
+                patch -d $out/lib/${pname} -p1 < ${./patches/paper-resolution.patch}
+
+                cat > $out/bin/nothing-ever-happens <<'EOF'
+                #!/usr/bin/env bash
+                set -euo pipefail
+
+                case "''${1:-}" in
+                  --version|-V)
+                    echo "nothing-ever-happens __VERSION__"
+                    exit 0
+                    ;;
+                  --help|-h)
+                    cat <<'USAGE'
+                nothing-ever-happens
+
+                Starts the Polymarket bot from the current working directory.
+
+                Safe commands:
+                  nothing-ever-happens --version
+                  nothing-ever-happens --help
+
+                Runtime files expected in your working directory:
+                  config.json
+                  .env
+                USAGE
+                    exit 0
+                    ;;
+                esac
+
+                config_path="''${CONFIG_PATH:-config.json}"
+                if [ ! -f "$config_path" ]; then
+                  echo "Config file not found: $config_path" >&2
+                  echo "Copy config.example.json to config.json and fill in your values." >&2
+                  exit 1
+                fi
+
+                export PYTHONPATH="__PKG_ROOT__''${PYTHONPATH:+:$PYTHONPATH}"
+                exec "__PYTHON__" -m bot.main "$@"
+                EOF
+                substituteInPlace $out/bin/nothing-ever-happens \
+                  --replace-fail "__VERSION__" "${version}" \
+                  --replace-fail "__PKG_ROOT__" "$out/lib/${pname}" \
+                  --replace-fail "__PYTHON__" "${pythonEnv}/bin/python"
+                chmod +x $out/bin/nothing-ever-happens
+
+                makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-db-stats" \
+                  --add-flags "$out/lib/${pname}/scripts/db_stats.py" \
+                  --prefix PYTHONPATH : "$out/lib/${pname}"
+                makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-export-db" \
+                  --add-flags "$out/lib/${pname}/scripts/export_db.py" \
+                  --prefix PYTHONPATH : "$out/lib/${pname}"
+                makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-wallet-history" \
+                  --add-flags "$out/lib/${pname}/scripts/wallet_history.py" \
+                  --prefix PYTHONPATH : "$out/lib/${pname}"
+                makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-parse-logs" \
+                  --add-flags "$out/lib/${pname}/scripts/parse_logs.py" \
+                  --prefix PYTHONPATH : "$out/lib/${pname}"
+
+                runHook postInstall
+              '';
+
             };
-
-            nativeBuildInputs = [
-              pkgs.makeWrapper
-              pkgs.patch
-            ];
-            dontBuild = true;
-            dontConfigure = true;
-
-            installPhase = ''
-              runHook preInstall
-
-              mkdir -p $out/lib/${pname}
-              mkdir -p $out/bin
-              cp -r $src/. $out/lib/${pname}/
-              chmod -R u+w $out/lib/${pname}
-
-              substituteInPlace $out/lib/${pname}/bot/exchange/paper.py \
-                --replace-fail $'import time' $'import os\nimport time' \
-                --replace-fail "        initial_collateral_balance: float = 100.0," "        initial_collateral_balance: float | None = None," \
-                --replace-fail $'        self._collateral_balance = float(initial_collateral_balance)' $'        if initial_collateral_balance is None:\n            initial_collateral_balance = float(os.getenv("PM_PAPER_INITIAL_COLLATERAL_BALANCE", "100.0"))\n        self._collateral_balance = float(initial_collateral_balance)'
-
-              substituteInPlace $out/lib/${pname}/bot/standalone_markets.py \
-                --replace-fail $'import json' $'import json\nimport os' \
-                --replace-fail "    cutoff = now + timedelta(days=max_end_date_months * 30)" $'    max_end_date_days = int(os.getenv("PM_NH_MAX_END_DATE_DAYS", str(max_end_date_months * 30)))\n    cutoff = now + timedelta(days=max(1, max_end_date_days))' \
-                --replace-fail $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:' $'        except aiohttp.ClientResponseError as exc:\n            if exc.status == 422 and offset > 0:\n                logger.info(\n                    "gamma_markets_pagination_exhausted offset=%d status=%s",\n                    offset,\n                    exc.status,\n                )\n                return\n            if exc.status == 429 and retries < PAGE_MAX_RETRIES:'
-
-              substituteInPlace $out/lib/${pname}/bot/strategy/nothing_happens.py \
-                --replace-fail $'    def _position_target_reached(self) -> bool:\n        new_entry_capacity = self._remaining_new_entry_capacity()\n        if new_entry_capacity is not None and new_entry_capacity <= 0:\n            return True\n        target = self._current_target_open_positions()\n        return target is not None and (len(self._positions_by_slug) + len(self._recovery_blocked_slugs)) >= target' $'    def _position_target_reached(self) -> bool:\n        if not self._uses_manual_target_override() and self.cfg.max_new_positions >= 0:\n            remaining_new_entries = (\n                self.cfg.max_new_positions\n                - self._opened_position_count\n                - len(self._recovery_blocked_slugs)\n            )\n            if remaining_new_entries <= 0:\n                return True\n        target = self._current_target_open_positions()\n        return target is not None and (len(self._positions_by_slug) + len(self._recovery_blocked_slugs)) >= target'
-
-              patch -d $out/lib/${pname} -p1 < ${./patches/paper-resolution.patch}
-
-              cat > $out/bin/nothing-ever-happens <<'EOF'
-              #!/usr/bin/env bash
-              set -euo pipefail
-
-              case "''${1:-}" in
-                --version|-V)
-                  echo "nothing-ever-happens __VERSION__"
-                  exit 0
-                  ;;
-                --help|-h)
-                  cat <<'USAGE'
-              nothing-ever-happens
-
-              Starts the Polymarket bot from the current working directory.
-
-              Safe commands:
-                nothing-ever-happens --version
-                nothing-ever-happens --help
-
-              Runtime files expected in your working directory:
-                config.json
-                .env
-              USAGE
-                  exit 0
-                  ;;
-              esac
-
-              config_path="''${CONFIG_PATH:-config.json}"
-              if [ ! -f "$config_path" ]; then
-                echo "Config file not found: $config_path" >&2
-                echo "Copy config.example.json to config.json and fill in your values." >&2
-                exit 1
-              fi
-
-              export PYTHONPATH="__PKG_ROOT__''${PYTHONPATH:+:$PYTHONPATH}"
-              exec "__PYTHON__" -m bot.main "$@"
-              EOF
-              substituteInPlace $out/bin/nothing-ever-happens \
-                --replace-fail "__VERSION__" "${version}" \
-                --replace-fail "__PKG_ROOT__" "$out/lib/${pname}" \
-                --replace-fail "__PYTHON__" "${pythonEnv}/bin/python"
-              chmod +x $out/bin/nothing-ever-happens
-
-              makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-db-stats" \
-                --add-flags "$out/lib/${pname}/scripts/db_stats.py" \
-                --prefix PYTHONPATH : "$out/lib/${pname}"
-              makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-export-db" \
-                --add-flags "$out/lib/${pname}/scripts/export_db.py" \
-                --prefix PYTHONPATH : "$out/lib/${pname}"
-              makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-wallet-history" \
-                --add-flags "$out/lib/${pname}/scripts/wallet_history.py" \
-                --prefix PYTHONPATH : "$out/lib/${pname}"
-              makeWrapper "${pythonEnv}/bin/python" "$out/bin/nothing-ever-happens-parse-logs" \
-                --add-flags "$out/lib/${pname}/scripts/parse_logs.py" \
-                --prefix PYTHONPATH : "$out/lib/${pname}"
-
-              runHook postInstall
-            '';
-
-          };
           latestPkg = mk releases.latest releases.versions.${releases.latest};
 
           # One `nothing-ever-happens_<sanitized-key>` package per table entry.

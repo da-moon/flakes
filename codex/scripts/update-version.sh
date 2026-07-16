@@ -2,7 +2,7 @@
 # Appends the newest (or an explicit) openai/codex release to releases.json (the
 # JSON version table the flake reads) as a new entry keyed by version, and sets
 # .latest to it. Existing entries are preserved so consumers can still select
-# past versions. Both per-arch bundle-tarball hashes are recomputed via
+# past versions. Per-system release-archive hashes are recomputed via
 # `nix store prefetch-file` and written with jq — the version data in flake.nix
 # is never touched.
 #
@@ -23,9 +23,11 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="openai"
 readonly REPO_NAME="codex"
-declare -Ar SYSTEM_TO_ARCH=(
-  [x86_64-linux]="x86_64"
-  [aarch64-linux]="aarch64"
+declare -Ar ASSET_BY_SYSTEM=(
+  [x86_64-linux]="codex-x86_64-unknown-linux-musl-bundle.tar.zst"
+  [aarch64-linux]="codex-aarch64-unknown-linux-musl-bundle.tar.zst"
+  [x86_64-darwin]="codex-package-x86_64-apple-darwin.tar.gz"
+  [aarch64-darwin]="codex-package-aarch64-apple-darwin.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -256,14 +258,14 @@ main() {
 
   # Compute per-arch SRI hashes from the release tarballs.
   log_info "Prefetching tarball hashes..."
-  local system arch url sri_hash
+  local system asset url sri_hash
   local hashes_json="{}"
-  for system in "${!SYSTEM_TO_ARCH[@]}"; do
-    arch="${SYSTEM_TO_ARCH[$system]}"
-    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/codex-${arch}-unknown-linux-musl-bundle.tar.zst"
+  for system in "${!ASSET_BY_SYSTEM[@]}"; do
+    asset="${ASSET_BY_SYSTEM[$system]}"
+    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/$asset"
     sri_hash="$(prefetch_sha256_sri "$url")"
     if [ -z "$sri_hash" ]; then
-      log_error "Failed to prefetch hash for $arch ($system)"
+      log_error "Failed to prefetch hash for $asset ($system)"
       exit 2
     fi
     log_info "$system hash: $sri_hash"

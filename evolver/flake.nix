@@ -13,12 +13,14 @@
       ...
     }:
     let
-      linuxSystems = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
     in
-    flake-utils.lib.eachSystem linuxSystems (
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -43,135 +45,137 @@
             version = entry.version;
 
             npmDeps = pkgs.stdenv.mkDerivation {
-          name = "${pname}-${version}-npm-deps";
+              name = "${pname}-${version}-npm-deps";
 
-          src = pkgs.fetchurl {
-            url = "https://registry.npmjs.org/@evomap/evolver/-/evolver-${version}.tgz";
-            hash = entry.hash;
-          };
+              src = pkgs.fetchurl {
+                url = "https://registry.npmjs.org/@evomap/evolver/-/evolver-${version}.tgz";
+                hash = entry.hash;
+              };
 
-          nativeBuildInputs = [
-            nodejs
-            pkgs.pnpm
-            pkgs.cacert
-          ];
+              nativeBuildInputs = [
+                nodejs
+                pkgs.pnpm
+                pkgs.cacert
+              ];
 
-          dontPatchShebangs = true;
+              dontPatchShebangs = true;
 
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
-          outputHash = entry.npmDepsHash;
+              outputHashAlgo = "sha256";
+              outputHashMode = "recursive";
+              outputHash = entry.npmDepsHash;
 
-          buildPhase = ''
-            runHook preBuild
+              buildPhase = ''
+                runHook preBuild
 
-            export HOME=$TMPDIR
-            tar -xzf $src
-            cd package
+                export HOME=$TMPDIR
+                tar -xzf $src
+                cd package
 
-            ${nodejs}/bin/node -e '
-              const fs = require("fs");
-              const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-              delete pkg.devDependencies;
-              delete pkg.packageManager;
-              function exactSpec(spec) {
-                if (typeof spec !== "string") return spec;
-                if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                return bare ? bare[1] : spec;
-              }
-              function isExactInstallSpec(spec) {
-                return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                  || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-              }
-              const unresolved = [];
-              for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                  const next = exactSpec(spec);
-                  pkg[field][name] = next;
-                  if (typeof next === "string" && !isExactInstallSpec(next)) {
-                    unresolved.push(field + "." + name + "=" + next);
+                ${nodejs}/bin/node -e '
+                  const fs = require("fs");
+                  const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+                  delete pkg.devDependencies;
+                  delete pkg.packageManager;
+                  function exactSpec(spec) {
+                    if (typeof spec !== "string") return spec;
+                    if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
+                    const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+                    return bare ? bare[1] : spec;
                   }
-                }
-              }
-              if (unresolved.length > 0) {
-                throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-              }
-              fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
-            '
+                  function isExactInstallSpec(spec) {
+                    return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
+                      || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
+                  }
+                  const unresolved = [];
+                  for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+                    for (const [name, spec] of Object.entries(pkg[field] || {})) {
+                      const next = exactSpec(spec);
+                      pkg[field][name] = next;
+                      if (typeof next === "string" && !isExactInstallSpec(next)) {
+                        unresolved.push(field + "." + name + "=" + next);
+                      }
+                    }
+                  }
+                  if (unresolved.length > 0) {
+                    throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
+                  }
+                  fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+                '
 
-            pnpm install --prod --ignore-scripts --shamefully-hoist
+                pnpm install --prod --ignore-scripts --shamefully-hoist
 
-            runHook postBuild
-          '';
+                runHook postBuild
+              '';
 
-          installPhase = ''
-            runHook preInstall
-            mkdir -p $out
-            cp -r . $out/
-            runHook postInstall
-          '';
-        };
+              installPhase = ''
+                runHook preInstall
+                mkdir -p $out
+                cp -r . $out/
+                runHook postInstall
+              '';
+            };
           in
           pkgs.stdenv.mkDerivation {
-          inherit pname version;
+            inherit pname version;
 
-          meta = with lib; {
-            description = "Self-evolution engine for AI agents";
-            homepage = "https://github.com/EvoMap/evolver";
-            license = licenses.gpl3Plus;
-            mainProgram = "evolver";
-            platforms = linuxSystems;
-            maintainers = [ ];
+            meta = with lib; {
+              description = "Self-evolution engine for AI agents";
+              homepage = "https://github.com/EvoMap/evolver";
+              license = licenses.gpl3Plus;
+              mainProgram = "evolver";
+              platforms = systems;
+              maintainers = [ ];
+            };
+
+            src = npmDeps;
+
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            dontBuild = true;
+            dontConfigure = true;
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/lib/${pname}
+              mkdir -p $out/bin
+              cp -r $src/* $out/lib/${pname}/
+
+              makeWrapper ${nodejs}/bin/node $out/bin/.evolver-real \
+                --add-flags "$out/lib/${pname}/index.js" \
+                --set NODE_PATH "$out/lib/${pname}/node_modules" \
+                --set NODE_ENV "production" \
+                --prefix PATH : ${
+                  lib.makeBinPath [
+                    pkgs.git
+                    pkgs.bash
+                    pkgs.coreutils
+                  ]
+                }
+
+              cat > $out/bin/evolver <<'EOF'
+              #!/usr/bin/env bash
+              set -euo pipefail
+
+              export MEMORY_DIR="''${MEMORY_DIR:-$PWD/memory}"
+
+              case "''${1:-}" in
+                --version|-V)
+                  echo "evolver __VERSION__"
+                  exit 0
+                  ;;
+              esac
+
+              exec "__REAL_BIN__" "$@"
+              EOF
+              substituteInPlace $out/bin/evolver \
+                --replace-fail "__VERSION__" "${version}" \
+                --replace-fail "__REAL_BIN__" "$out/bin/.evolver-real"
+              chmod +x $out/bin/evolver
+
+              runHook postInstall
+            '';
+
           };
-
-          src = npmDeps;
-
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-          dontBuild = true;
-          dontConfigure = true;
-
-          installPhase = ''
-            runHook preInstall
-
-            mkdir -p $out/lib/${pname}
-            mkdir -p $out/bin
-            cp -r $src/* $out/lib/${pname}/
-
-            makeWrapper ${nodejs}/bin/node $out/bin/.evolver-real \
-              --add-flags "$out/lib/${pname}/index.js" \
-              --set NODE_PATH "$out/lib/${pname}/node_modules" \
-              --set NODE_ENV "production" \
-              --prefix PATH : ${lib.makeBinPath [
-                pkgs.git
-                pkgs.bash
-                pkgs.coreutils
-              ]}
-
-            cat > $out/bin/evolver <<'EOF'
-            #!/usr/bin/env bash
-            set -euo pipefail
-
-            export MEMORY_DIR="''${MEMORY_DIR:-$PWD/memory}"
-
-            case "''${1:-}" in
-              --version|-V)
-                echo "evolver __VERSION__"
-                exit 0
-                ;;
-            esac
-
-            exec "__REAL_BIN__" "$@"
-            EOF
-            substituteInPlace $out/bin/evolver \
-              --replace-fail "__VERSION__" "${version}" \
-              --replace-fail "__REAL_BIN__" "$out/bin/.evolver-real"
-            chmod +x $out/bin/evolver
-
-            runHook postInstall
-          '';
-
-        };
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
@@ -184,7 +188,8 @@
         packages = {
           default = latestPkg;
           evolver = latestPkg;
-        } // versionPackages;
+        }
+        // versionPackages;
 
         apps = {
           default = {

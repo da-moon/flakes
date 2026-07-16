@@ -58,8 +58,8 @@
 
               outputHashAlgo = "sha256";
               outputHashMode = "recursive";
-              outputHash = outputHashBySystem.${system}
-                or (throw "Missing outputHashBySystem entry for system: ${system}");
+              outputHash =
+                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
 
               buildPhase = ''
                 runHook preBuild
@@ -143,7 +143,9 @@
                   fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
                 '
 
-                NODE_OPTIONS=--max-old-space-size=4096 pnpm install --prod --ignore-scripts --shamefully-hoist
+                NODE_OPTIONS=--max-old-space-size=4096 pnpm install --prod --ignore-scripts --shamefully-hoist \
+                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
+                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
 
                 runHook postBuild
               '';
@@ -227,7 +229,12 @@
                   --add-flags "$out/lib/${pname}/dist/cli/index.js" \
                   --set NODE_PATH "$out/lib/${pname}/node_modules" \
                   --set NODE_ENV "production" \
-                  --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.git pkgs.ripgrep ]}
+                  --prefix PATH : ${
+                    pkgs.lib.makeBinPath [
+                      pkgs.git
+                      pkgs.ripgrep
+                    ]
+                  }
 
                 runHook postInstall
               '';
@@ -239,10 +246,20 @@
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
         versionedPackages = builtins.listToAttrs (
-          builtins.map (key: {
-            name = "${pname}_${sanitize key}";
-            value = mk key releases.versions.${key};
-          }) (builtins.attrNames releases.versions)
+          builtins.map
+            (key: {
+              name = "${pname}_${sanitize key}";
+              value = mk key releases.versions.${key};
+            })
+            (
+              builtins.filter (
+                key:
+                let
+                  hash = releases.versions.${key}.outputHashes.${system} or null;
+                in
+                hash != null && hash != pkgs.lib.fakeHash
+              ) (builtins.attrNames releases.versions)
+            )
         );
       in
       {

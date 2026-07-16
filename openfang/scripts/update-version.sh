@@ -27,6 +27,8 @@ readonly TAG_PREFIX="v"
 declare -Ar ASSET_BY_SYSTEM=(
   [x86_64-linux]="openfang-x86_64-unknown-linux-gnu.tar.gz"
   [aarch64-linux]="openfang-aarch64-unknown-linux-gnu.tar.gz"
+  [x86_64-darwin]="openfang-x86_64-apple-darwin.tar.gz"
+  [aarch64-darwin]="openfang-aarch64-apple-darwin.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

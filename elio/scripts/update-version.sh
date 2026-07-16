@@ -18,10 +18,11 @@ readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="elio-fm"
 readonly REPO_NAME="elio"
 
-# Systems we ship prebuilt binaries for. Upstream currently only publishes an
-# x86_64-linux tarball (aarch64 is darwin-only), so this is the single entry.
+# Systems we ship prebuilt binaries for. Upstream publishes x86_64 Linux and
+# Apple-silicon macOS archives.
 declare -Ar ASSET_NAME_BY_SYSTEM=(
   [x86_64-linux]="x86_64-unknown-linux-gnu"
+  [aarch64-darwin]="aarch64-apple-darwin"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

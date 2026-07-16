@@ -20,10 +20,12 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="steveyegge"
 readonly REPO_NAME="beads"
-# Upstream release-asset arch tokens keyed by nix system.
-declare -Ar SYSTEM_TO_RELEASE_ARCH=(
-  [x86_64-linux]="amd64"
-  [aarch64-linux]="arm64"
+# Upstream release-asset OS/arch suffixes keyed by nix system.
+declare -Ar SYSTEM_TO_RELEASE_SUFFIX=(
+  [x86_64-linux]="linux_amd64"
+  [aarch64-linux]="linux_arm64"
+  [x86_64-darwin]="darwin_amd64"
+  [aarch64-darwin]="darwin_arm64"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -258,14 +260,14 @@ main() {
 
   # Prefetch per-arch tarball hashes from the release assets.
   log_info "Prefetching tarball hashes..."
-  local system arch url sri_hash
+  local system suffix url sri_hash
   local hashes_json="{}"
-  for system in "${!SYSTEM_TO_RELEASE_ARCH[@]}"; do
-    arch="${SYSTEM_TO_RELEASE_ARCH[$system]}"
-    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/beads_${latest_version}_linux_${arch}.tar.gz"
+  for system in "${!SYSTEM_TO_RELEASE_SUFFIX[@]}"; do
+    suffix="${SYSTEM_TO_RELEASE_SUFFIX[$system]}"
+    url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$latest_tag/beads_${latest_version}_${suffix}.tar.gz"
     sri_hash="$(prefetch_sha256_sri "$url")"
     if [ -z "$sri_hash" ]; then
-      log_error "Failed to prefetch hash for $arch ($system): $url"
+      log_error "Failed to prefetch hash for $suffix ($system): $url"
       exit 2
     fi
     log_info "$system hash: $sri_hash"

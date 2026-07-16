@@ -24,6 +24,8 @@ readonly REPO_NAME="rtk"
 declare -Ar ASSET_NAME_BY_SYSTEM=(
   [aarch64-linux]="rtk-aarch64-unknown-linux-gnu.tar.gz"
   [x86_64-linux]="rtk-x86_64-unknown-linux-musl.tar.gz"
+  [aarch64-darwin]="rtk-aarch64-apple-darwin.tar.gz"
+  [x86_64-darwin]="rtk-x86_64-apple-darwin.tar.gz"
 )
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

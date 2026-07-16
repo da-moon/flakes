@@ -10,7 +10,7 @@
 #             URL and the fetchFromGitHub source rev.
 #
 # Each entry carries every hash the dual-path flake needs:
-#   - prebuiltHashes."x86_64-linux" : prefetched GitHub release-binary hash.
+#   - prebuiltHashes.<system>        : prefetched GitHub release-binary hashes.
 #   - srcHash                       : fetchFromGitHub source hash (source path).
 #   - cargoOutputHashes.<dep>       : per git-dep cargoLock FOD hash.
 # The source hashes are host-independent and are read from fast-failing
@@ -30,9 +30,12 @@ readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="block"
 readonly REPO_NAME="goose"
 readonly PACKAGE_ATTR="goose-cli"
-# System whose prebuilt release binary is pulled from GitHub (matches prebuiltBySystem in flake.nix).
-readonly PREBUILT_SYSTEM="x86_64-linux"
-readonly PREBUILT_ASSET="goose-x86_64-unknown-linux-gnu.tar.gz"
+# Systems with upstream CLI archives (matches prebuiltBySystem in flake.nix).
+declare -Ar PREBUILT_ASSET_BY_SYSTEM=(
+  [x86_64-linux]="goose-x86_64-unknown-linux-gnu.tar.gz"
+  [x86_64-darwin]="goose-x86_64-apple-darwin.tar.gz"
+  [aarch64-darwin]="goose-aarch64-apple-darwin.tar.gz"
+)
 # lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
 readonly PLACEHOLDER_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
@@ -105,14 +108,14 @@ releases_jq() {
 # hashes, then set it as .latest. An existing entry's cargoOutputHashes are
 # preserved so already-resolved git-dep hashes are not needlessly recomputed.
 seed_release_entry() {
-  local key="$1" version="$2" rev="$3" prebuilt_hash="$4"
+  local key="$1" version="$2" rev="$3" prebuilt_hashes="$4"
   local existing_cargo
   existing_cargo="$(jq -c --arg k "$key" '.versions[$k].cargoOutputHashes // {}' "$releases_file")"
   releases_jq '
       .versions[$k] = {
         version: $ver,
         rev: $rev,
-        prebuiltHashes: { "x86_64-linux": $pb },
+        prebuiltHashes: $pb,
         srcHash: $fake,
         cargoOutputHashes: $cargo
       }
@@ -121,7 +124,7 @@ seed_release_entry() {
     --arg k "$key" \
     --arg ver "$version" \
     --arg rev "$rev" \
-    --arg pb "$prebuilt_hash" \
+    --argjson pb "$prebuilt_hashes" \
     --arg fake "$PLACEHOLDER_HASH" \
     --argjson cargo "$existing_cargo"
 }
@@ -306,7 +309,7 @@ resolve_source_hashes() {
 
 verify_build() {
   local sanitized_key="$1"
-  log_info "Verifying build of .#${PACKAGE_ATTR} (prebuilt on ${PREBUILT_SYSTEM}, source elsewhere)..."
+  log_info "Verifying build of .#${PACKAGE_ATTR} (prebuilt where available, source otherwise)..."
   local -a build_cmd=(nix build ".#${PACKAGE_ATTR}_${sanitized_key}" --no-link --print-out-paths --no-write-lock-file)
   if [ -n "$BUILD_SYSTEM" ]; then
     build_cmd+=(--system "$BUILD_SYSTEM")
@@ -411,9 +414,9 @@ Options:
   --help              Show this help message
 
 Notes:
-  On x86_64-linux the package is the prebuilt GitHub release binary; every other
-  system builds goose-cli from source. This updater refreshes BOTH the prebuilt
-  hash and the source hashes on any host (source hashes are read from fast-failing
+  Linux x86_64 and both Darwin systems use upstream release binaries;
+  aarch64-linux builds goose-cli from source. This updater refreshes all prebuilt
+  hashes and the source hashes on any host (source hashes are read from fast-failing
   fixed-output derivations, so no Rust compilation is needed to update them).
 
 Examples:
@@ -512,21 +515,26 @@ main() {
     exit 0
   fi
 
-  # Prefetch the prebuilt release binary hash (deterministic, no build).
-  local prebuilt_url prebuilt_hash
-  prebuilt_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${latest_tag}/${PREBUILT_ASSET}"
-  log_info "Prefetching prebuilt release binary hash..."
-  prebuilt_hash="$(prefetch_sha256_sri "$prebuilt_url")"
-  if [ -z "$prebuilt_hash" ]; then
-    log_error "Failed to prefetch prebuilt release binary hash from $prebuilt_url"
-    exit 2
-  fi
-  log_info "prebuilt hash: $prebuilt_hash"
+  # Prefetch all prebuilt release binary hashes (deterministic, no build).
+  local system asset prebuilt_url prebuilt_hash
+  local prebuilt_hashes='{}'
+  for system in "${!PREBUILT_ASSET_BY_SYSTEM[@]}"; do
+    asset="${PREBUILT_ASSET_BY_SYSTEM[$system]}"
+    prebuilt_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${latest_tag}/${asset}"
+    log_info "Prefetching $asset ($system)..."
+    prebuilt_hash="$(prefetch_sha256_sri "$prebuilt_url")"
+    if [ -z "$prebuilt_hash" ]; then
+      log_error "Failed to prefetch prebuilt release binary hash from $prebuilt_url"
+      exit 2
+    fi
+    prebuilt_hashes="$(jq -n --argjson hashes "$prebuilt_hashes" --arg system "$system" --arg hash "$prebuilt_hash" \
+      '$hashes + {($system): $hash}')"
+  done
 
   backup_repo_state
 
   # Seed the new entry (prebuilt hash + placeholder source hashes) and set latest.
-  seed_release_entry "$latest_version" "$latest_version" "$latest_tag" "$prebuilt_hash"
+  seed_release_entry "$latest_version" "$latest_version" "$latest_tag" "$prebuilt_hashes"
 
   # Refresh the vendored Cargo.lock for the source (aarch64) build path.
   if ! fetch_cargo_lock "$latest_tag"; then

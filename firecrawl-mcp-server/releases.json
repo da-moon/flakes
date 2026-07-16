@@ -15,8 +15,10 @@
       "rev": "3.22.3",
       "hash": "sha256-YskN+6kuNCa/a3JiQfcqPk2JsW9TNX/DBN0yuYSIZZI=",
       "outputHashBySystem": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-wkbAB7OfV+cg2dT0HvpnidS2T/3TOJxJcUh9YKb6F6Y="
+        "aarch64-darwin": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU=",
+        "aarch64-linux": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU=",
+        "x86_64-darwin": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU=",
+        "x86_64-linux": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU="
       }
     }
   }

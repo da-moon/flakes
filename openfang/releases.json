@@ -6,7 +6,9 @@
       "rev": "0.6.9",
       "hashes": {
         "x86_64-linux": "sha256-QwmwvPKtxdrEV3biAICHqK0HKTPxrmmP+NTgb7a4dgI=",
-        "aarch64-linux": "sha256-jquFK6eJg8PPM0uBJwoUwRfIyxTMgkE0P9G0V222SuA="
+        "aarch64-linux": "sha256-jquFK6eJg8PPM0uBJwoUwRfIyxTMgkE0P9G0V222SuA=",
+        "x86_64-darwin": "sha256-ExeE7ilVq53m3LC+YEaVcySP/6FzJxxYDVrjBQmM6NQ=",
+        "aarch64-darwin": "sha256-G3fEoGFxnT7rqqLaRc+uvFxwlnmbyGgtSo1LqIk/jiU="
       }
     }
   }
