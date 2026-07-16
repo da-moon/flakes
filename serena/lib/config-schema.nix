@@ -70,13 +70,17 @@ let
     "bsl"
     "ada"
     "gdscript"
+    "qml"
     "typescript_vts"
     "python_jedi"
     "python_ty"
+    "python_pyrefly"
     "csharp_omnisharp"
     "ruby_solargraph"
     "php_phpactor"
+    "php_phpantom"
     "markdown"
+    "latex"
     "yaml"
     "json"
     "toml"
@@ -94,6 +98,7 @@ let
     "antigravity"
     "chatgpt"
     "claude-code"
+    "codebuddy"
     "codex"
     "copilot-cli"
     "desktop-app"
@@ -106,6 +111,7 @@ let
   ];
 
   builtinModes = [
+    "benchmark"
     "editing"
     "interactive"
     "no-memories"
@@ -125,7 +131,13 @@ let
     webDashboardOpenOnLaunch = true;
     webDashboardInterface = null;
     webDashboardListenAddress = "127.0.0.1";
+    webDashboardTrustedHosts = [
+      "127.0.0.1"
+      "localhost"
+    ];
     jetbrainsPluginServerAddress = "127.0.0.1";
+    jetbrainsLaunchCommand = null;
+    trustedProjectPathPatterns = [ ];
     logLevel = 20;
     traceLspCommunication = false;
     lsSpecificSettings = { };
@@ -157,7 +169,10 @@ let
     languageBackend = null;
     ignoreAllFilesInGitignore = true;
     lsSpecificSettings = { };
-    additionalWorkspaceFolders = [ ];
+    activationCommand = null;
+    activationCommandTimeout = 180;
+    lsAdditionalWorkspaceFolders = [ ];
+    lsWorkspaceFolders = [ "." ];
     ignoredPaths = [ ];
     readOnly = false;
     excludedTools = [ ];
@@ -179,6 +194,7 @@ let
     fixedTools = [ ];
     toolDescriptionOverrides = { };
     singleProject = false;
+    structuredToolOutput = null;
   };
 
   modeDefaults = {
@@ -197,7 +213,10 @@ let
     webDashboardOpenOnLaunch = "web_dashboard_open_on_launch";
     webDashboardInterface = "web_dashboard_interface";
     webDashboardListenAddress = "web_dashboard_listen_address";
+    webDashboardTrustedHosts = "web_dashboard_trusted_hosts";
     jetbrainsPluginServerAddress = "jetbrains_plugin_server_address";
+    jetbrainsLaunchCommand = "jetbrains_launch_command";
+    trustedProjectPathPatterns = "trusted_project_path_patterns";
     logLevel = "log_level";
     traceLspCommunication = "trace_lsp_communication";
     lsSpecificSettings = "ls_specific_settings";
@@ -225,7 +244,10 @@ let
     languageBackend = "language_backend";
     ignoreAllFilesInGitignore = "ignore_all_files_in_gitignore";
     lsSpecificSettings = "ls_specific_settings";
-    additionalWorkspaceFolders = "additional_workspace_folders";
+    activationCommand = "activation_command";
+    activationCommandTimeout = "activation_command_timeout";
+    lsAdditionalWorkspaceFolders = "ls_additional_workspace_folders";
+    lsWorkspaceFolders = "ls_workspace_folders";
     ignoredPaths = "ignored_paths";
     readOnly = "read_only";
     excludedTools = "excluded_tools";
@@ -248,6 +270,7 @@ let
     fixedTools = "fixed_tools";
     toolDescriptionOverrides = "tool_description_overrides";
     singleProject = "single_project";
+    structuredToolOutput = "structured_tool_output";
   };
 
   modeFieldMappings = {
@@ -300,10 +323,13 @@ let
     markdown = "markdown";
     matlab = "matlab";
     pascal = "pascal";
+    perl = "perl";
     php = "php";
     phpPhpactor = "php_phpactor";
+    phpPhpantom = "php_phpantom";
     powershell = "powershell";
     python = "python";
+    pythonPyrefly = "python_pyrefly";
     pythonTy = "python_ty";
     ruby = "ruby";
     rust = "rust";
@@ -469,6 +495,10 @@ let
       fpcTarget = "fpc_target";
       fpcTargetCpu = "fpc_target_cpu";
     };
+    perl = {
+      fileFilter = "file_filter";
+      ignoreDirs = "ignore_dirs";
+    };
     php = {
       lsPath = "ls_path";
       intelephenseVersion = "intelephense_version";
@@ -482,6 +512,10 @@ let
       phpactorVersion = "phpactor_version";
       ignoreVendor = "ignore_vendor";
     };
+    phpPhpantom = {
+      ignoreVendor = "ignore_vendor";
+      phpantomVersion = "phpantom_version";
+    };
     powershell = {
       psesVersion = "pses_version";
       psscriptanalyzerVersion = "psscriptanalyzer_version";
@@ -489,6 +523,11 @@ let
     python = {
       lsPath = "ls_path";
       pyrightVersion = "pyright_version";
+    };
+    pythonPyrefly = {
+      indexingMode = "indexing_mode";
+      pyreflyVersion = "pyrefly_version";
+      workspaceIndexingLimit = "workspace_indexing_limit";
     };
     pythonTy = {
       lsPath = "ls_path";
@@ -520,6 +559,7 @@ let
       typescriptLanguageServerVersion = "typescript_language_server_version";
       typescriptSveltePluginVersion = "typescript_svelte_plugin_version";
       npmRegistry = "npm_registry";
+      indexingTimeout = "indexing_timeout";
       initializationOptionsConfiguration = "initialization_options_configuration";
     };
     systemverilog = {
@@ -536,10 +576,13 @@ let
       typescriptVersion = "typescript_version";
       typescriptLanguageServerVersion = "typescript_language_server_version";
       npmRegistry = "npm_registry";
+      indexingTimeout = "indexing_timeout";
+      serverReadyTimeout = "server_ready_timeout";
     };
     typescriptVts = {
       vtslsVersion = "vtsls_version";
       npmRegistry = "npm_registry";
+      initializationOptions = "initialization_options";
     };
     vue = {
       vueLanguageServerVersion = "vue_language_server_version";
@@ -805,7 +848,7 @@ let
           "1.54.0-923"
         ];
         default = "1.54.0-923";
-        description = "Pinned vscode-java bundle version supported by Serena v1.5.3.";
+        description = "Pinned vscode-java bundle version supported by Serena v1.6.0.";
       };
       intellicodeVersion = mkStr "1.2.30" "IntelliCode extension version.";
       lombokShowGenerated = mkBool true "Show Lombok-generated symbols.";
@@ -866,6 +909,18 @@ let
       fpcTarget = mkStr "" "Target operating-system override.";
       fpcTargetCpu = mkStr "" "Target CPU override.";
     };
+    perl = mkLanguageOption "Perl language-server settings." {
+      fileFilter = mkOption {
+        type = types.nullOr (types.listOf types.str);
+        default = null;
+        description = "File suffixes included in Perl Language Server indexing; null uses Serena's default (.pm, .pl, .t).";
+      };
+      ignoreDirs = mkOption {
+        type = types.nullOr (types.listOf types.str);
+        default = null;
+        description = "Directories the Perl Language Server skips; null uses Serena's default ignore list.";
+      };
+    };
     php = mkLanguageOption "Intelephense settings." {
       lsPath = lsPathOption;
       intelephenseVersion = mkStr "1.14.4" "Intelephense npm version.";
@@ -887,6 +942,10 @@ let
       phpactorVersion = mkStr "2025.12.21.1" "Phpactor PHAR version.";
       ignoreVendor = mkBool true "Ignore Composer vendor directories.";
     };
+    phpPhpantom = mkLanguageOption "Phpantom settings." {
+      ignoreVendor = mkBool true "Ignore Composer vendor directories.";
+      phpantomVersion = mkStr "0.8.0" "Phpantom version.";
+    };
     powershell = mkLanguageOption "PowerShell Editor Services settings." {
       psesVersion = mkStr "4.4.0" "PowerShell Editor Services version.";
       psscriptanalyzerVersion = mkStr "1.25.0" "PSScriptAnalyzer version.";
@@ -894,6 +953,15 @@ let
     python = mkLanguageOption "Pyright settings." {
       lsPath = lsPathOption;
       pyrightVersion = mkStr "1.1.403" "Pyright PyPI version.";
+    };
+    pythonPyrefly = mkLanguageOption "Astral Pyrefly settings." {
+      indexingMode = mkNullableStr "Pyrefly indexing mode forwarded as --indexing-mode; null uses Pyrefly's default.";
+      pyreflyVersion = mkStr "1.1.1" "Pyrefly PyPI version.";
+      workspaceIndexingLimit = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = "Workspace indexing limit forwarded as --workspace-indexing-limit; null uses Pyrefly's default.";
+      };
     };
     pythonTy = mkLanguageOption "Astral ty settings." {
       lsPath = lsPathOption;
@@ -935,6 +1003,11 @@ let
       typescriptLanguageServerVersion = mkStr "5.1.3" "Companion TypeScript language-server version.";
       typescriptSveltePluginVersion = mkStr "0.3.52" "typescript-svelte-plugin version.";
       npmRegistry = npmRegistryOption;
+      indexingTimeout = mkOption {
+        type = types.nullOr numberType;
+        default = null;
+        description = "Indexing-progress timeout in seconds for Svelte's TypeScript server; null falls back to the TypeScript indexing_timeout (upstream default 120).";
+      };
       initializationOptionsConfiguration = mkOption {
         type = jsonObjectType;
         default = { };
@@ -957,10 +1030,25 @@ let
       typescriptVersion = mkStr "5.9.3" "TypeScript version.";
       typescriptLanguageServerVersion = mkStr "5.1.3" "typescript-language-server version.";
       npmRegistry = npmRegistryOption;
+      indexingTimeout = mkOption {
+        type = types.nullOr numberType;
+        default = null;
+        description = "Indexing-progress timeout in seconds; null uses Serena's default (30).";
+      };
+      serverReadyTimeout = mkOption {
+        type = types.nullOr numberType;
+        default = null;
+        description = "Language-server readiness timeout in seconds; null uses Serena's default (10).";
+      };
     };
     typescriptVts = mkLanguageOption "vtsls settings." {
       vtslsVersion = mkStr "0.2.9" "@vtsls/language-server version.";
       npmRegistry = npmRegistryOption;
+      initializationOptions = mkOption {
+        type = types.nullOr jsonObjectType;
+        default = null;
+        description = "Raw vtsls initializationOptions; null lets Serena compute its defaults.";
+      };
     };
     vue = mkLanguageOption "Vue language-server settings." {
       vueLanguageServerVersion = mkStr "3.1.5" "@vue/language-server version.";
@@ -1042,6 +1130,17 @@ let
       };
       webDashboardListenAddress = mkStr globalDefaults.webDashboardListenAddress "Dashboard bind address.";
       jetbrainsPluginServerAddress = mkStr globalDefaults.jetbrainsPluginServerAddress "JetBrains plugin server address.";
+      jetbrainsLaunchCommand = mkNullableStr "Command used to launch a JetBrains IDE on demand when the JetBrains backend is active.";
+      trustedProjectPathPatterns = mkOption {
+        type = types.listOf types.str;
+        default = globalDefaults.trustedProjectPathPatterns;
+        description = "Glob patterns for trusted project roots; some project settings apply only to trusted projects.";
+      };
+      webDashboardTrustedHosts = mkOption {
+        type = types.listOf types.str;
+        default = globalDefaults.webDashboardTrustedHosts;
+        description = "Hosts allowed to access the web dashboard; an empty list trusts all hosts.";
+      };
       logLevel = mkOption {
         type = types.int;
         default = globalDefaults.logLevel;
@@ -1158,10 +1257,25 @@ let
       };
       ignoreAllFilesInGitignore = mkBool projectDefaults.ignoreAllFilesInGitignore "Honor project .gitignore files.";
       lsSpecificSettings = mkLsSpecificSettingsOption { };
-      additionalWorkspaceFolders = mkOption {
+      activationCommand = mkOption {
+        type = types.nullOr types.str;
+        default = projectDefaults.activationCommand;
+        description = "Shell command run in the project root before the language backend initializes; trusted projects only.";
+      };
+      activationCommandTimeout = mkOption {
+        type = numberType;
+        default = projectDefaults.activationCommandTimeout;
+        description = "Maximum seconds to wait for activationCommand before killing it; must be positive.";
+      };
+      lsAdditionalWorkspaceFolders = mkOption {
         type = types.listOf pathStringType;
-        default = projectDefaults.additionalWorkspaceFolders;
-        description = "Additional relative or absolute LSP workspace folders.";
+        default = projectDefaults.lsAdditionalWorkspaceFolders;
+        description = "Additional workspace folders for cross-package reference support; not indexed by Serena.";
+      };
+      lsWorkspaceFolders = mkOption {
+        type = types.listOf types.str;
+        default = projectDefaults.lsWorkspaceFolders;
+        description = "Project-root-relative folders used to build Serena's symbol index.";
       };
       ignoredPaths = mkOption {
         type = types.listOf types.str;
@@ -1216,6 +1330,11 @@ let
         description = "Tool-name to replacement-description mapping.";
       };
       singleProject = mkBool contextDefaults.singleProject "Limit Serena to the project supplied at startup.";
+      structuredToolOutput = mkOption {
+        type = types.nullOr types.bool;
+        default = contextDefaults.structuredToolOutput;
+        description = "Whether MCP tools return structured output; null auto-detects client support.";
+      };
     };
 
   mkModeOptions =
@@ -1364,7 +1483,7 @@ let
       "Serena ${scope} configuration: Clojure sourcePaths takes precedence over configEdnPath."
     ]
     ++ lib.optionals (svelte != null && svelte.lsPath != null) [
-      "Serena ${scope} configuration: v1.5.3 svelte.lsPath bypasses installation but still expects managed companion TypeScript files."
+      "Serena ${scope} configuration: v1.6.0 svelte.lsPath bypasses installation but still expects managed companion TypeScript files."
     ]
     ++
       lib.optionals
@@ -1414,7 +1533,7 @@ rec {
 
   manifest = {
     schemaVersion = 2;
-    upstreamVersion = "1.5.3";
+    upstreamVersion = "1.6.0";
     inherit languageValues builtinContexts builtinModes;
     defaults = {
       global = globalDefaults;

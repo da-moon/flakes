@@ -75,7 +75,7 @@ rec {
     // renameAttrs schema.projectFieldMappings (
       complete
       // {
-        additionalWorkspaceFolders = map toString complete.additionalWorkspaceFolders;
+        lsAdditionalWorkspaceFolders = map toString complete.lsAdditionalWorkspaceFolders;
         lsSpecificSettings = toUpstreamLsSpecificSettings complete.lsSpecificSettings;
       }
     );
@@ -85,7 +85,10 @@ rec {
     let
       complete = schema.contextDefaults // settings;
     in
-    complete.extraSettings // renamePresentAttrs schema.contextFieldMappings complete;
+    complete.extraSettings
+    // renamePresentAttrs schema.contextFieldMappings complete
+      # Null is meaningful upstream (auto-detect); always emit the key.
+    // { structured_tool_output = complete.structuredToolOutput; };
 
   toUpstreamMode =
     settings:
