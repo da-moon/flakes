@@ -1,12 +1,12 @@
 {
-  "latest": "1.5.3",
+  "latest": "1.6.0",
   "versions": {
-    "1.5.3": {
-      "narHash": "sha256-8RHjJG8loqC742LoFK7O3MK7JDEhb1qw8VMBhzj04MM=",
-      "rev": "2449313c0d7427275c4c66aedff7d4881782f713",
-      "schemaSha256": "6b098fff076a14582fa92cac93cdf3e49704fb143970b678174a1bff72678aa9",
-      "tag": "v1.5.3",
-      "version": "1.5.3"
+    "1.6.0": {
+      "narHash": "sha256-PpZTvI+HGm1Iq1AyqBw+b/tn8U/ZGwUNjFBAOYMIIr8=",
+      "rev": "93b9544ea9def8e93cb6a90f8ea67befe3c8fee4",
+      "schemaSha256": "d551f90b914f0d91a0dd2170b4d0ae4632c93d9444550bcd9720628099fd0d0e",
+      "tag": "v1.6.0",
+      "version": "1.6.0"
     }
   }
 }
