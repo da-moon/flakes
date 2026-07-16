@@ -1,0 +1,8 @@
+{
+  "name": "command-code",
+  "version": "0.42.0",
+  "main": "dist/cli.mjs",
+  "bin": {
+    "cmdc": "dist/index.mjs"
+  }
+}

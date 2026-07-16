@@ -1,160 +1,144 @@
-# Shared helpers for Command Code hook management.
 { pkgs }:
 let
   lib = pkgs.lib;
+  render = import ./render.nix { inherit lib; };
+  managedSync = pkgs.writeText "command-code-managed-sync.mjs" (builtins.readFile ./managed-sync.mjs);
 
-  # Default strip-coauthor hook packaged from the local script.
   mkDefaultStripCoauthorHook =
-    { runtimeInputs ? [ pkgs.jq pkgs.gnugrep ] }:
+    {
+      runtimeInputs ? [
+        pkgs.jq
+        pkgs.gnugrep
+      ],
+    }:
     {
       name = "strip-coauthor";
       event = "PreToolUse";
       matcher = "SHELL";
       timeout = 10;
       script = builtins.readFile ./hooks/strip-coauthor.sh;
+      command = null;
       inherit runtimeInputs;
+      async = false;
+      failClosed = false;
     };
 
-  # Turn a hook definition into a packaged executable named $out/bin/<name>.sh.
   mkHookScript =
-    { name
-    , script
-    , runtimeInputs ? [ pkgs.jq pkgs.gnugrep ]
-    }:
+    hook:
     let
-      scriptText = if builtins.isString script then script else builtins.readFile script;
+      scriptText = if builtins.isString hook.script then hook.script else builtins.readFile hook.script;
     in
     pkgs.writeShellApplication {
-      name = "${name}.sh";
-      inherit runtimeInputs;
+      name = "${hook.name}.sh";
+      runtimeInputs = hook.runtimeInputs;
       text = scriptText;
     };
 
-  # Combine a list of hook definitions into one derivation with all scripts.
   mkHooksPackage =
     { hooks }:
-    pkgs.symlinkJoin {
-      name = "command-code-hooks";
-      paths = map (h: mkHookScript { inherit (h) name script runtimeInputs; }) hooks;
-    };
+    let
+      scriptHooks = builtins.filter (hook: hook.script != null) hooks;
+    in
+    if scriptHooks == [ ] then
+      pkgs.runCommand "command-code-hooks-empty" { } ''
+        mkdir -p "$out/bin"
+      ''
+    else
+      pkgs.symlinkJoin {
+        name = "command-code-hooks";
+        paths = map mkHookScript scriptHooks;
+      };
 
-  # Render a JSON file describing the hooks that Nix should manage.
-  mkManagedHooksJson =
-    { hooks
-    , commandFor
+  writeJson = name: value: pkgs.writeText name (builtins.toJSON value);
+
+  mkManagedSyncScript =
+    {
+      name ? "command-code-managed-sync",
+      config ? { },
+      settings ? { },
+      hooks ? [ ],
+      mcpServers ? {
+        mcpServers = { };
+      },
+      commandFor,
     }:
     let
-      entries = map (h: {
-        name = h.name;
-        event = h.event or "PreToolUse";
-        matcher = h.matcher or null;
-        command = commandFor h;
-        timeout = h.timeout or 10;
-      }) hooks;
+      hooksPackage = mkHooksPackage { inherit hooks; };
+      hookDefinitions = render.toHookDefinitions { inherit hooks commandFor; };
+      hookFiles = map (hook: hook.name) (builtins.filter (hook: hook.script != null) hooks);
+      desiredConfig = writeJson "command-code-desired-config.json" config;
+      desiredSettings = writeJson "command-code-desired-settings.json" settings;
+      desiredHooks = writeJson "command-code-desired-hooks.json" hookDefinitions;
+      desiredMcp = writeJson "command-code-desired-mcp.json" mcpServers;
+      desiredHookFiles = writeJson "command-code-desired-hook-files.json" hookFiles;
     in
-    pkgs.writeText "command-code-managed-hooks.json" (builtins.toJSON entries);
-
-  mergeHooksJq = pkgs.writeText "command-code-merge-hooks.jq" ''
-    $managed[0] as $defs
-    | ($defs | map(.name)) as $managedNames
-    | .hooks //= {}
-    | .hooks |= map_values(
-        map(
-          .hooks |= map(select(
-            (
-              ((.command | test("^/nix/store/.+\\.sh$")) and
-               ((.command | split("/") | last | split(".") | first) as $bn | ($managedNames | index($bn)) == null))
-              or
-              (.command | contains(".commandcode/hooks/"))
-            ) | not
-          ))
-        )
-        | map(select((.hooks | length) > 0))
-        | reduce .[] as $g ({};
-            ($g.matcher // null) as $m
-            | .[$m | tostring] += $g.hooks
-          )
-        | to_entries
-        | map(
-            (if .key == "null" then {} else { matcher: .key } end)
-            + { hooks: .value }
-          )
-      )
-    | reduce $defs[] as $h (.;
-        $h.name as $name
-        | $h.event as $event
-        | $h.matcher as $matcher
-        | $h.command as $cmd
-        | $h.timeout as $timeout
-        | .hooks[$event] //= []
-        | (.hooks[$event] | to_entries | map(((.value.matcher // null) == ($matcher // null))) | index(true)) as $gi
-        | if $gi == null then
-            .hooks[$event] += [
-              (if $matcher == null then {} else { matcher: $matcher } end)
-              + { hooks: [{ type: "command", command: $cmd, timeout: $timeout }] }
-            ]
-          else
-            .hooks[$event][$gi].hooks |= (
-              map(select(.command | test("/" + $name + "\\.sh$") | not))
-              + [{ type: "command", command: $cmd, timeout: $timeout }]
-            )
-          end
-      )
-  '';
-
-  # Build the idempotent merge script. It takes two positional args:
-  #   $1 = path to settings.json
-  #   $2 = path to hooks directory
-  mkMergeHooksScript =
-    { managedHooksJson
-    , hooksPackage
-    }:
     pkgs.writeShellApplication {
-      name = "command-code-merge-hooks";
-      runtimeInputs = [ pkgs.jq pkgs.coreutils ];
+      inherit name;
+      runtimeInputs = [
+        pkgs.coreutils
+        pkgs.nodejs_22
+        pkgs.util-linux
+      ];
       text = ''
         set -euo pipefail
-        configFile="$1"
-        hooksDir="$2"
-        managedHooks=${managedHooksJson}
-        hooksPackage=${hooksPackage}
 
-        mkdir -p "$hooksDir"
-        manifestFile="$hooksDir/.nix-managed-hooks"
-        oldManifest=$(cat "$manifestFile" 2>/dev/null || true)
-        newManifest=""
-
-        shopt -s nullglob
-        for src in "$hooksPackage"/bin/*.sh; do
-          hookName=$(basename "$src" .sh)
-          dest="$hooksDir/$hookName.sh"
-          install -m755 "$src" "$dest"
-          newManifest="$newManifest$hookName"$'\n'
+        state_dir=""
+        data_dir=""
+        arguments=("$@")
+        while (($#)); do
+          case "$1" in
+            --state-dir)
+              (($# >= 2)) || { echo "--state-dir requires a value" >&2; exit 2; }
+              state_dir="$2"
+              shift 2
+              ;;
+            --data-dir)
+              (($# >= 2)) || { echo "--data-dir requires a value" >&2; exit 2; }
+              data_dir="$2"
+              shift 2
+              ;;
+            --force)
+              shift
+              ;;
+            *)
+              if [[ "$1" == --* && $# -ge 2 ]]; then shift 2; else shift; fi
+              ;;
+          esac
         done
-        shopt -u nullglob
-
-        if [ -n "$oldManifest" ]; then
-          while IFS= read -r oldName; do
-            [ -n "$oldName" ] || continue
-            if ! printf '%s\n' "$newManifest" | grep -qx "$oldName"; then
-              rm -f "$hooksDir/$oldName.sh"
-            fi
-          done <<< "$oldManifest"
+        [[ -n "$state_dir" && -n "$data_dir" ]] || {
+          echo "--state-dir and --data-dir are required" >&2
+          exit 2
+        }
+        if [[ -L "$data_dir" || ( -e "$data_dir" && ! -d "$data_dir" ) ]]; then
+          echo "command-code Nix sync: refusing unsafe data directory $data_dir" >&2
+          exit 1
+        fi
+        install -d -m 0700 "$data_dir"
+        state_parent=$(dirname "$state_dir")
+        if [[ -L "$state_parent" || ( -e "$state_parent" && ! -d "$state_parent" ) ]]; then
+          echo "command-code Nix sync: refusing unsafe state directory $state_parent" >&2
+          exit 1
+        fi
+        install -d -m 0700 "$state_parent"
+        if [[ -L "$state_dir" || ( -e "$state_dir" && ! -d "$state_dir" ) ]]; then
+          echo "command-code Nix sync: refusing unsafe state directory $state_dir" >&2
+          exit 1
+        fi
+        install -d -m 0700 "$state_dir"
+        lock_file="$state_dir/sync.lock"
+        if [[ -L "$lock_file" || ( -e "$lock_file" && ! -f "$lock_file" ) ]]; then
+          echo "command-code Nix sync: refusing unsafe lock file $lock_file" >&2
+          exit 1
         fi
 
-        printf '%s' "$newManifest" > "$manifestFile"
-
-        mkdir -p "$(dirname "$configFile")"
-        tmp=$(${pkgs.coreutils}/bin/mktemp)
-        if [ -f "$configFile" ]; then
-          cp "$configFile" "$tmp"
-        else
-          echo '{}' > "$tmp"
-        fi
-
-        ${pkgs.jq}/bin/jq --slurpfile managed "$managedHooks" -f ${mergeHooksJq} "$tmp" > "$configFile.tmp"
-        mv "$configFile.tmp" "$configFile"
-        rm -f "$tmp"
+        export CMDC_DESIRED_CONFIG=${lib.escapeShellArg (toString desiredConfig)}
+        export CMDC_DESIRED_SETTINGS=${lib.escapeShellArg (toString desiredSettings)}
+        export CMDC_DESIRED_HOOKS=${lib.escapeShellArg (toString desiredHooks)}
+        export CMDC_DESIRED_MCP=${lib.escapeShellArg (toString desiredMcp)}
+        export CMDC_DESIRED_HOOK_FILES=${lib.escapeShellArg (toString desiredHookFiles)}
+        export CMDC_HOOKS_PACKAGE=${lib.escapeShellArg (toString hooksPackage)}
+        exec flock --exclusive "$lock_file" \
+          ${pkgs.nodejs_22}/bin/node ${managedSync} "''${arguments[@]}"
       '';
     };
 in
@@ -163,7 +147,6 @@ in
     mkDefaultStripCoauthorHook
     mkHookScript
     mkHooksPackage
-    mkManagedHooksJson
-    mkMergeHooksScript
+    mkManagedSyncScript
     ;
 }

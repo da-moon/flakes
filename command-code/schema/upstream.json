@@ -1,0 +1,860 @@
+{
+  "catalogs": {
+    "featureModels": [
+      {
+        "description": "Summarizes long conversations when context fills up.",
+        "hasFixedDefault": true,
+        "key": "compaction",
+        "label": "Compaction"
+      },
+      {
+        "description": "Learns your coding style from your sessions.",
+        "hasFixedDefault": false,
+        "key": "tasteLearning",
+        "label": "Taste learning"
+      },
+      {
+        "description": "Streams live observations during onboarding.",
+        "hasFixedDefault": true,
+        "key": "tasteOnboarding",
+        "label": "/learn-taste"
+      },
+      {
+        "description": "Names your sessions after the first exchange.",
+        "hasFixedDefault": true,
+        "key": "titleGeneration",
+        "label": "Session titles"
+      },
+      {
+        "description": "Writes the one-line command summaries on permission prompts.",
+        "hasFixedDefault": true,
+        "key": "toolDescription",
+        "label": "Tool descriptions"
+      }
+    ],
+    "models": [
+      {
+        "contextWindow": 1000000,
+        "id": "claude-fable-5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Fable 5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 200000,
+        "id": "claude-haiku-4-5-20251001",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Haiku 4.5"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "claude-opus-4-7",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Opus 4.7",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "claude-opus-4-8",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Opus 4.8",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "claude-sonnet-4-6",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Sonnet 4.6",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "claude-sonnet-5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Sonnet 5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "deepseek/deepseek-v4-flash",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "DeepSeek V4 Flash",
+        "reasoningEfforts": [
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "deepseek/deepseek-v4-pro",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "DeepSeek V4 Pro",
+        "reasoningEfforts": [
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "google/gemini-3.1-flash-lite",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 3.1 Flash Lite",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "google/gemini-3.5-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 3.5 Flash",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "contextWindow": 400000,
+        "id": "gpt-5.3-codex",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-5.3 Codex",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "contextWindow": 400000,
+        "id": "gpt-5.4",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-5.4",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "contextWindow": 400000,
+        "id": "gpt-5.4-mini",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-5.4 Mini",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "id": "gpt-5.5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-5.5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "contextWindow": 1050000,
+        "id": "gpt-5.6-luna",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-5.6 Luna",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1050000,
+        "id": "gpt-5.6-sol",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-5.6 Sol",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1050000,
+        "id": "gpt-5.6-terra",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-5.6 Terra",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "meta/muse-spark-1.1",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Muse Spark 1.1"
+      },
+      {
+        "contextWindow": 200000,
+        "id": "MiniMaxAI/MiniMax-M2.5",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "MiniMax M2.5"
+      },
+      {
+        "id": "MiniMaxAI/MiniMax-M2.7",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "MiniMax M2.7"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "MiniMaxAI/MiniMax-M3",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiniMax M3"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "MiniMaxAI/MiniMax-M3-Free",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiniMax M3"
+      },
+      {
+        "contextWindow": 256000,
+        "id": "moonshotai/Kimi-K2.5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Kimi K2.5"
+      },
+      {
+        "contextWindow": 256000,
+        "id": "moonshotai/Kimi-K2.6",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Kimi K2.6"
+      },
+      {
+        "contextWindow": 256000,
+        "id": "moonshotai/Kimi-K2.7-Code",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Kimi K2.7 Code"
+      },
+      {
+        "contextWindow": 262000,
+        "id": "moonshotai/Kimi-K2.7-Code-Highspeed",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Kimi K2.7 Code HighSpeed"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "moonshotai/Kimi-K3",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Kimi K3"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "nvidia/nemotron-3-ultra-550b-a55b",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Nemotron 3 Ultra"
+      },
+      {
+        "id": "Qwen/Qwen3.6-Max-Preview",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Qwen 3.6 Max Preview"
+      },
+      {
+        "id": "Qwen/Qwen3.6-Plus",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Qwen 3.6 Plus"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "Qwen/Qwen3.7-Max",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Qwen 3.7 Max"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "Qwen/Qwen3.7-Plus",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Qwen 3.7 Plus"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "sakana/fugu-ultra",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Fugu Ultra",
+        "reasoningEfforts": [
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "stepfun/Step-3.5-Flash",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Step 3.5 Flash"
+      },
+      {
+        "contextWindow": 256000,
+        "id": "stepfun/Step-3.7-Flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Step 3.7 Flash"
+      },
+      {
+        "contextWindow": 262144,
+        "id": "tencent/Hy3",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Tencent Hy3"
+      },
+      {
+        "contextWindow": 256000,
+        "id": "thinkingmachines/inkling",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Inkling"
+      },
+      {
+        "contextWindow": 500000,
+        "id": "xai/grok-4.5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Grok 4.5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "xiaomi/mimo-v2.5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiMo V2.5"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "xiaomi/mimo-v2.5-pro",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "MiMo V2.5 Pro"
+      },
+      {
+        "contextWindow": 200000,
+        "id": "zai-org/GLM-5",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "GLM-5"
+      },
+      {
+        "id": "zai-org/GLM-5.1",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "GLM-5.1"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "zai-org/GLM-5.2",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "GLM-5.2",
+        "reasoningEfforts": [
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "zai-org/GLM-5.2-Fast",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "GLM-5.2 Fast"
+      }
+    ],
+    "providers": [
+      {
+        "id": "anthropic",
+        "label": "Anthropic",
+        "requiresAuth": 0
+      },
+      {
+        "id": "codex",
+        "label": "ChatGPT (Codex)",
+        "requiresAuth": 0
+      },
+      {
+        "id": "command-code",
+        "label": "Command Code",
+        "requiresAuth": 1
+      },
+      {
+        "id": "github-copilot",
+        "label": "GitHub Copilot",
+        "requiresAuth": 0
+      }
+    ],
+    "reasoningEfforts": [
+      "high",
+      "low",
+      "max",
+      "medium",
+      "xhigh"
+    ]
+  },
+  "evidence": {
+    "analysis": "static-ecmascript-syntax-tree",
+    "bundleBytes": 1266667,
+    "modelCount": 44,
+    "pathLiteralCounts": {
+      "config.json": 1,
+      "mcp-tokens.json": 1,
+      "mcp.json": 1,
+      "settings.json": 5,
+      "settings.local.json": 5,
+      "trusted-hooks.json": 1
+    },
+    "permissionAutoApproveKeys": [
+      "create",
+      "delete",
+      "update"
+    ],
+    "semanticBindings": [
+      "loadMergedMcpConfig",
+      "loadUserConfig",
+      "settingsFilePaths",
+      "updateUserConfig"
+    ],
+    "tokenCount": 363600
+  },
+  "package": {
+    "entrypoint": "dist/cli.mjs",
+    "entrypointHash": "sha256-4Y/PBP7KFPw0lzYIjbu7KHMzS64RCoO0LKcCk+z4oAE=",
+    "name": "command-code",
+    "packageJsonHash": "sha256-8BvOE0/wqxSLgsjPgfIlleQkNJkYAobG+ylURcr/45g=",
+    "version": "0.51.0"
+  },
+  "schemaVersion": 1,
+  "structural": {
+    "excludedRuntimeFiles": [
+      "~/.commandcode/auth.json",
+      "~/.commandcode/mcp-tokens.json",
+      "~/.commandcode/trusted-hooks.json"
+    ],
+    "files": {
+      "globalConfig": {
+        "format": "json",
+        "path": "~/.commandcode/config.json",
+        "scope": "user"
+      },
+      "projectLocalMcp": {
+        "format": "json",
+        "path": "~/.commandcode/projects/<slug>/mcp.json",
+        "scope": "project-local"
+      },
+      "projectLocalSettings": {
+        "format": "json",
+        "path": ".commandcode/settings.local.json",
+        "scope": "project-local"
+      },
+      "projectSharedMcp": {
+        "format": "json",
+        "path": ".mcp.json",
+        "scope": "project-shared"
+      },
+      "projectSharedSettings": {
+        "format": "json",
+        "path": ".commandcode/settings.json",
+        "scope": "project-shared"
+      },
+      "userMcp": {
+        "format": "json",
+        "path": "~/.commandcode/mcp.json",
+        "scope": "user"
+      },
+      "userSettings": {
+        "format": "json",
+        "path": "~/.commandcode/settings.json",
+        "scope": "user"
+      }
+    },
+    "globalConfig": {
+      "fields": {
+        "autoInstallExtension": {
+          "ownership": "declarative",
+          "type": "boolean"
+        },
+        "compactMode": {
+          "ownership": "declarative",
+          "type": "enum(compactMode)"
+        },
+        "featureModels": {
+          "ownership": "declarative",
+          "type": "attrsOf(modelId)"
+        },
+        "firstMessageSent": {
+          "ownership": "runtime-preserved",
+          "type": "boolean"
+        },
+        "forceOAuth": {
+          "ownership": "runtime-preserved",
+          "type": "boolean"
+        },
+        "installed": {
+          "ownership": "runtime-preserved",
+          "type": "boolean"
+        },
+        "model": {
+          "ownership": "declarative",
+          "type": "string"
+        },
+        "provider": {
+          "ownership": "declarative",
+          "type": "string"
+        },
+        "reasoningEffort": {
+          "ownership": "declarative",
+          "type": "attrsOf(reasoningEffort)"
+        },
+        "tasteLearning": {
+          "ownership": "declarative",
+          "type": "boolean"
+        },
+        "telemetry": {
+          "ownership": "declarative",
+          "type": "boolean"
+        },
+        "theme": {
+          "ownership": "declarative",
+          "type": "enum(theme)"
+        }
+      },
+      "unknownKeys": "preserve"
+    },
+    "hooks": {
+      "events": [
+        "PostToolUse",
+        "PreToolUse",
+        "SessionStart",
+        "Stop"
+      ],
+      "fields": {
+        "async": {
+          "type": "boolean"
+        },
+        "command": {
+          "required": true,
+          "type": "string"
+        },
+        "failClosed": {
+          "type": "boolean"
+        },
+        "timeout": {
+          "maximum": 600,
+          "minimum": 1,
+          "type": "integer-seconds"
+        },
+        "type": {
+          "enum": [
+            "command"
+          ],
+          "type": "enum"
+        }
+      }
+    },
+    "mcp": {
+      "fields": {
+        "args": {
+          "transport": "stdio",
+          "type": "listOf(string)"
+        },
+        "command": {
+          "requiredFor": "stdio",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "env": {
+          "ownership": "secret-preserved",
+          "type": "attrsOf(string)"
+        },
+        "headers": {
+          "ownership": "secret-preserved",
+          "type": "attrsOf(string)"
+        },
+        "oauth": {
+          "ownership": "secret-preserved",
+          "type": "object"
+        },
+        "transport": {
+          "enum": [
+            "http",
+            "stdio"
+          ],
+          "required": true,
+          "type": "enum"
+        },
+        "url": {
+          "requiredFor": "http",
+          "type": "url"
+        }
+      },
+      "precedence": [
+        "project-local",
+        "project-shared",
+        "user"
+      ],
+      "serverMapKey": "mcpServers"
+    },
+    "settings": {
+      "fields": {
+        "disabledSkills": {
+          "scopes": [
+            "user",
+            "project-shared",
+            "project-local"
+          ],
+          "type": "listOf(string)"
+        },
+        "hooks": {
+          "scopes": [
+            "user",
+            "project-shared",
+            "project-local"
+          ],
+          "type": "attrsOf(listOf(hookDefinition))"
+        },
+        "input": {
+          "fields": {
+            "collapsePastedText": {
+              "type": "boolean"
+            }
+          },
+          "scopes": [
+            "user",
+            "project-shared",
+            "project-local"
+          ],
+          "type": "object"
+        },
+        "permissions": {
+          "fields": {
+            "allow": {
+              "type": "listOf(string)"
+            },
+            "autoApprove": {
+              "fields": {
+                "create": {
+                  "type": "boolean"
+                },
+                "delete": {
+                  "type": "boolean"
+                },
+                "update": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "defaultMode": {
+              "enum": [
+                "acceptEdits",
+                "ask"
+              ],
+              "type": "enum"
+            },
+            "deny": {
+              "ownership": "runtime-preserved",
+              "type": "listOf(string)"
+            }
+          },
+          "scopes": [
+            "project-local"
+          ],
+          "type": "object"
+        },
+        "tasteLearning": {
+          "scopes": [
+            "project-shared",
+            "project-local"
+          ],
+          "type": "boolean"
+        }
+      },
+      "precedence": {
+        "disabledSkills": [
+          "project-local",
+          "project-shared",
+          "user"
+        ],
+        "hooks": [
+          "project-local",
+          "project-shared",
+          "user"
+        ],
+        "input": [
+          "project-local",
+          "project-shared",
+          "user"
+        ],
+        "tasteLearning": [
+          "project-local",
+          "project-shared",
+          "user-config"
+        ]
+      },
+      "unknownKeys": "preserve"
+    }
+  }
+}

@@ -27,6 +27,50 @@
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
       sanitize = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
 
+      latestRelease = releases.versions.${releases.latest};
+      schemaTypes = import ./modules/schema.nix { lib = nixpkgs.lib; };
+      render = import ./modules/render.nix { lib = nixpkgs.lib; };
+      uncheckedConfigSchema = builtins.fromJSON (builtins.readFile ./schema/upstream.json);
+      recordedSchemaHash = nixpkgs.lib.removeSuffix "\n" (builtins.readFile ./schema/upstream.sha256);
+      configSchema =
+        if uncheckedConfigSchema.package.version != latestRelease.version then
+          throw "Command Code schema artifact version does not match releases.json"
+        else if schemaTypes.schemaVersion != latestRelease.version then
+          throw "Command Code Nix schema version does not match releases.json"
+        else if recordedSchemaHash != latestRelease.schemaSha256 then
+          throw "Command Code schema hash does not match releases.json"
+        else
+          uncheckedConfigSchema;
+
+      evalTyped =
+        name: type: value:
+        (nixpkgs.lib.evalModules {
+          modules = [
+            {
+              options.value = nixpkgs.lib.mkOption {
+                inherit type;
+                description = "Validated ${name}.";
+              };
+              config.value = value;
+            }
+          ];
+        }).config.value;
+
+      mkGlobalConfig =
+        value:
+        render.toGlobalConfig (evalTyped "Command Code global config" schemaTypes.globalConfigType value);
+      mkProjectConfig =
+        value:
+        render.toProjectSettings (
+          evalTyped "Command Code project config" schemaTypes.projectSettingsType value
+        );
+
+      commandCodePackage = pkgs: self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      projectFactory = import ./modules/project-integration.nix {
+        lib = nixpkgs.lib;
+        inherit commandCodePackage;
+      };
+
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -49,8 +93,13 @@
         };
 
       flakePartsModule = import ./flake-modules/default.nix {
-        mkProjectIntegration = import ./modules/project-integration.nix;
-        commandCodePackage = pkgs: self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        inherit commandCodePackage;
+        inherit (projectFactory) mkProjectIntegration;
+        inherit (schemaTypes)
+          projectSettingsType
+          hookType
+          mcpServerType
+          ;
       };
     in
     flake-utils.lib.eachSystem systems (
@@ -221,10 +270,85 @@
                 if pkgs.stdenv.hostPlatform.isDarwin then "/Users/cc-test" else "/home/cc-test";
               home.stateVersion = "24.11";
               programs.home-manager.enable = true;
-              programs.command-code.enable = true;
+              programs.command-code = {
+                enable = true;
+                config = {
+                  provider = "command-code";
+                  model = "zai-org/GLM-5.2";
+                  reasoningEffort."zai-org/GLM-5.2" = "max";
+                };
+                settings.input.collapsePastedText = true;
+                mcpServers.fixture = {
+                  transport = "stdio";
+                  command = "${pkgs.coreutils}/bin/true";
+                };
+              };
             }
           ];
         };
+
+        configTests = import ./tests/config { inherit pkgs lib; };
+        projectTests = import ./tests/project { inherit pkgs lib; };
+        flakeModuleConsumer =
+          flake-parts.lib.mkFlake
+            {
+              inputs = {
+                inherit
+                  self
+                  nixpkgs
+                  flake-utils
+                  home-manager
+                  flake-parts
+                  ;
+              };
+            }
+            {
+              systems = [ system ];
+              imports = [ flakePartsModule ];
+              command-code.project = {
+                enable = true;
+                settings = {
+                  tasteLearning = false;
+                  permissions.autoApprove.update = true;
+                };
+              };
+              perSystem =
+                { pkgs, ... }:
+                {
+                  command-code.project.extraPackages = [ pkgs.jq ];
+                };
+            };
+        flakeModuleCheck =
+          assert builtins.hasAttr "command-code" flakeModuleConsumer.apps.${system};
+          assert builtins.hasAttr "command-code" flakeModuleConsumer.devShells.${system};
+          assert builtins.hasAttr "command-code-project-config" flakeModuleConsumer.packages.${system};
+          flakeModuleConsumer.checks.${system}.command-code-project-config;
+        latestTarball = pkgs.fetchurl {
+          url = "https://registry.npmjs.org/${pname}/-/${pname}-${latestRelease.version}.tgz";
+          hash = latestRelease.hash;
+        };
+        schemaArtifactCheck =
+          pkgs.runCommand "command-code-schema-artifact-check"
+            {
+              nativeBuildInputs = [
+                pkgs.gnutar
+                pkgs.gzip
+              ];
+            }
+            ''
+              mkdir package-root
+              tar -xzf ${latestTarball} -C package-root
+              ${nodejs}/bin/node ${./scripts/verify-config-schema.mjs} \
+                --schema ${./schema/upstream.json} \
+                --hash ${./schema/upstream.sha256} \
+                --expected-version ${lib.escapeShellArg latestRelease.version} \
+                --expected-sha256 ${lib.escapeShellArg latestRelease.schemaSha256} \
+                --package-dir package-root/package \
+                > "$out"
+              test -x ${latestPkg}/bin/cmdc
+              test -f ${latestPkg}/lib/command-code/${configSchema.package.entrypoint}
+              test -f ${latestPkg}/lib/command-code/node_modules/@sindresorhus/slugify/index.js
+            '';
       in
       {
         packages = versionedPackages // {
@@ -232,13 +356,24 @@
           command-code = latestPkg;
         };
 
-        apps.default = {
-          type = "app";
-          program = "${latestPkg}/bin/command-code";
+        apps = {
+          default = {
+            type = "app";
+            program = "${latestPkg}/bin/command-code";
+          };
+          command-code = {
+            type = "app";
+            program = "${latestPkg}/bin/command-code";
+          };
         };
 
         checks = {
           module-eval = moduleCheck.activationPackage;
+          config-schema = configTests.command-code-config-schema;
+          flake-module = flakeModuleCheck;
+          managed-sync = configTests.command-code-managed-sync;
+          project-integration = projectTests.command-code-project-integration;
+          schema-artifact = schemaArtifactCheck;
         };
       }
     )
@@ -246,11 +381,21 @@
       homeManagerModules = {
         default = homeManagerModule;
         command-code = homeManagerModule;
+        "command-code_${sanitize releases.latest}" = homeManagerModule;
       };
 
       flakeModules = {
         default = flakePartsModule;
         command-code = flakePartsModule;
+      };
+
+      lib = {
+        inherit
+          configSchema
+          mkGlobalConfig
+          mkProjectConfig
+          ;
+        inherit (projectFactory) mkProjectIntegration;
       };
     };
 }

@@ -1,3 +1,3 @@
-# Reusable flake-parts module for project-level Command Code configuration.
-{ mkProjectIntegration, commandCodePackage }:
-import ./project.nix { inherit mkProjectIntegration commandCodePackage; }
+# The default reusable flake-parts module is the local-only project module.
+# Accepts the same explicit dependency-injection arguments as ./project.nix.
+args: import ./project.nix args

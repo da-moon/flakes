@@ -1,39 +1,55 @@
-# Typed options for the command-code Home Manager and project modules.
-{ config, lib, pkgs, ... }:
+{ lib, ... }:
 let
-  inherit (lib)
-    mkEnableOption
-    mkOption
-    types
-    ;
-
-  hookSubmodule = import ./hook-type.nix { inherit lib; };
+  schema = import ./schema.nix { inherit lib; };
 in
 {
   options.programs.command-code = {
-    enable = mkEnableOption "Command Code AI coding agent";
+    enable = lib.mkEnableOption "Command Code AI coding agent";
 
-    package = mkOption {
-      type = types.package;
-      description = "The command-code package to use.";
+    package = lib.mkOption {
+      type = lib.types.package;
+      description = "The Command Code 0.51.0 package to use.";
     };
 
-    enableDefaultStripCoauthorHook = mkOption {
-      type = types.bool;
-      default = true;
-      description = ''
-        Inject the default PreToolUse hook that denies git commits
-        containing a Command Code co-author trailer.
-      '';
+    config = lib.mkOption {
+      type = schema.globalConfigType;
+      default = { };
+      description = "Strict declarative subset of ~/.commandcode/config.json.";
     };
 
-    hooks = mkOption {
-      type = types.listOf hookSubmodule;
-      default = [ ];
+    settings = lib.mkOption {
+      type = schema.userSettingsType;
+      default = { };
+      description = "Strict declarative subset of ~/.commandcode/settings.json.";
+    };
+
+    hooks = {
+      enableDefaultStripCoauthor = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Install the default PreToolUse hook that rejects Command Code co-author trailers.";
+      };
+
+      definitions = lib.mkOption {
+        type = lib.types.listOf schema.hookType;
+        default = [ ];
+        description = "Ordered global hook definitions.";
+      };
+    };
+
+    mcpServers = lib.mkOption {
+      type = lib.types.attrsOf schema.mcpServerType;
+      default = { };
+      description = "Public, non-secret global MCP server configuration.";
+    };
+
+    migration.force = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
       description = ''
-        Additional custom hooks to merge into Command Code's
-        settings.json. Existing hooks and hand-edited settings are
-        preserved.
+        Permit conflicting values to be replaced only while adopting an
+        installation with no Nix ownership manifest. Disable after the first
+        successful activation; later activations reject this option.
       '';
     };
   };
