@@ -371,7 +371,7 @@ async function main() {
   const manifestSnapshot = await readRegular(manifestPath);
   const manifest = manifestSnapshot.exists ? parseDocument(manifestSnapshot, manifestPath) : null;
   if (manifest) {
-    if (manifest.schemaVersion !== 1 || manifest.commandCodeVersion !== "0.51.0" || manifest.scope !== options.scope) {
+    if (manifest.schemaVersion !== 1 || manifest.commandCodeVersion !== "0.52.1" || manifest.scope !== options.scope) {
       fail(`unsupported or mismatched ownership manifest ${manifestPath}`);
     }
     if (options.force) fail("migration.force is one-time only and must be disabled after the ownership manifest exists");
@@ -486,7 +486,7 @@ async function main() {
 
   const nextManifest = {
     schemaVersion: 1,
-    commandCodeVersion: "0.51.0",
+    commandCodeVersion: "0.52.1",
     scope: options.scope,
     targets,
     desired: {

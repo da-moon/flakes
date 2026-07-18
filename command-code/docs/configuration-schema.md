@@ -6,7 +6,7 @@ not publish an aggregate JSON Schema, and several settings are only discoverable
 in the application source. The selected schema is therefore coupled to the
 selected package release and checked during version updates.
 
-The 0.51.0 review cross-referenced the public [documentation index](https://commandcode.ai/docs),
+The 0.52.1 review cross-referenced the public [documentation index](https://commandcode.ai/docs),
 [hook guide](https://commandcode.ai/docs/hooks), [MCP guide](https://commandcode.ai/docs/mcp),
 [model reference](https://commandcode.ai/docs/reference/cli/models), and
 [Taste guide](https://commandcode.ai/docs/taste) against the statically extracted
@@ -57,7 +57,7 @@ the `async` and `failClosed` flags. An asynchronous hook cannot fail closed and
 is rejected by the Nix schema.
 
 Only `permissions.defaultMode = "acceptEdits"`, the create/update/delete
-auto-approval flags, and `Bash(...)` allow entries affect Command Code 0.51.0.
+auto-approval flags, and `Bash(...)` allow entries affect Command Code 0.52.1.
 Although the application may write a `deny` array, this release never reads it;
 the module does not expose a misleading security option for it.
 
@@ -73,7 +73,7 @@ Server names follow the CLI restriction and may not contain `__`. OAuth tokens
 and client secrets remain in Command Code's private token store.
 
 The documentation says strings such as `${API_KEY}` are expanded at runtime.
-The 0.51.0 load and transport path passes configured environment and header
+The 0.52.1 load and transport path passes configured environment and header
 strings through literally. To prevent credentials entering the world-readable
 Nix store, this module deliberately does not expose MCP `headers`, explicit
 `env` maps, or `oauth.clientSecret`. Stdio processes still inherit the parent

@@ -2,19 +2,19 @@
 
 This subflake packages Command Code and provides version-coupled, typed Nix
 configuration for global Home Manager use and private project-local use. The
-current package and schema are Command Code 0.51.0.
+current package and schema are Command Code 0.52.1.
 
 ## Outputs
 
-- `packages.<system>.{default,command-code,command-code_0_51_0}`
+- `packages.<system>.{default,command-code,command-code_0_52_1}`
 - `apps.<system>.{default,command-code}`
-- `homeManagerModules.{default,command-code,command-code_0_51_0}`
+- `homeManagerModules.{default,command-code,command-code_0_52_1}`
 - `flakeModules.{default,command-code}` for flake-parts projects
 - `lib.{configSchema,mkGlobalConfig,mkProjectConfig,mkProjectIntegration}`
 
 The versioned Home Manager module rejects a package from another Command Code
 release. Historical packages remain available, but this flake does not pretend
-that the 0.51.0 configuration contract applies to them.
+that the 0.52.1 configuration contract applies to them.
 
 ## Home Manager
 
@@ -30,11 +30,11 @@ that the 0.51.0 configuration contract applies to them.
   };
 
   # In the Home Manager module list:
-  # inputs.command-code.homeManagerModules.command-code_0_51_0
+  # inputs.command-code.homeManagerModules.command-code_0_52_1
 
   programs.command-code = {
     enable = true;
-    package = inputs.command-code.packages.${pkgs.system}.command-code_0_51_0;
+    package = inputs.command-code.packages.${pkgs.system}.command-code_0_52_1;
 
     config = {
       provider = "command-code";
