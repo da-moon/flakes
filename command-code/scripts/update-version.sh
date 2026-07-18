@@ -50,6 +50,15 @@ readonly PACKAGE_DIR_NAME
 # Which system's npmDeps hash to (re)compute — the host we build on.
 BUILD_SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo x86_64-linux)"
 
+# Rollback transaction state. These MUST stay script-global: when `set -e`
+# aborts main(), the EXIT trap fires after main's local scope is gone, so a
+# local would be unbound (under `set -u`) exactly when rollback needs it.
+backup_dir=""
+staging=""
+transaction_active=false
+had_schema=false
+had_schema_hash=false
+
 ensure_required_tools_installed() {
   for t in nix curl jq node tar; do
     command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
@@ -285,7 +294,6 @@ main() {
 
   local tarball_url
   tarball_url="$NPM_REGISTRY_URL/$NPM_PACKAGE/-/$NPM_PACKAGE-$latest_version.tgz"
-  local staging
   staging="$(mktemp -d -t "command-code-${latest_version}.schema.XXXXXX")"
   log_info "Staging release and schema evidence in: $staging"
   if ! curl -fsSL "$tarball_url" -o "$staging/package.tgz"; then
@@ -359,8 +367,10 @@ main() {
   prior_hashes="$(jq -c --arg k "$latest_version" \
     '.versions[$k].npmDepsHashes // {}' "$releases_file")"
 
-  local backup_dir transaction_active=false had_schema=false had_schema_hash=false
   backup_dir="$(mktemp -d -t command-code-update-backup.XXXXXX)"
+  transaction_active=false
+  had_schema=false
+  had_schema_hash=false
   cp "$releases_file" "$backup_dir/releases.json"
   if [ -f "$schema_file" ]; then cp "$schema_file" "$backup_dir/upstream.json"; had_schema=true; fi
   if [ -f "$schema_hash_file" ]; then cp "$schema_hash_file" "$backup_dir/upstream.sha256"; had_schema_hash=true; fi
