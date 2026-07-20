@@ -107,6 +107,64 @@ listen address, and trusted hosts in YAML. It does **not** expose a dashboard po
 CLI `--port` option configures the MCP HTTP transport port, not a persistent
 dashboard YAML port, so this module deliberately does not invent one.
 
+## MCP client registration
+
+With the Home Manager installation, register the wrapped `serena` command once
+at each client's user/global MCP scope. Each client starts its own Serena
+process, and `--project-from-cwd` detects the project from the session's working
+directory by looking for `.serena/project.yml` or `.git`. Global registration
+therefore does not make project configuration global: keep project-specific
+settings in each repository's tracked `.serena/project.yml`.
+
+For Codex CLI and the Codex IDE extension, which share MCP configuration:
+
+```console
+codex mcp add serena -- \
+  serena start-mcp-server \
+    --context codex \
+    --project-from-cwd \
+    --open-web-dashboard false
+```
+
+Rust Analyzer and other language servers can take longer than the default MCP
+startup window on a cold start. If needed, add these fields to the generated
+`[mcp_servers.serena]` table in `~/.codex/config.toml`:
+
+```toml
+startup_timeout_sec = 60
+tool_timeout_sec = 240
+```
+
+For Claude Code, use its user scope and Serena's dedicated context:
+
+```console
+claude mcp add --scope user serena -- \
+  serena start-mcp-server \
+    --context claude-code \
+    --project-from-cwd \
+    --open-web-dashboard false
+```
+
+For Command Code, Kimi, and other terminal coding agents, configure a
+user-scoped stdio MCP server with command `serena` and arguments
+`start-mcp-server --context ide --project-from-cwd --open-web-dashboard false`.
+The generic `ide` context avoids exposing tools that duplicate a coding
+agent's built-in file and shell tools. See Serena's
+[client guide](https://oraios.github.io/serena/02-usage/030_clients.html) for
+client-specific configuration and verification.
+
+Initialize and verify a repository that uses the global installation with:
+
+```console
+serena project create /path/to/project
+serena project health-check /path/to/project
+```
+
+When a repository must pin Serena and its language servers independently, use
+one of the project-flake integrations below, run
+`nix run .#serena-project-sync`, and launch the harness from
+`nix develop .#serena`. A project flake is not otherwise required.
+
 ## Configuration model
 
 Nix option names use lower camel case and render to Serena's snake-case YAML.
