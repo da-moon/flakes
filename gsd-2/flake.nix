@@ -37,132 +37,49 @@
         npmPackage = "@opengsd/gsd-pi";
         npmTarballName = "gsd-pi";
         nodejs = pkgs.nodejs_22;
-        dependencyOS = if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux";
-        dependencyCPU = if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64";
-        enginePackage =
-          if pkgs.stdenv.hostPlatform.isDarwin then
-            "@opengsd/engine-darwin-${dependencyCPU}"
-          else
-            "@opengsd/engine-linux-${dependencyCPU}-gnu";
+        # Pin pnpm major to match the committed pnpm-lock.yaml (lockfileVersion 9.0).
+        pnpm = pkgs.pnpm_10;
 
         # Builder: derive a gsd-2 package from one releases.json entry.
-        # PRESERVES the original build logic exactly; only version/tarball
-        # hash/per-arch npm-deps hash now come from `entry`.
+        #
+        # Dependencies are pinned by a committed pnpm-lock.yaml (deps/<version>/)
+        # and fetched with pnpm.fetchDeps — a content-addressed derivation keyed
+        # to that lockfile. This is reproducible over time: the hash changes only
+        # when the committed lockfile changes, never because the npm registry
+        # drifted. fetchDeps downloads every platform's tarballs (--force), so
+        # `pnpmDepsHash` is identical on all systems.
         mk =
           key: entry:
           let
             version = entry.version;
+            lockfile = ./deps + "/${version}/pnpm-lock.yaml";
 
-            # npm optionalDependencies include native and platform-specific engine packages,
-            # so the fixed-output hash is expected to differ by Linux architecture.
-            outputHashBySystem = entry.npmDepsHashes;
+            tarball = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/${npmPackage}/-/${npmTarballName}-${version}.tgz";
+              hash = entry.hash;
+            };
 
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
+            # The published npm tarball ships no lockfile, so inject our
+            # committed, fully-pinned pnpm-lock.yaml into the source tree.
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              tar -xzf ${tarball} -C $out --strip-components=1
+              cp ${lockfile} $out/pnpm-lock.yaml
+            '';
 
-              src = pkgs.fetchurl {
-                url = "https://registry.npmjs.org/${npmPackage}/-/${npmTarballName}-${version}.tgz";
-                hash = entry.hash;
-              };
-
-              nativeBuildInputs = [
-                nodejs
-                pkgs.pnpm
-                pkgs.cacert
-              ];
-
-              dontPatchShebangs = true;
-
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              outputHash =
-                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
-
-              buildPhase = ''
-                                runHook preBuild
-
-                                export HOME=$TMPDIR
-                                export npm_config_cache=$TMPDIR/npm-cache
-                                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-
-                                tar -xzf $src
-                                cd package
-
-                                ${nodejs}/bin/node <<'NODE'
-                                const fs = require("fs");
-                                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-                                delete pkg.devDependencies;
-                                delete pkg.packageManager;
-                                delete pkg.workspaces;
-                                if (pkg.scripts) {
-                                  delete pkg.scripts.postinstall;
-                                }
-
-                                function exactSpec(spec) {
-                                  if (typeof spec !== "string") return spec;
-                                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                                  return bare ? bare[1] : spec;
-                                }
-
-                                function isExactInstallSpec(spec) {
-                                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                                }
-
-                                const targetOS = "${dependencyOS}";
-                                const targetEngine = "${enginePackage}";
-                                if (pkg.optionalDependencies) {
-                                  for (const name of Object.keys(pkg.optionalDependencies)) {
-                                    if (name === "fsevents" && targetOS !== "darwin") {
-                                      delete pkg.optionalDependencies[name];
-                                      continue;
-                                    }
-                                    if (name.startsWith("@opengsd/engine-")) {
-                                      if (name === targetEngine) {
-                                        pkg.optionalDependencies[name] = pkg.version;
-                                      } else {
-                                        delete pkg.optionalDependencies[name];
-                                      }
-                                    }
-                                  }
-                                }
-
-                                const unresolved = [];
-                                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                                    const next = exactSpec(spec);
-                                    pkg[field][name] = next;
-                                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                                      unresolved.push(field + "." + name + "=" + next);
-                                    }
-                                  }
-                                }
-
-                                if (unresolved.length > 0) {
-                                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                                }
-                                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
-                NODE
-
-                                pnpm install --prod --ignore-scripts --shamefully-hoist \
-                                  --os ${dependencyOS} \
-                                  --cpu ${dependencyCPU}
-                                test -d "node_modules/${enginePackage}"
-
-                                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                cp -r . $out/
-                runHook postInstall
-              '';
+            pnpmDeps = pnpm.fetchDeps {
+              inherit pname version src;
+              fetcherVersion = 2;
+              hash = entry.pnpmDepsHash;
             };
           in
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit
+              pname
+              version
+              src
+              pnpmDeps
+              ;
 
             meta = with lib; {
               description = "GSD coding agent CLI";
@@ -173,18 +90,31 @@
               maintainers = [ ];
             };
 
-            src = npmDeps;
+            nativeBuildInputs = [
+              nodejs
+              pnpm.configHook
+              pkgs.makeWrapper
+            ];
 
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            # structuredAttrs is required so pnpmInstallFlags reaches the
+            # config hook as a bash array rather than one space-joined string.
+            __structuredAttrs = true;
+
+            # pnpmConfigHook runs `pnpm install --offline --frozen-lockfile` with
+            # these flags: production-only tree, flattened so NODE_PATH resolves.
+            pnpmInstallFlags = [
+              "--prod"
+              "--shamefully-hoist"
+            ];
+
             dontBuild = true;
-            dontConfigure = true;
 
             installPhase = ''
                             runHook preInstall
 
                             mkdir -p $out/lib/${pname}
                             mkdir -p $out/bin
-                            cp -r $src/* $out/lib/${pname}/
+                            cp -r . $out/lib/${pname}/
                             chmod -R u+w $out/lib/${pname}/node_modules
 
                             export GSD_INSTALL_ROOT="$out/lib/${pname}"
@@ -244,25 +174,15 @@
 
                             runHook postInstall
             '';
-
           };
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-        # One `gsd-2_<sanitized-key>` package per entry in the table.
+        # One `gsd-2_<sanitized-key>` package per entry that has a committed
+        # lockfile + resolved pnpmDepsHash.
         versionPackages =
           lib.mapAttrs' (key: entry: lib.nameValuePair "gsd-2_${sanitizeKey key}" (mk key entry))
-            (
-              lib.filterAttrs (
-                _: entry:
-                let
-                  hash = entry.npmDepsHashes.${system} or null;
-                in
-                # fakeHash entries must stay exposed: update-version.sh builds the
-                # attr to learn the real hash from nix's "got:" mismatch line.
-                hash != null
-              ) releases.versions
-            );
+            (lib.filterAttrs (_: entry: entry ? pnpmDepsHash) releases.versions);
       in
       {
         packages = {

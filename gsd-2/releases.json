@@ -1,43 +1,11 @@
 {
   "latest": "1.11.0",
   "versions": {
-    "1.4.0": {
-      "version": "1.4.0",
-      "rev": "1.4.0",
-      "hash": "sha256-Z9LtZE24Yw7uf37a2VNBbfCSnB/mJPSCZXF5YR13pvA=",
-      "npmDepsHashes": {
-        "x86_64-linux": "sha256-egoLzlaaVs2i1CQ22QG8uuJEcBaaipPIpcZkhPSe5LY=",
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-      }
-    },
-    "1.5.0": {
-      "version": "1.5.0",
-      "rev": "1.5.0",
-      "hash": "sha256-RGZvke0xGm+RK9bXqfrXWSXNMp5se4EzhKXqslJH3SA=",
-      "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-JLmJThCH3YPVDJeFmGFQ4fE7j2jxl8HGEHnEzLJ2+fM="
-      }
-    },
-    "1.9.0": {
-      "version": "1.9.0",
-      "rev": "1.9.0",
-      "hash": "sha256-fvG5H/G1GO4Cdcz7bI6whHvfCAQlDniqyr0cUyIRmcM=",
-      "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-ygrU/tWj2kHwjATRDfejdy+IrDmgvtorRROzTGCZ3tc="
-      }
-    },
     "1.11.0": {
       "version": "1.11.0",
       "rev": "1.11.0",
       "hash": "sha256-SV9B2PVZwSEdeJciarUH9nChjv1j/YMR5HkBvnjv34Y=",
-      "npmDepsHashes": {
-        "x86_64-linux": "sha256-pyfw5MKyNDGDItzzUD+rT1gaST85KjHHsro/dK600So=",
-        "aarch64-linux": "sha256-tsSb597i2ccRHO/AqOdoiyao8mTOiUqZqTMHw24oOZE=",
-        "x86_64-darwin": "sha256-/tplOc62GreQDZGgR6wjBkhZr0oMkAybaVGjRd+lRyI=",
-        "aarch64-darwin": "sha256-DGNtTb8SvwBxeC2c6dZuT7CudSd098kdfqvFigeXlYw="
-      }
+      "pnpmDepsHash": "sha256-ua9rANJcrkgUNJwcRroA4dqsqCKaVaEAqo8ncWbFVac="
     }
   }
 }
