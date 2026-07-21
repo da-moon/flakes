@@ -96,7 +96,7 @@ let
   };
 
   schemaAssertions =
-    assert schema.schemaVersion == "0.52.2";
+    assert schema.schemaVersion == "0.52.3";
     assert rendered.provider == "command-code";
     assert rendered.model == "dynamic/model";
     assert rendered.reasoningEffort."dynamic/model" == "high";
