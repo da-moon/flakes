@@ -452,6 +452,7 @@ let
       gradleWrapperEnabled = "gradle_wrapper_enabled";
       gradleJavaHome = "gradle_java_home";
       useSystemJavaHome = "use_system_java_home";
+      runtimes = "runtimes";
       gradleVersion = "gradle_version";
       vscodeJavaVersion = "vscode_java_version";
       intellicodeVersion = "intellicode_version";
@@ -506,6 +507,7 @@ let
       ignoreVendor = "ignore_vendor";
       maxFileSize = "maxFileSize";
       maxMemory = "maxMemory";
+      fileFilter = "file_filter";
     };
     phpPhpactor = {
       lsPath = "ls_path";
@@ -610,6 +612,14 @@ let
     description = "description";
   };
 
+  javaRuntimeFieldMappings = {
+    name = "name";
+    path = "path";
+    default = "default";
+    sources = "sources";
+    javadoc = "javadoc";
+  };
+
   mkStr =
     default: description:
     mkOption {
@@ -689,6 +699,26 @@ let
       packageVersion = mkNullableStr "Package version.";
       extractPath = mkNullableStr "Path within the archive to extract.";
       description = mkNullableStr "Human-readable dependency description.";
+    };
+  };
+
+  javaRuntimeType = types.submodule {
+    options = {
+      name = mkOption {
+        type = types.str;
+        description = "JDT-LS execution-environment name, such as JavaSE-25; reusing JavaSE-21 overrides the bundled runtime.";
+      };
+      path = mkOption {
+        type = types.str;
+        description = "Existing JDK/JRE home directory registered for this runtime.";
+      };
+      default = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Whether JDT-LS treats this runtime as the default; null omits the flag.";
+      };
+      sources = mkNullableStr "Source archive path forwarded to JDT-LS; null omits it.";
+      javadoc = mkNullableStr "Javadoc path forwarded to JDT-LS; null omits it.";
     };
   };
 
@@ -841,6 +871,11 @@ let
       gradleWrapperEnabled = mkBool false "Use the project's Gradle wrapper.";
       gradleJavaHome = mkNullableStr "JDK home used by Gradle.";
       useSystemJavaHome = mkBool false "Use the process JAVA_HOME for JDTLS.";
+      runtimes = mkOption {
+        type = types.listOf javaRuntimeType;
+        default = [ ];
+        description = "Extra JRE/JDK entries registered with JDT-LS via java.configuration.runtimes, for projects whose source/target level exceeds the JDK JDT-LS runs on.";
+      };
       gradleVersion = mkStr "8.14.2" "Managed Gradle version.";
       vscodeJavaVersion = mkOption {
         type = types.enum [
@@ -848,7 +883,7 @@ let
           "1.54.0-923"
         ];
         default = "1.54.0-923";
-        description = "Pinned vscode-java bundle version supported by Serena v1.6.0.";
+        description = "Pinned vscode-java bundle version supported by Serena v1.6.1.";
       };
       intellicodeVersion = mkStr "1.2.30" "IntelliCode extension version.";
       lombokShowGenerated = mkBool true "Show Lombok-generated symbols.";
@@ -935,6 +970,11 @@ let
         type = types.nullOr numberType;
         default = null;
         description = "Value forwarded as intelephense.maxMemory.";
+      };
+      fileFilter = mkOption {
+        type = types.nullOr (types.listOf types.str);
+        default = null;
+        description = "Additional file extensions (with leading dot) treated as PHP sources; null keeps the defaults (.php, .phtml).";
       };
     };
     phpPhpactor = mkLanguageOption "Phpactor settings." {
@@ -1483,7 +1523,7 @@ let
       "Serena ${scope} configuration: Clojure sourcePaths takes precedence over configEdnPath."
     ]
     ++ lib.optionals (svelte != null && svelte.lsPath != null) [
-      "Serena ${scope} configuration: v1.6.0 svelte.lsPath bypasses installation but still expects managed companion TypeScript files."
+      "Serena ${scope} configuration: v1.6.1 svelte.lsPath bypasses installation but still expects managed companion TypeScript files."
     ]
     ++
       lib.optionals
@@ -1501,6 +1541,8 @@ rec {
     contextFieldMappings
     globalDefaults
     globalFieldMappings
+    javaRuntimeFieldMappings
+    javaRuntimeType
     jsonObjectType
     jsonValueType
     languageValues
@@ -1533,7 +1575,7 @@ rec {
 
   manifest = {
     schemaVersion = 2;
-    upstreamVersion = "1.6.0";
+    upstreamVersion = "1.6.1";
     inherit languageValues builtinContexts builtinModes;
     defaults = {
       global = globalDefaults;
@@ -1549,6 +1591,7 @@ rec {
       lsLanguages = lsLanguageMappings;
       lsFields = lsFieldMappings;
       runtimeDependency = runtimeDependencyFieldMappings;
+      javaRuntime = javaRuntimeFieldMappings;
       prompt = promptFieldMappings;
     };
     templateFields = {

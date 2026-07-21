@@ -5,16 +5,16 @@ its complete stable YAML configuration surface as typed Nix options for Home
 Manager and project flakes.
 
 The selected release is one immutable stable tag. The current selection is
-`v1.6.0` at commit `93b9544ea9def8e93cb6a90f8ea67befe3c8fee4`.
-The package and Home Manager module therefore both have a `serena_1_6_0`
+`v1.6.1` at commit `bcac0969fb8685783ea6d0f2642468fcc47e6395`.
+The package and Home Manager module therefore both have a `serena_1_6_1`
 alias, so a consumer cannot accidentally combine a package with another
 configuration schema.
 
 ## Outputs
 
-- `packages.<system>.{default,serena,serena_1_6_0}`
+- `packages.<system>.{default,serena,serena_1_6_1}`
 - `apps.<system>.{default,serena}`
-- `homeManagerModules.{default,serena,serena_1_6_0}`
+- `homeManagerModules.{default,serena,serena_1_6_1}`
 - `flakeModules.{default,serena}` for flake-parts projects
 - `lib.mkProjectIntegration` for plain project flakes
 - `lib.mkGlobalConfig` and `lib.mkProjectConfig` render complete YAML
@@ -45,11 +45,11 @@ configuration schema.
       homeConfigurations.me = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
-          serena.homeManagerModules.serena_1_6_0
+          serena.homeManagerModules.serena_1_6_1
           {
             programs.serena = {
               enable = true;
-              package = serena.packages.${system}.serena_1_6_0;
+              package = serena.packages.${system}.serena_1_6_1;
 
               runtimePackages = [
                 pkgs.gopls
@@ -102,7 +102,7 @@ updates its registered-project list at runtime. Every Home Manager activation
 restores the declared Nix configuration and removes only files recorded in its
 own managed-file manifest.
 
-Serena v1.6.0 exposes dashboard enablement, auto-open behavior, interface,
+Serena v1.6.1 exposes dashboard enablement, auto-open behavior, interface,
 listen address, and trusted hosts in YAML. It does **not** expose a dashboard port setting. The
 CLI `--port` option configures the MCP HTTP transport port, not a persistent
 dashboard YAML port, so this module deliberately does not invent one.
@@ -170,7 +170,7 @@ one of the project-flake integrations below, run
 Nix option names use lower camel case and render to Serena's snake-case YAML.
 Typed options cover:
 
-- every global and project field in the v1.6.0 source;
+- every global and project field in the v1.6.1 source;
 - all 68 `Language` enum values;
 - all source- and documentation-discovered language-server settings;
 - custom contexts and modes, including source-supported `fixed_tools`;
@@ -210,7 +210,7 @@ generated config package, and named development shell:
         inherit pkgs;
         sourceRoot = self.outPath;
         projectRoot = ".";
-        package = serena.packages.${system}.serena_1_6_0;
+        package = serena.packages.${system}.serena_1_6_1;
         settings = {
           projectName = "example";
           languages = [ "nix" ];

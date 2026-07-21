@@ -15,6 +15,9 @@ let
   toUpstreamRuntimeDependency =
     dependency: renamePresentAttrs schema.runtimeDependencyFieldMappings dependency;
 
+  toUpstreamJavaRuntime =
+    runtime: renamePresentAttrs schema.javaRuntimeFieldMappings runtime;
+
   toUpstreamLsLanguage =
     language: settings:
     let
@@ -26,6 +29,8 @@ let
       // {
         runtime_dependencies = map toUpstreamRuntimeDependency mapped.runtime_dependencies;
       }
+    else if language == "java" && mapped ? runtimes then
+      mapped // { runtimes = map toUpstreamJavaRuntime mapped.runtimes; }
     else
       mapped;
 
@@ -33,6 +38,7 @@ in
 rec {
   inherit
     schema
+    toUpstreamJavaRuntime
     toUpstreamLsLanguage
     toUpstreamRuntimeDependency
     ;
