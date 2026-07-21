@@ -36,99 +36,41 @@
         pname = "career-ops";
 
         # Builder: derive a career-ops package from one releases.json entry.
-        # PRESERVES the original build logic exactly; only version/rev/hash(es)
+        # PRESERVES the original build logic exactly; only version/rev/hash
         # now come from `entry` instead of let-bindings.
         mk =
           key: entry:
           let
             version = entry.version;
             rev = entry.rev;
+            lockDir = ./deps + "/${version}";
 
-            src = pkgs.fetchFromGitHub {
+            githubSrc = pkgs.fetchFromGitHub {
               owner = "santifer";
               repo = "career-ops";
               inherit rev;
               hash = entry.hash;
             };
 
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
-              inherit src;
+            # Upstream ships no lockfile. Inject our committed, fully-pinned
+            # package.json + package-lock.json + .npmrc. This is what makes
+            # the dependency set reproducible: importNpmLock fetches every
+            # module as its own content-addressed derivation keyed to the
+            # lockfile's integrity hashes — there is no drift-prone recursive
+            # hash FOD.
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              cp -r ${githubSrc}/. $out/
+              chmod -R u+w $out
+              cp ${lockDir}/package.json $out/package.json
+              cp ${lockDir}/package-lock.json $out/package-lock.json
+              cp ${lockDir}/.npmrc $out/.npmrc
+            '';
 
-              nativeBuildInputs = [
-                nodejs
-                pkgs.cacert
-              ];
-
-              dontPatchShebangs = true;
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              outputHash =
-                entry.npmDepsHashes.${system} or (throw "Missing npmDepsHashes entry for system: ${system}");
-
-              buildPhase = ''
-                runHook preBuild
-
-                export HOME=$TMPDIR
-                export npm_config_cache=$TMPDIR/.npm
-                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-                export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
-
-                cp -r $src/. .
-                chmod -R u+w .
-
-                ${nodejs}/bin/node <<'NODE'
-                const fs = require("fs");
-                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-
-                function exactSpec(spec) {
-                  if (typeof spec !== "string") return spec;
-                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                  return bare ? bare[1] : spec;
-                }
-
-                function isExactInstallSpec(spec) {
-                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                }
-
-                const unresolved = [];
-                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                    const next = exactSpec(spec);
-                    pkg[field][name] = next;
-                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                      unresolved.push(field + "." + name + "=" + next);
-                    }
-                  }
-                }
-
-                if (unresolved.length > 0) {
-                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                }
-
-                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-                NODE
-                npm install --omit=dev --ignore-scripts \
-                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
-                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
-
-                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                shopt -s dotglob
-                cp -r ./* $out/
-                shopt -u dotglob
-                runHook postInstall
-              '';
-            };
+            npmDeps = pkgs.importNpmLock { npmRoot = src; };
           in
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit pname version src npmDeps;
 
             meta = with pkgs.lib; {
               description = "AI-powered job search pipeline built on Claude Code";
@@ -138,19 +80,29 @@
               platforms = systems;
             };
 
-            src = npmDeps;
-
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            # npmConfigHook runs `npm ci`-equivalent offline against npmDeps
+            # during the configure phase, populating node_modules.
+            nativeBuildInputs = [
+              nodejs
+              nodejs.passthru.python
+              pkgs.importNpmLock.npmConfigHook
+              pkgs.makeWrapper
+            ];
 
             dontBuild = true;
-            dontConfigure = true;
+
+            # Prevent `npm rebuild`'s implicit rebuild-scripts pass (which
+            # runs the root package's lifecycle scripts, including
+            # playwright's browser-download postinstall) from executing
+            # inside the sandbox.
+            npmRebuildFlags = [ "--ignore-scripts" ];
 
             installPhase = ''
               runHook preInstall
 
               mkdir -p $out/lib/${pname} $out/bin
               shopt -s dotglob
-              cp -r $src/* $out/lib/${pname}/
+              cp -r ./* $out/lib/${pname}/
               shopt -u dotglob
 
               cat > $out/bin/career-ops <<'EOF'
@@ -232,12 +184,8 @@
             (
               builtins.filter (
                 key:
-                let
-                  hash = releases.versions.${key}.npmDepsHashes.${system} or null;
-                in
-                # fakeHash entries must stay exposed: update-version.sh builds the
-                # attr to learn the real hash from nix's "got:" mismatch line.
-                hash != null
+                # Only expose versions that have a committed lockfile.
+                builtins.pathExists (./deps + "/${key}/package-lock.json")
               ) (builtins.attrNames releases.versions)
             )
         );

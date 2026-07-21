@@ -1,63 +1,10 @@
 {
   "latest": "1.21.0",
   "versions": {
-    "1.15.0": {
-      "version": "1.15.0",
-      "rev": "career-ops-v1.15.0",
-      "hash": "sha256-smKUbY81gOrzZj5BlZcidUiPOE2wYUaF38F8iRtytdw=",
-      "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-JoL2u/YBvzqwPJgqpzqTmyIcfjf8c68XggCmvaZlbww="
-      }
-    },
-    "1.16.0": {
-      "version": "1.16.0",
-      "rev": "career-ops-v1.16.0",
-      "hash": "sha256-iG1PmpGuRQ6ShkwvQIAOnQNq9OihLIqnR+Cws9uUSto=",
-      "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-KQ9TOkDtv/B8WGs8KWdyQTjErZcHom1qMeyjX0y8FUs="
-      }
-    },
-    "1.18.0": {
-      "version": "1.18.0",
-      "rev": "career-ops-v1.18.0",
-      "hash": "sha256-1OoyPD4Ioru4fjIu1vDZv1fQD7v8NdCo7Pkb9mrIAlI=",
-      "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-Yg9pLQGygPCPqMK6fBp5Cfn5VKjL5ERSTQm3PTX6Kew="
-      }
-    },
-    "1.19.0": {
-      "version": "1.19.0",
-      "rev": "career-ops-v1.19.0",
-      "hash": "sha256-AGWEy9dmboJ1dhpq0gjFHkbV+YRiJRb3Pn+l8A+cCWE=",
-      "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-X5QyEXaI/qkcFNapEIcjqYcC7Y3MVyfv7fly+2vB+gg="
-      }
-    },
-    "1.20.0": {
-      "version": "1.20.0",
-      "rev": "career-ops-v1.20.0",
-      "hash": "sha256-C7N2RSRdXAw9L63YewdkIz8JgURS/K6ojH7yLKtxC54=",
-      "npmDepsHashes": {
-        "aarch64-darwin": "sha256-8X3rS8q2f0eMwOAlBxIp5ZwSTf5A4H7ezyrErg8CMJs=",
-        "aarch64-linux": "sha256-f0XFU0zzQ6Z5p0UnF2lu3JILSPQF1Uzhy1MRXcrKEXA=",
-        "x86_64-darwin": "sha256-8X3rS8q2f0eMwOAlBxIp5ZwSTf5A4H7ezyrErg8CMJs=",
-        "x86_64-linux": "sha256-f0XFU0zzQ6Z5p0UnF2lu3JILSPQF1Uzhy1MRXcrKEXA="
-      }
-    },
     "1.21.0": {
       "version": "1.21.0",
       "rev": "career-ops-v1.21.0",
-      "hash": "sha256-Xr2Xy48NhITEQEgWw2f4B9NvJyCrQZTsSjwQl/sXuzA=",
-      "npmDepsHashes": {
-        "x86_64-linux": "sha256-E8Foaj3MzHjV3/sApnsEmEG6Hvt+HqPDPDmDK9xXdBs=",
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-darwin": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "aarch64-darwin": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-      }
+      "hash": "sha256-Xr2Xy48NhITEQEgWw2f4B9NvJyCrQZTsSjwQl/sXuzA="
     }
   }
 }
