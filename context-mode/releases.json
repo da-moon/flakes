@@ -5,12 +5,7 @@
       "version": "1.0.169",
       "rev": "1.0.169",
       "hash": "sha256-CcQeTPd7IVZsdrjqL9vX89gjBV/uLwLCFm/Vu1ddryw=",
-      "npmDepsHashes": {
-        "x86_64-linux": "sha256-7HWgVwvpN/Em2b2IDsLo69N4YmYZCvxM9IbTV7VMr6Y=",
-        "aarch64-linux": "sha256-ggSDa2K3nQ63IOIbhd3q1rz4NtdlXgLygqTtu9uPPa4=",
-        "x86_64-darwin": "sha256-EO0CJrsbF2BwazZZ6FLADKwEi20piSD2cy8vvC2B8xc=",
-        "aarch64-darwin": "sha256-Bx/W5JA+MOyWEFYJu6uQOTqCGPaf5Ub9g46PafIUvSs="
-      }
+      "pnpmDepsHash": "sha256-sHFr+ZBX+mA98+KAofM0YFwhh71zFHQmmb65iFaSrGk="
     }
   }
 }

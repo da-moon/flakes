@@ -41,111 +41,49 @@
           config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ pname ];
         };
         nodejs = pkgs.nodejs_22;
-        dependencyPlatform =
-          {
-            "x86_64-linux" = {
-              os = "linux";
-              cpu = "x64";
-            };
-            "aarch64-linux" = {
-              os = "linux";
-              cpu = "arm64";
-            };
-            "x86_64-darwin" = {
-              os = "darwin";
-              cpu = "x64";
-            };
-            "aarch64-darwin" = {
-              os = "darwin";
-              cpu = "arm64";
-            };
-          }
-          .${system};
+        # Pin pnpm major to match the committed pnpm-lock.yaml (lockfileVersion 9.0).
+        pnpm = pkgs.pnpm_10;
 
         # Builder: derive a context-mode package from one releases.json entry.
-        # PRESERVES the original build logic exactly; only version/src-url/hash(es)
-        # now come from `entry` instead of let-bindings.
+        #
+        # Dependencies are pinned by a committed pnpm-lock.yaml (deps/<version>/)
+        # and fetched with pnpm.fetchDeps — a content-addressed derivation keyed
+        # to that lockfile. This is reproducible over time: the hash changes only
+        # when the committed lockfile changes, never because the npm registry
+        # drifted. fetchDeps downloads every platform's tarballs (--force), so
+        # `pnpmDepsHash` is identical on all systems.
         mk =
           key: entry:
           let
             version = entry.version;
+            lockfile = ./deps + "/${version}/pnpm-lock.yaml";
 
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
+            tarball = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/context-mode/-/context-mode-${version}.tgz";
+              hash = entry.hash;
+            };
 
-              src = pkgs.fetchurl {
-                url = "https://registry.npmjs.org/context-mode/-/context-mode-${version}.tgz";
-                hash = entry.hash;
-              };
+            # The published npm tarball ships no lockfile, so inject our
+            # committed, fully-pinned pnpm-lock.yaml into the source tree.
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              tar -xzf ${tarball} -C $out --strip-components=1
+              cp ${lockfile} $out/pnpm-lock.yaml
+            '';
 
-              nativeBuildInputs = [
-                nodejs
-                pkgs.pnpm
-                pkgs.cacert
-              ];
-
-              dontPatchShebangs = true;
-
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              outputHash = entry.npmDepsHashes.${system};
-
-              buildPhase = ''
-                runHook preBuild
-
-                export HOME=$TMPDIR
-                tar -xzf $src
-                cd package
-
-                ${nodejs}/bin/node -e '
-                  const fs = require("fs");
-                  const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-                  delete pkg.devDependencies;
-                  delete pkg.optionalDependencies;
-                  delete pkg.packageManager;
-                  function exactSpec(spec) {
-                    if (typeof spec !== "string") return spec;
-                    if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                    const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                    return bare ? bare[1] : spec;
-                  }
-                  function isExactInstallSpec(spec) {
-                    return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                      || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                  }
-                  const unresolved = [];
-                  for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                    for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                      const next = exactSpec(spec);
-                      pkg[field][name] = next;
-                      if (typeof next === "string" && !isExactInstallSpec(next)) {
-                        unresolved.push(field + "." + name + "=" + next);
-                      }
-                    }
-                  }
-                  if (unresolved.length > 0) {
-                    throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                  }
-                  fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
-                '
-
-                pnpm install --prod --ignore-scripts --shamefully-hoist \
-                  --os ${dependencyPlatform.os} \
-                  --cpu ${dependencyPlatform.cpu}
-
-                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                cp -r . $out/
-                runHook postInstall
-              '';
+            pnpmDeps = pnpm.fetchDeps {
+              inherit pname version src;
+              fetcherVersion = 2;
+              hash = entry.pnpmDepsHash;
             };
           in
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit
+              pname
+              version
+              src
+              pnpmDeps
+              ;
 
             meta = with lib; {
               description = "MCP plugin for context-efficient AI coding workflows";
@@ -156,18 +94,34 @@
               maintainers = [ ];
             };
 
-            src = npmDeps;
+            nativeBuildInputs = [
+              nodejs
+              pnpm.configHook
+              pkgs.makeWrapper
+            ];
 
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            # structuredAttrs is required so pnpmInstallFlags reaches the
+            # config hook as a bash array rather than one space-joined string.
+            __structuredAttrs = true;
+
+            # pnpmConfigHook runs `pnpm install --offline --frozen-lockfile` with
+            # these flags: production-only tree, flattened so NODE_PATH resolves.
+            # The published tarball already ships prebuilt bundles
+            # (cli.bundle.mjs / server.bundle.mjs / build/), so no build step
+            # (tsc/esbuild) is needed here — devDependencies are not installed.
+            pnpmInstallFlags = [
+              "--prod"
+              "--shamefully-hoist"
+            ];
+
             dontBuild = true;
-            dontConfigure = true;
 
             installPhase = ''
               runHook preInstall
 
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
-              cp -r $src/* $out/lib/${pname}/
+              cp -r . $out/lib/${pname}/
 
               makeWrapper ${nodejs}/bin/node $out/bin/.context-mode-real \
                 --add-flags "$out/lib/${pname}/cli.bundle.mjs" \
@@ -221,7 +175,8 @@
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-        # One `context-mode_<sanitized-key>` package per entry in the table.
+        # One `context-mode_<sanitized-key>` package per entry that has a
+        # committed pnpm-lock.yaml under deps/<key>/.
         versionPackages = builtins.listToAttrs (
           builtins.map
             (key: {
@@ -230,13 +185,7 @@
             })
             (
               builtins.filter (
-                key:
-                let
-                  hash = releases.versions.${key}.npmDepsHashes.${system} or null;
-                in
-                # fakeHash entries must stay exposed: update-version.sh builds the
-                # attr to learn the real hash from nix's "got:" mismatch line.
-                hash != null
+                key: builtins.pathExists (./deps + "/${key}/pnpm-lock.yaml")
               ) (builtins.attrNames releases.versions)
             )
         );
