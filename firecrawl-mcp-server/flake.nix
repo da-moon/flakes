@@ -27,99 +27,40 @@
         pname = "firecrawl-mcp";
 
         # Builder: turns one releases.json entry into the firecrawl-mcp
-        # derivation. PRESERVES the original build logic exactly; only
-        # version/src/hash(es) now come from `entry` instead of let-bindings.
+        # derivation. Dependencies are pinned by a committed yarn.lock
+        # (deps/<key>/) and fetched with fetchYarnDeps into an offline
+        # mirror; yarnConfigHook then runs `yarn install --offline
+        # --frozen-lockfile`. This is reproducible over time: the
+        # offline-mirror hash changes only when the committed lockfile
+        # changes, never because the npm registry drifted.
         mk =
           key: entry:
           let
             version = entry.version;
+            yarnLock = ./deps + "/${key}/yarn.lock";
 
-            # NOTE: npm optionalDependencies can be platform-specific,
-            # so the fixed-output hash from "yarn install" is not portable across systems.
-            outputHashBySystem = entry.outputHashBySystem;
+            tarball = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-${version}.tgz";
+              hash = entry.hash;
+            };
 
-            # Fixed-output derivation to fetch npm package with all dependencies
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              tar -xzf ${tarball} -C $out --strip-components=1
+            '';
 
-              src = pkgs.fetchurl {
-                url = "https://registry.npmjs.org/firecrawl-mcp/-/firecrawl-mcp-${version}.tgz";
-                hash = entry.hash;
-              };
-
-              nativeBuildInputs = [
-                nodejs
-                pkgs.cacert
-                pkgs.yarn
-              ];
-
-              # Don't patch shebangs in FOD - it would add store references
-              # Shebangs will be patched in the main derivation
-              dontPatchShebangs = true;
-
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              outputHash =
-                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
-
-              buildPhase = ''
-                                runHook preBuild
-
-                                export HOME=$TMPDIR
-
-                                tar -xzf $src
-                                cd package
-                                ${nodejs}/bin/node <<'NODE'
-                                const fs = require("fs");
-                                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-
-                                function exactSpec(spec) {
-                                  if (typeof spec !== "string") return spec;
-                                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                                  return bare ? bare[1] : spec;
-                                }
-
-                                function isExactInstallSpec(spec) {
-                                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                                }
-
-                                const unresolved = [];
-                                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                                    const next = exactSpec(spec);
-                                    pkg[field][name] = next;
-                                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                                      unresolved.push(field + "." + name + "=" + next);
-                                    }
-                                  }
-                                }
-
-                                if (unresolved.length > 0) {
-                                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                                }
-
-                                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-                NODE
-                                # Keep the dependency closure platform-independent so the same
-                                # fixed-output hash is valid on Linux and Darwin.
-                                yarn install --production --ignore-scripts --ignore-platform --non-interactive
-
-                                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                cp -r . $out/
-                runHook postInstall
-              '';
+            offlineCache = pkgs.fetchYarnDeps {
+              inherit yarnLock;
+              hash = entry.yarnDepsHash;
             };
           in
-          # Main package
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit
+              pname
+              version
+              src
+              offlineCache
+              ;
 
             meta = with pkgs.lib; {
               description = "Firecrawl MCP Server - web scraping and crawling";
@@ -127,12 +68,23 @@
               platforms = platforms.unix;
             };
 
-            src = npmDeps;
+            nativeBuildInputs = [
+              nodejs
+              pkgs.yarn
+              pkgs.yarnConfigHook
+              pkgs.makeWrapper
+            ];
 
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            # The published tarball has no yarn.lock; ensure the committed,
+            # complete lock is present before the offline install
+            # (yarnConfigHook diffs it against the fetchYarnDeps mirror).
+            postPatch = ''
+              cp ${yarnLock} yarn.lock
+              chmod +w yarn.lock
+            '';
 
+            # The npm tarball ships a prebuilt dist/index.js — no build step needed.
             dontBuild = true;
-            dontConfigure = true;
 
             installPhase = ''
               runHook preInstall
@@ -140,7 +92,7 @@
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
 
-              cp -r $src/* $out/lib/${pname}/
+              cp -r . $out/lib/${pname}/
 
               makeWrapper ${nodejs}/bin/node $out/bin/firecrawl-mcp \
                 --add-flags "$out/lib/${pname}/dist/index.js" \
@@ -148,7 +100,6 @@
 
               runHook postInstall
             '';
-
           };
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
@@ -162,13 +113,8 @@
             })
             (
               builtins.filter (
-                key:
-                let
-                  hash = releases.versions.${key}.outputHashBySystem.${system} or null;
-                in
-                # fakeHash entries must stay exposed: update-version.sh builds the
-                # attr to learn the real hash from nix's "got:" mismatch line.
-                hash != null
+                # Only expose versions that have a committed lockfile.
+                key: builtins.pathExists (./deps + "/${key}/yarn.lock")
               ) (builtins.attrNames releases.versions)
             )
         );

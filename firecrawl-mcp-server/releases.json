@@ -1,36 +1,11 @@
 {
   "latest": "3.22.4",
   "versions": {
-    "3.22.2": {
-      "version": "3.22.2",
-      "rev": "3.22.2",
-      "hash": "sha256-lp37l7HOlcSdgKH6N46Z7B3baOeX3pxuP/BEHuCxSUM=",
-      "outputHashBySystem": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-aYWiuSVZT9UbUiHSMj3GshLgYUF8b+U1yfMnu7XvqQc="
-      }
-    },
-    "3.22.3": {
-      "version": "3.22.3",
-      "rev": "3.22.3",
-      "hash": "sha256-YskN+6kuNCa/a3JiQfcqPk2JsW9TNX/DBN0yuYSIZZI=",
-      "outputHashBySystem": {
-        "aarch64-darwin": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU=",
-        "aarch64-linux": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU=",
-        "x86_64-darwin": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU=",
-        "x86_64-linux": "sha256-4yrtK3DSoxmXMXEDDDygFp87z9r+orqRWT2/+cytJZU="
-      }
-    },
     "3.22.4": {
       "version": "3.22.4",
       "rev": "3.22.4",
       "hash": "sha256-Dw9dRTH6BnCu+g/4kD2qZIVevheIYVHkljRxA5tGbL4=",
-      "outputHashBySystem": {
-        "x86_64-linux": "sha256-LZZHxIzozqI7XPVdwyAtCVcBieNklPoCUbdajpdbs50=",
-        "aarch64-linux": "sha256-LZZHxIzozqI7XPVdwyAtCVcBieNklPoCUbdajpdbs50=",
-        "x86_64-darwin": "sha256-LZZHxIzozqI7XPVdwyAtCVcBieNklPoCUbdajpdbs50=",
-        "aarch64-darwin": "sha256-LZZHxIzozqI7XPVdwyAtCVcBieNklPoCUbdajpdbs50="
-      }
+      "yarnDepsHash": "sha256-IwbpkpxP5MSLoCCuKK5FsIUt2bV/cMSiv7KuX0cgaAc="
     }
   }
 }
