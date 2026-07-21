@@ -1,36 +1,10 @@
 {
   "latest": "3.2.4",
   "versions": {
-    "3.2.2": {
-      "version": "3.2.2",
-      "rev": "3.2.2",
-      "hash": "sha256-4VWHqoR9fleBcCCXPq0lM0+VzeIoMaf7CTyYuplUh10=",
-      "outputHashBySystem": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-ifJ+MfIRmR//2+TxtAScBVI1n/QMefpRNyjl7uM0E7U="
-      }
-    },
-    "3.2.3": {
-      "version": "3.2.3",
-      "rev": "3.2.3",
-      "hash": "sha256-AI6IlKPFRopUbVVyrpcVZB8PyoEt9ZUjeA2hiZDPBos=",
-      "outputHashBySystem": {
-        "aarch64-darwin": "sha256-YrZq6i/5rursy1fXVvdCpxzdTrCK7FCZ7mjAvHxsyxc=",
-        "aarch64-linux": "sha256-YrZq6i/5rursy1fXVvdCpxzdTrCK7FCZ7mjAvHxsyxc=",
-        "x86_64-darwin": "sha256-YrZq6i/5rursy1fXVvdCpxzdTrCK7FCZ7mjAvHxsyxc=",
-        "x86_64-linux": "sha256-YrZq6i/5rursy1fXVvdCpxzdTrCK7FCZ7mjAvHxsyxc="
-      }
-    },
     "3.2.4": {
       "version": "3.2.4",
       "rev": "3.2.4",
-      "hash": "sha256-pyGoGEUUzNcBUFaIMqCAQlOZDyIX81VUKSZGhJNUCeM=",
-      "outputHashBySystem": {
-        "x86_64-linux": "sha256-bii6Rv0fn0C0FjaFckNW94+PtWN5u5HXwReAn5DaG90=",
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-darwin": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "aarch64-darwin": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-      }
+      "hash": "sha256-pyGoGEUUzNcBUFaIMqCAQlOZDyIX81VUKSZGhJNUCeM="
     }
   }
 }
