@@ -34,105 +34,73 @@
         pkgs = nixpkgs.legacyPackages.${system};
         pname = "dexter";
 
+        nodejs = pkgs.nodejs_22;
+
         # Builder: derive a dexter package from one releases.json entry.
-        # PRESERVES the original build logic exactly; only version/src/hash(es)
-        # now come from `entry` instead of let-bindings.
+        # PRESERVES the original build logic exactly; only version/src/hash
+        # now come from `entry` instead of let-bindings. Dependencies are
+        # resolved from the committed lockfile under ./deps/<key>/ via
+        # importNpmLock instead of a recursive-hash fixed-output derivation.
         mk =
           key: entry:
           let
             version = entry.version;
             rev = entry.rev;
+            lockDir = ./deps + "/${key}";
 
-            src = pkgs.fetchFromGitHub {
+            githubSrc = pkgs.fetchFromGitHub {
               owner = "virattt";
               repo = "dexter";
               inherit rev;
               hash = entry.hash;
             };
 
-            outputHashBySystem = entry.npmDepsHashes;
+            # The upstream repo's own package.json/package-lock.json still
+            # carry devDependencies. Inject our committed, deps-only
+            # package.json + package-lock.json + .npmrc so importNpmLock
+            # resolves every module as its own content-addressed derivation
+            # keyed to the lockfile's integrity hashes — there is no
+            # drift-prone recursive FOD hash.
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              cp -r ${githubSrc}/. $out/
+              chmod -R u+w $out
+              cp ${lockDir}/package.json $out/package.json
+              cp ${lockDir}/package-lock.json $out/package-lock.json
+              cp ${lockDir}/.npmrc $out/.npmrc
+            '';
 
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
-              inherit src;
+            # @whiskeysockets/baileys' `libsignal` dependency is a git commit,
+            # normally recorded by npm as an unauthenticated-inaccessible
+            # `git+ssh://git@github.com/...` URL. We fetch that exact commit
+            # ourselves via fetchFromGitHub (a real content-addressed,
+            # hash-verified derivation) and hand it to importNpmLock as a
+            # source override for the top-level `libsignal` module.
+            #
+            # The committed lockfile also patches baileys' OWN recorded
+            # dependency on `libsignal` from the raw git spec down to a plain
+            # semver ("6.0.0", libsignal's version) — `npm install` (used by
+            # npmConfigHook, not `npm ci`) treats any git-looking dependency
+            # spec as needing live re-resolution against the network
+            # (ls-remote / a codeload.github.com tarball fetch) to verify it,
+            # *regardless* of what the tree already has resolved there. A
+            # plain version spec instead lets it satisfy the edge by ordinary
+            # semver matching against the already-installed node, with no
+            # network access needed.
+            libsignalSrc = pkgs.fetchFromGitHub {
+              owner = "whiskeysockets";
+              repo = "libsignal-node";
+              rev = "bcea72df9ec34d9d9140ab30619cf479c7c144c7";
+              hash = "sha256-xb6ep3shVNEu+P4O4EeyRVYVaYtxdPAuMCuhpRKaJ4U=";
+            };
 
-              nativeBuildInputs = with pkgs; [
-                nodejs_22
-                cacert
-              ];
-
-              dontPatchShebangs = true;
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              outputHash =
-                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
-
-              buildPhase = ''
-                runHook preBuild
-
-                export HOME=$TMPDIR
-                export XDG_CACHE_HOME=$TMPDIR/.cache
-                export npm_config_cache=$TMPDIR/.npm
-                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-                export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
-
-                cp -r $src/. .
-                chmod -R u+w .
-
-                ${pkgs.nodejs_22}/bin/node <<'NODE'
-                const fs = require("fs");
-                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-
-                delete pkg.devDependencies;
-
-                function exactSpec(spec) {
-                  if (typeof spec !== "string") return spec;
-                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                  return bare ? bare[1] : spec;
-                }
-
-                function isExactInstallSpec(spec) {
-                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                }
-
-                const unresolved = [];
-                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                    const next = exactSpec(spec);
-                    pkg[field][name] = next;
-                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                      unresolved.push(field + "." + name + "=" + next);
-                    }
-                  }
-                }
-
-                if (unresolved.length > 0) {
-                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                }
-
-                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-                NODE
-                npm install --omit=dev --ignore-scripts \
-                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
-                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
-
-                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                shopt -s dotglob
-                cp -r ./* $out/
-                shopt -u dotglob
-                runHook postInstall
-              '';
+            npmDeps = pkgs.importNpmLock {
+              npmRoot = src;
+              packageSourceOverrides."node_modules/libsignal" = libsignalSrc;
             };
           in
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit pname version src npmDeps;
 
             meta = with pkgs.lib; {
               description = "Autonomous financial research agent";
@@ -142,24 +110,26 @@
               platforms = systems;
             };
 
-            src = npmDeps;
-
+            # npmConfigHook runs `npm install --ignore-scripts` offline
+            # against npmDeps during the configure phase, populating
+            # node_modules.
             nativeBuildInputs = with pkgs; [
               gcc
+              git
               makeWrapper
-              nodejs_22
+              nodejs
+              nodejs.passthru.python
+              pkgs.importNpmLock.npmConfigHook
               pkg-config
               python3
             ];
-
-            dontConfigure = true;
 
             buildPhase = ''
               runHook preBuild
 
               export HOME=$TMPDIR
               export npm_config_build_from_source=true
-              export npm_config_nodedir=${pkgs.nodejs_22}
+              export npm_config_nodedir=${nodejs}
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
               export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
 
@@ -204,13 +174,8 @@
             })
             (
               builtins.filter (
-                key:
-                let
-                  hash = releases.versions.${key}.npmDepsHashes.${system} or null;
-                in
-                # fakeHash entries must stay exposed: update-version.sh builds the
-                # attr to learn the real hash from nix's "got:" mismatch line.
-                hash != null
+                # Only expose versions that have a committed lockfile.
+                key: builtins.pathExists (./deps + "/${key}/package-lock.json")
               ) (builtins.attrNames releases.versions)
             )
         );
