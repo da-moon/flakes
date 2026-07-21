@@ -1,47 +1,11 @@
 {
   "latest": "1.92.1",
   "versions": {
-    "1.89.20": {
-      "version": "1.89.20",
-      "rev": "1.89.20",
-      "hash": "sha256-wZdDiJ4it1xDrj5+yjz0SGFbojYm/+9/b1AVCb2OwYU=",
-      "npmDepsHash": "sha256-Gn3ty2UI9yr5JL78nai/yTg8uT3eTH3jrI1dTeyEXDk="
-    },
-    "1.90.0": {
-      "version": "1.90.0",
-      "rev": "1.90.0",
-      "hash": "sha256-TTQ/BEOuHx0TZwILDVebYCTGk5U4jZs9umLhMesdlQQ=",
-      "npmDepsHash": "sha256-tJuFc+9HNWu7qpS8S/zWWvz+0LhePx9JUmqqDA7QEuM="
-    },
-    "1.91.0": {
-      "version": "1.91.0",
-      "rev": "1.91.0",
-      "hash": "sha256-koX7BlhO4PkA4s+RNppf3kvOPwxsXXvaqwgnvsJvbXo=",
-      "npmDepsHash": "sha256-o/gAsLDUpZTzqfhVXEuOd/1FMf3Z3/kurXe5PMGy+h8="
-    },
-    "1.91.1": {
-      "version": "1.91.1",
-      "rev": "1.91.1",
-      "hash": "sha256-EHCACYCxekLUitMb1D/e8xJI7LfcnvAXibMoBE3VqEw=",
-      "npmDepsHash": "sha256-tVkjdo2eyGg6EpnI9gIq4Cxwd8zuACMTQBvOSpQPPsw="
-    },
-    "1.91.2": {
-      "version": "1.91.2",
-      "rev": "1.91.2",
-      "hash": "sha256-FZ19RR9jBzWUFXPt3yH4IC/AI9/5PREPml3funu17t0=",
-      "npmDepsHash": "sha256-B7AUJvTrmWOUi8g/oncTtpS3MDa53Rku6KeD13/pHls="
-    },
-    "1.92.0": {
-      "version": "1.92.0",
-      "rev": "1.92.0",
-      "hash": "sha256-59YYUNuwHwxoYOsTOtpjobJTXjLaCujDtoGjddPs+Fc=",
-      "npmDepsHash": "sha256-E47zdq8N4bu78QW5cXCkAE/jBXLex9MBhUsGzL5+Ry0="
-    },
     "1.92.1": {
       "version": "1.92.1",
       "rev": "1.92.1",
       "hash": "sha256-t09qTj4FnE6Md2ZwN2fy6A8zQ1hcGJdibAOHWFdnX5s=",
-      "npmDepsHash": "sha256-Isb/YnEbFUkH5ndLCMn/rK5YIFztaI+5zanNpk8l8F0="
+      "pnpmDepsHash": "sha256-Jl/xc9kR8A+k50cpx/Wqi0rKobWhu8S2lVVEWt5CEek="
     }
   }
 }

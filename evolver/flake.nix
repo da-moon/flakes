@@ -27,6 +27,10 @@
         lib = pkgs.lib;
         nodejs = pkgs.nodejs_22;
         pname = "evolver";
+        npmPackage = "@evomap/evolver";
+        npmTarballName = "evolver";
+        # Pin pnpm major to match the committed pnpm-lock.yaml (lockfileVersion 9.0).
+        pnpm = pkgs.pnpm_10;
 
         # Version table: consumers select the latest OR any past version.
         # New entries are appended by scripts/update-version.sh via jq — do
@@ -37,86 +41,44 @@
         sanitizeKey = builtins.replaceStrings [ "." "-" "+" ] [ "_" "_" "_" ];
 
         # Builder: derive an evolver package from one releases.json entry.
-        # PRESERVES the original build logic exactly; only version/src/hash(es)
-        # now come from `entry` instead of let-bindings.
+        #
+        # Dependencies are pinned by a committed pnpm-lock.yaml (deps/<version>/)
+        # and fetched with pnpm.fetchDeps — a content-addressed derivation keyed
+        # to that lockfile. This is reproducible over time: the hash changes only
+        # when the committed lockfile changes, never because the npm registry
+        # drifted. PRESERVES the original wrapper/install logic exactly.
         mk =
           key: entry:
           let
             version = entry.version;
+            lockfile = ./deps + "/${version}/pnpm-lock.yaml";
 
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
+            tarball = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/${npmPackage}/-/${npmTarballName}-${version}.tgz";
+              hash = entry.hash;
+            };
 
-              src = pkgs.fetchurl {
-                url = "https://registry.npmjs.org/@evomap/evolver/-/evolver-${version}.tgz";
-                hash = entry.hash;
-              };
+            # The published npm tarball ships no lockfile, so inject our
+            # committed, fully-pinned pnpm-lock.yaml into the source tree.
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              tar -xzf ${tarball} -C $out --strip-components=1
+              cp ${lockfile} $out/pnpm-lock.yaml
+            '';
 
-              nativeBuildInputs = [
-                nodejs
-                pkgs.pnpm
-                pkgs.cacert
-              ];
-
-              dontPatchShebangs = true;
-
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              outputHash = entry.npmDepsHash;
-
-              buildPhase = ''
-                runHook preBuild
-
-                export HOME=$TMPDIR
-                tar -xzf $src
-                cd package
-
-                ${nodejs}/bin/node -e '
-                  const fs = require("fs");
-                  const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-                  delete pkg.devDependencies;
-                  delete pkg.packageManager;
-                  function exactSpec(spec) {
-                    if (typeof spec !== "string") return spec;
-                    if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                    const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                    return bare ? bare[1] : spec;
-                  }
-                  function isExactInstallSpec(spec) {
-                    return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                      || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                  }
-                  const unresolved = [];
-                  for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                    for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                      const next = exactSpec(spec);
-                      pkg[field][name] = next;
-                      if (typeof next === "string" && !isExactInstallSpec(next)) {
-                        unresolved.push(field + "." + name + "=" + next);
-                      }
-                    }
-                  }
-                  if (unresolved.length > 0) {
-                    throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                  }
-                  fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
-                '
-
-                pnpm install --prod --ignore-scripts --shamefully-hoist
-
-                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                cp -r . $out/
-                runHook postInstall
-              '';
+            pnpmDeps = pnpm.fetchDeps {
+              inherit pname version src;
+              fetcherVersion = 2;
+              hash = entry.pnpmDepsHash;
             };
           in
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit
+              pname
+              version
+              src
+              pnpmDeps
+              ;
 
             meta = with lib; {
               description = "Self-evolution engine for AI agents";
@@ -127,18 +89,31 @@
               maintainers = [ ];
             };
 
-            src = npmDeps;
+            nativeBuildInputs = [
+              nodejs
+              pnpm.configHook
+              pkgs.makeWrapper
+            ];
 
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            # structuredAttrs is required so pnpmInstallFlags reaches the
+            # config hook as a bash array rather than one space-joined string.
+            __structuredAttrs = true;
+
+            # pnpmConfigHook runs `pnpm install --offline --frozen-lockfile` with
+            # these flags: production-only tree, flattened so NODE_PATH resolves.
+            pnpmInstallFlags = [
+              "--prod"
+              "--shamefully-hoist"
+            ];
+
             dontBuild = true;
-            dontConfigure = true;
 
             installPhase = ''
               runHook preInstall
 
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
-              cp -r $src/* $out/lib/${pname}/
+              cp -r . $out/lib/${pname}/
 
               makeWrapper ${nodejs}/bin/node $out/bin/.evolver-real \
                 --add-flags "$out/lib/${pname}/index.js" \
@@ -179,10 +154,11 @@
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
-        # One `evolver_<sanitized-key>` package per entry in the table.
-        versionPackages = lib.mapAttrs' (
-          key: entry: lib.nameValuePair "evolver_${sanitizeKey key}" (mk key entry)
-        ) releases.versions;
+        # One `evolver_<sanitized-key>` package per entry that has a committed
+        # lockfile.
+        versionPackages =
+          lib.mapAttrs' (key: entry: lib.nameValuePair "evolver_${sanitizeKey key}" (mk key entry))
+            (lib.filterAttrs (key: _: builtins.pathExists (./deps + "/${key}/pnpm-lock.yaml")) releases.versions);
       in
       {
         packages = {
