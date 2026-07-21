@@ -8,9 +8,18 @@
 #   version = the same version string
 #   rev     = the upstream tag ("career-ops-v<version>")
 #
-# Two hashes are recomputed from scratch:
-#   - .hash            : fetchFromGitHub source hash (prefetched via nix-prefetch-url)
-#   - .npmDepsHashes.* : per-system npm FOD hash (fakeHash -> nix build -> parse "got:")
+# Reproducible-deps model (npm via importNpmLock, github source): the source is
+# fetchFromGitHub (not an npm tarball — upstream ships no lockfile), and
+# dependencies are pinned by a COMMITTED package-lock.json under deps/<version>/,
+# consumed at build time by pkgs.importNpmLock (each module is fetched as its
+# own content-addressed derivation keyed to the lockfile's integrity hashes —
+# there is NO aggregate deps hash to record). This script therefore, per version:
+#   - .hash : the fetchFromGitHub source hash (prefetched via
+#             `nix store prefetch-file --unpack`, independent of the build).
+#   - deps/<v>/{package.json,package-lock.json,.npmrc} : the committed, pinned
+#     lockfile, generated straight from upstream's package.json (no
+#     devDependencies/packageManager to strip today, but the mutation step is
+#     kept so it stays correct if upstream ever adds them).
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -22,44 +31,40 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
-readonly REPO_URL="https://github.com/santifer/career-ops"
-# lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
-readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+readonly REPO_OWNER="santifer"
+readonly REPO_NAME="career-ops"
+readonly REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
+readonly PACKAGE_ATTR="career-ops"
+readonly BIN_NAME="career-ops"
+# nixpkgs ref used to obtain node/npm matching flake.nix (nodejs_22).
+readonly NIXPKGS_REF="github:NixOS/nixpkgs/nixos-26.05"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
-# Which system's npmDeps hash to (re)compute — the host we build on.
-BUILD_SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo x86_64-linux)"
 
-ensure_tools() {
-  for tool in git nix nix-prefetch-url jq; do
-    command -v "$tool" >/dev/null 2>&1 || { log_error "$tool is required"; exit 2; }
+ensure_required_tools_installed() {
+  for t in nix curl jq git tar; do
+    command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
   done
 }
 
 ensure_in_package_directory() {
-  [ -f "$flake_file" ] || { log_error "flake.nix not found in ${pkg_dir}"; exit 2; }
-  [ -f "$releases_file" ] || { log_error "releases.json not found at $releases_file"; exit 2; }
+  [ -f "$flake_file" ] || { log_error "flake.nix not found at: $flake_file"; exit 2; }
+  [ -f "$releases_file" ] || { log_error "releases.json not found at: $releases_file"; exit 2; }
 }
 
 # mirror flake.nix: replace . - + with _  ('-' kept last so tr treats it literally)
-sanitize_key() {
-  printf '%s' "$1" | tr '.+-' '___'
-}
+sanitize_key() { printf '%s' "$1" | tr '.+-' '___'; }
 
-# Current "latest" key recorded in the version table.
-get_current_key() {
-  jq -r '.latest // empty' "$releases_file"
-}
+# npm from the pinned nixpkgs (major must match flake.nix's nodejs_22).
+npm_run() { nix shell "${NIXPKGS_REF}#nodejs_22" --command npm "$@"; }
+node_run() { nix shell "${NIXPKGS_REF}#nodejs_22" --command node "$@"; }
 
-# Does the table already have an entry for this key?
-has_version_entry() {
-  local key="$1"
-  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
-}
+lockfile_rel() { printf 'deps/%s/package-lock.json' "$1"; }
+lockfile_exists() { [ -f "${pkg_dir}/$(lockfile_rel "$1")" ]; }
 
 latest_tag() {
   git ls-remote --tags "$REPO_URL.git" \
@@ -83,55 +88,82 @@ version_from_tag() {
   printf '%s\n' "$tag"
 }
 
-prefetch_source_hash() {
-  local tag="$1"
-  local base32
-  base32="$(nix-prefetch-url --unpack "${REPO_URL}/archive/${tag}.tar.gz" | tail -n1)"
-  nix hash to-sri --type sha256 "$base32"
-}
+get_current_key() { jq -r '.latest // empty' "$releases_file"; }
 
-extract_got_hash() {
-  sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
-}
-
-# Recompute a fixed-output hash by building the target attr with FAKE_HASH
-# already written into releases.json and parsing nix's "got:" line.
-build_and_get_hash() {
-  local attr="$1" out
-  out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link 2>&1 || true)"
-  printf '%s\n' "$out" | extract_got_hash
-}
-
-# Upsert an entry into releases.json and set .latest.
-upsert_release_entry() {
+has_version_entry() {
   local key="$1"
-  local entry_json="$2"
-  local tmp
-  tmp="$(mktemp)"
-  jq --arg k "$key" --argjson e "$entry_json" \
-    '.versions[$k] = $e | .latest = $k' "$releases_file" >"$tmp"
-  mv "$tmp" "$releases_file"
+  [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
 }
 
-set_entry_field() {
-  local key="$1" filter="$2"
-  local tmp
-  tmp="$(mktemp)"
-  jq --arg k "$key" "$filter" "$releases_file" >"$tmp"
-  mv "$tmp" "$releases_file"
+# fetchFromGitHub source hash, prefetched (unpacked NAR) independently of the build.
+prefetch_github_src() {
+  local tag="$1"
+  nix store prefetch-file --unpack --json --hash-type sha256 \
+    "${REPO_URL}/archive/${tag}.tar.gz" \
+    | jq -r '.hash // empty'
 }
 
-# Parallel-safe auto-commit. flock serialises the git index across updaters.
+# Resolve + commit a package-lock.json for VERSION from the tagged source
+# archive. Upstream ships no lockfile at all, so this generates one from
+# scratch — stripping devDependencies/packageManager first (none exist today,
+# but kept for parity with the other npm updaters and future-proofing), then
+# resolving with --package-lock-only. NOTE: unlike a plain dependency,
+# --package-lock-only does NOT skip the root project's own lifecycle scripts
+# (verified empirically: without --ignore-scripts, `npm install
+# --package-lock-only` still ran career-ops' postinstall, which tries to
+# `npx playwright install chromium --with-deps` — downloading a browser and
+# apt-get'ing system libs) — so --ignore-scripts is required here too.
+generate_npm_lock() {
+  local version="$1" tag="$2"
+  local dest="${pkg_dir}/deps/${version}"
+  local work; work="$(mktemp -d)"
+  log_info "Generating package-lock.json for ${version}..."
+  curl -fsSL "${REPO_URL}/archive/${tag}.tar.gz" -o "$work/src.tgz"
+  tar -xzf "$work/src.tgz" -C "$work"
+  local srcdir; srcdir="$(find "$work" -maxdepth 1 -type d -name "${REPO_NAME}-*" | head -n1)"
+  [ -n "$srcdir" ] || { log_error "could not locate extracted source dir"; rm -rf "$work"; return 1; }
+  (
+    cd "$srcdir"
+    export HOME="$work/home"; mkdir -p "$HOME"
+    node_run -e 'const fs=require("fs");const p=require("./package.json");delete p.devDependencies;delete p.packageManager;fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
+    printf 'legacy-peer-deps=true\n' > .npmrc
+    npm_run install --package-lock-only --ignore-scripts --legacy-peer-deps >/dev/null 2>&1
+  )
+  [ -f "$srcdir/package-lock.json" ] || { log_error "lockfile generation produced no package-lock.json"; rm -rf "$work"; return 1; }
+  mkdir -p "$dest"
+  cp "$srcdir/package.json" "$dest/package.json"
+  cp "$srcdir/package-lock.json" "$dest/package-lock.json"
+  cp "$srcdir/.npmrc" "$dest/.npmrc"
+  rm -rf "$work"
+  log_info "  committed deps/${version}/{package.json,package-lock.json,.npmrc}"
+}
+
+print_usage() {
+  cat <<'EOF'
+Usage: ./scripts/update-version.sh [OPTIONS]
+
+Appends the newest (or an explicit) tagged career-ops release to releases.json
+as a new version-table entry (keyed by version) and sets .latest to it. For the
+new version it prefetches the fetchFromGitHub source hash and generates+commits
+deps/<version>/{package.json,package-lock.json,.npmrc}. importNpmLock needs no
+aggregate deps hash. flake.nix is never touched.
+
+Options:
+  --version VERSION   Append a specific version (default: newest tag)
+  --check             Only check for updates (exit 1 if update available)
+  --rehash            Regenerate the committed lockfile for the latest entry
+  --no-build          Skip final build verification
+  --no-commit         Do not auto-commit (default: auto-commit is enabled)
+  --help              Show this help message
+EOF
+}
+
 maybe_git_commit() {
   local commit_message="$1"; shift
   local -a paths=("$@")
-  command -v git >/dev/null 2>&1 || { log_warn "git not found; skipping commit"; return 0; }
-  git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
-    log_warn "not in a git work tree; skipping commit"; return 0; }
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
-    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
-  fi
+  command -v git >/dev/null 2>&1 || { log_warn "git not found; skipping auto-commit"; return 0; }
+  git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { log_warn "not in a git work tree; skipping auto-commit"; return 0; }
+
   local git_dir lock_file
   git_dir="$(git -C "$pkg_dir" rev-parse --absolute-git-dir 2>/dev/null || true)"
   lock_file="${git_dir:-$pkg_dir/.git}/update-version-commit.lock"
@@ -144,40 +176,23 @@ maybe_git_commit() {
   ) 9>"$lock_file"
 }
 
-usage() {
-  cat <<'EOF'
-Usage: ./scripts/update-version.sh [OPTIONS]
-
-Appends the newest (or an explicit) tagged career-ops release to releases.json as
-a new version-table entry (keyed by version) and sets .latest to it. Recomputes
-the fetchFromGitHub source hash and the per-system npm FOD hash via jq — the
-version data in flake.nix is never touched.
-
-Options:
-  --version VERSION   Append a specific version (default: newest tag)
-  --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute hashes even if version is unchanged
-  --no-build          Skip build verification
-  --help              Show this help
-EOF
-}
-
 main() {
-  ensure_tools
+  ensure_required_tools_installed
   ensure_in_package_directory
-  log_info "Updating package: ${PACKAGE_DIR_NAME} (build system: ${BUILD_SYSTEM})"
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
-  local requested="" check=false rehash=false no_build=false
+  local requested="" check_only=false rehash=false no_build=false do_commit=true
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
         [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
         requested="$2"; shift 2 ;;
-      --check) check=true; shift ;;
+      --check) check_only=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
-      --help) usage; exit 0 ;;
-      *) log_error "Unknown option: $1"; usage; exit 2 ;;
+      --no-commit) do_commit=false; shift ;;
+      --help) print_usage; exit 0 ;;
+      *) log_error "Unknown option: $1"; print_usage; exit 2 ;;
     esac
   done
 
@@ -194,81 +209,60 @@ main() {
   log_info "Current latest key: ${current_key}"
   log_info "Target version:     ${version} (${tag})"
 
-  if [ "$check" = true ]; then
-    if has_version_entry "$version" && [ "$current_key" = "$version" ]; then
-      log_info "Already up to date!"
-      exit 0
-    fi
-    log_info "Update available: ${current_key} -> ${version}"
-    exit 1
+  local up_to_date=false
+  if has_version_entry "$version" && [ "$current_key" = "$version" ] \
+    && lockfile_exists "$version"; then
+    up_to_date=true
   fi
 
-  if has_version_entry "$version" && [ "$current_key" = "$version" ] && [ "$rehash" = false ]; then
-    log_info "Already up to date! (use --rehash to force)"
-    exit 0
+  if [ "$check_only" = true ]; then
+    if [ "$up_to_date" = true ]; then log_info "Already up to date!"; exit 0; fi
+    log_info "Update available: ${current_key} -> ${version}"; exit 1
   fi
 
-  local attr backup
-  attr="career-ops_$(sanitize_key "$version")"
-  backup="$(mktemp -t releases.json.backup.XXXXXX)"
-  cp "$releases_file" "$backup"
+  if [ "$up_to_date" = true ] && [ "$rehash" != true ]; then
+    log_info "Already up to date!"; exit 0
+  fi
 
-  # Preserve every known target hash. Missing targets stay hidden by the flake
-  # until this updater is run on that platform (or their hash is cross-probed).
-  local prior_hashes
-  prior_hashes="$(jq -c --arg k "$version" \
-    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
+  local attr; attr="${PACKAGE_ATTR}_$(sanitize_key "$version")"
 
-  # 1) source hash (prefetch — deterministic, no build needed)
+  # 1) source hash (prefetched, independent of build).
   log_info "Prefetching fetchFromGitHub source hash..."
-  local src_hash
-  src_hash="$(prefetch_source_hash "$tag")"
+  local src_hash; src_hash="$(prefetch_github_src "$tag")"
   [ -n "$src_hash" ] || { log_error "failed to prefetch source hash"; exit 1; }
   log_info "  src hash: $src_hash"
 
-  # Seed the entry with a fake npmDeps hash for the build system so nix reveals
-  # the real one on build.
-  local entry_json
-  entry_json="$(jq -n \
-    --arg v "$version" \
-    --arg rev "$tag" \
-    --arg h "$src_hash" \
-    --arg fake "$FAKE_HASH" \
-    --arg bsys "$BUILD_SYSTEM" \
-    --argjson prior "$prior_hashes" \
-    '{version: $v, rev: $rev, hash: $h,
-      npmDepsHashes: ({
-        "x86_64-linux": $fake,
-        "aarch64-linux": $fake,
-        "x86_64-darwin": $fake,
-        "aarch64-darwin": $fake
-      } + $prior + { ($bsys): $fake })}')"
-  upsert_release_entry "$version" "$entry_json"
+  # 2) generate + commit the package-lock.json for this version.
+  generate_npm_lock "$version" "$tag"
 
-  # 2) npmDeps FOD hash (for the build system)
-  log_info "Computing npmDeps hash for ${BUILD_SYSTEM}..."
-  local npm_hash
-  npm_hash="$(build_and_get_hash "$attr")"
-  if [ -z "$npm_hash" ]; then
-    # No mismatch printed => build already succeeded (hash was correct).
-    log_info "  npmDeps hash already correct (no rehash needed)."
-  else
-    log_info "  npmDeps hash: $npm_hash"
-    set_entry_field "$version" \
-      "$(printf '.versions[$k].npmDepsHashes["%s"] = "%s"' "$BUILD_SYSTEM" "$npm_hash")"
-  fi
+  local backup tmp
+  backup="$(mktemp -t releases.json.backup.XXXXXX)"
+  cp "$releases_file" "$backup"
 
-  if [ "$no_build" = false ]; then
+  # Upsert the entry (no deps hash needed for importNpmLock). Set it as .latest.
+  tmp="$(mktemp)"
+  jq --arg k "$version" \
+     --arg ver "$version" \
+     --arg rev "$tag" \
+     --arg hash "$src_hash" '
+       .versions[$k] = { version: $ver, rev: $rev, hash: $hash }
+       | .latest = $k
+     ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
+
+  if [ "$no_build" != true ]; then
     log_info "Verifying build of ${attr}..."
-    local out
-    if ! out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
+    local out_path
+    if ! out_path="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
       log_error "verification build failed; restoring previous releases.json"
-      printf '%s\n' "$out" | tail -n 40 >&2
-      cp "$backup" "$releases_file"
-      rm -f "$backup"
-      exit 1
+      printf '%s\n' "$out_path" | tail -n 40 >&2
+      cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
     fi
-    log_info "Build OK: $(printf '%s\n' "$out" | tail -n1)"
+    out_path="$(printf '%s\n' "$out_path" | tail -n1)"
+    if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
+      log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
+      cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
+    fi
+    log_info "Build OK: $out_path"
   fi
 
   rm -f "$backup"
@@ -276,14 +270,16 @@ main() {
   log_info "releases.json now contains:"
   jq -r '.latest as $l | "  latest=" + $l, (.versions | keys[] | "  - " + .)' "$releases_file"
 
-  local scope msg
-  scope="$(basename "$pkg_dir")"
-  if [ "$current_key" = "$version" ]; then
-    msg="chore(${scope}): rehash ${version}"
-  else
-    msg="chore(${scope}): bump to ${version}"
+  if [ "$do_commit" = true ]; then
+    local scope msg
+    scope="$(basename "$pkg_dir")"
+    if [ "$current_key" != "$version" ]; then
+      msg="chore(${scope}): bump to ${version}"
+    else
+      msg="chore(${scope}): rehash ${version}"
+    fi
+    maybe_git_commit "$msg" "releases.json" "deps/${version}"
   fi
-  maybe_git_commit "$msg" "releases.json"
 }
 
 main "$@"
