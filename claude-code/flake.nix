@@ -97,10 +97,13 @@
               install -m755 $src $out/libexec/claude
 
               # This package is Nix-managed, so bypass native-installer checks and updates.
+              # NOTE: the line-continuation backslash must stay OUTSIDE the
+              # optionalString — when it is empty (darwin), an inlined `\`
+              # disappears and the next line runs as a command (exit 127).
               makeWrapper $out/libexec/claude $out/bin/claude \
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--prefix LD_LIBRARY_PATH : ${
                   lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
-                } \\"}
+                }"} \
                 --set DISABLE_INSTALLATION_CHECKS 1 \
                 --set DISABLE_UPDATES 1 \
                 --set DISABLE_UPGRADE_COMMAND 1 \
@@ -109,7 +112,7 @@
               makeWrapper $out/libexec/claude $out/bin/claude-direct \
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "--prefix LD_LIBRARY_PATH : ${
                   lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
-                } \\"}
+                }"} \
                 --set DISABLE_INSTALLATION_CHECKS 1 \
                 --set DISABLE_UPDATES 1 \
                 --set DISABLE_UPGRADE_COMMAND 1 \
