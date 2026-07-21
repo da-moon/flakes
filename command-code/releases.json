@@ -1,11 +1,17 @@
 {
-  "latest": "0.52.2",
+  "latest": "0.52.3",
   "versions": {
     "0.52.2": {
       "version": "0.52.2",
       "rev": "0.52.2",
       "hash": "sha256-DKE30IOEqM0wkRVqJT7fWVj64rWH34c+J9u7Bgx61RI=",
       "schemaSha256": "sha256-3RsatgkqMSDNZqQOD8lBV1kbo0ZTorXwCwK6/A6Nae4="
+    },
+    "0.52.3": {
+      "version": "0.52.3",
+      "rev": "0.52.3",
+      "hash": "sha256-tKF9bNttn+CkQh4C4fqKBaMUTnuu2yV6GKMQsagoRNs=",
+      "schemaSha256": "sha256-WnRSUOWsVvweD2RTC63PwWcJxj4ETfCCYJKxzuG1xUk="
     }
   }
 }
