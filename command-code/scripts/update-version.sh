@@ -7,11 +7,15 @@
 #   key     = the npm version (e.g. "0.40.17"); kind = tag-based
 #   version = the same npm version
 #
-# Two kinds of fixed-output hashes live in each entry:
-#   - .hash             : the npm tarball hash (fetchurl, arch-agnostic)
-#   - .npmDepsHashes.*  : per-system "npm install --production" FOD hash. Only
-#                         the build system's hash is recomputed here; other
-#                         arches keep a lib.fakeHash placeholder until built.
+# Reproducible-deps model (npm): dependencies are pinned by a COMMITTED
+# package-lock.json under deps/<version>/, consumed at build time by
+# pkgs.importNpmLock (each module is fetched as its own content-addressed
+# derivation keyed to the lockfile's integrity hashes — there is NO aggregate
+# deps hash to record). This script therefore, per version:
+#   - .hash          : the npm tarball fetchurl hash (SRI, arch-agnostic)
+#   - deps/<v>/{package.json,package-lock.json,.npmrc} : the committed, pinned
+#     lockfile (devDependencies + packageManager stripped, so unbuildable
+#     platform dev packages are never fetched).
 # The release also records .schemaSha256, which couples it to the canonical,
 # statically extracted schema/upstream.json artifact.
 set -euo pipefail
@@ -27,10 +31,19 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 readonly NPM_REGISTRY_URL="${COMMAND_CODE_NPM_REGISTRY_URL:-https://registry.npmjs.org}"
 readonly NPM_PACKAGE="command-code"
+readonly TARBALL_NAME="command-code"
 readonly PACKAGE_ATTR="command-code"
 readonly BIN_NAME="command-code"
-# lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
-readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+# nixpkgs ref used to obtain node/npm. The RUNTIME (flake.nix's build) is
+# pinned to nodejs_22; LOCKFILE GENERATION deliberately uses the newer
+# nodejs_24-bundled npm (11.x) instead. npm's abbreviated ("corgi") packument
+# fetch omits the "libc" field on optionalDependencies, while nodejs_22's
+# older bundled npm (10.9.x) requests the abbreviated form; nodejs_24's npm
+# requests the full packument and reproduces the committed lockfile
+# byte-for-byte. This does not affect the built package: importNpmLock's
+# npmConfigHook runs `npm ci` with nodejs_22 against the already-resolved
+# lockfile, which is compatible regardless of which npm produced it.
+readonly NIXPKGS_REF="github:NixOS/nixpkgs/nixos-26.05"
 
 # command-code declares an unfree license; allow it for local build verification.
 export NIXPKGS_ALLOW_UNFREE=1
@@ -47,8 +60,6 @@ schema_comparator="${script_dir}/compare-config-schema.mjs"
 schema_verifier="${script_dir}/verify-config-schema.mjs"
 PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 readonly PACKAGE_DIR_NAME
-# Which system's npmDeps hash to (re)compute — the host we build on.
-BUILD_SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo x86_64-linux)"
 
 # Rollback transaction state. These MUST stay script-global: when `set -e`
 # aborts main(), the EXIT trap fires after main's local scope is gone, so a
@@ -58,6 +69,7 @@ staging=""
 transaction_active=false
 had_schema=false
 had_schema_hash=false
+had_deps=false
 
 ensure_required_tools_installed() {
   for t in nix curl jq node tar; do
@@ -71,6 +83,42 @@ ensure_in_package_directory() {
   [ -x "$schema_extractor" ] || [ -f "$schema_extractor" ] || { log_error "schema extractor not found at: $schema_extractor"; exit 2; }
   [ -f "$schema_comparator" ] || { log_error "schema comparator not found at: $schema_comparator"; exit 2; }
   [ -f "$schema_verifier" ] || { log_error "schema verifier not found at: $schema_verifier"; exit 2; }
+}
+
+# npm from the pinned nixpkgs, used only for lockfile generation (see
+# NIXPKGS_REF comment above for why this is nodejs_24, not nodejs_22).
+# Not on PATH, so every invocation goes through `nix shell`.
+npm_run() { nix shell "${NIXPKGS_REF}#nodejs_24" --command npm "$@"; }
+
+lockfile_rel() { printf 'deps/%s/package-lock.json' "$1"; }
+lockfile_exists() { [ -f "${pkg_dir}/$(lockfile_rel "$1")" ]; }
+
+# Resolve + commit a package-lock.json for VERSION from its npm tarball. The
+# lockfile is generated from the tarball's package.json with devDependencies +
+# packageManager stripped, so importNpmLock's `npm ci` installs a lean prod
+# tree (this mirrors exactly what flake.nix's `mk` overlays onto the tarball
+# source before invoking importNpmLock).
+generate_npm_lock() {
+  local version="$1" tarball_url="$2"
+  local dest="${pkg_dir}/deps/${version}"
+  local work; work="$(mktemp -d)"
+  log_info "Generating package-lock.json for ${version}..."
+  curl -fsSL "$tarball_url" -o "$work/pkg.tgz"
+  tar -xzf "$work/pkg.tgz" -C "$work"   # -> $work/package/
+  (
+    cd "$work/package"
+    export HOME="$work/home"; mkdir -p "$HOME"
+    node -e 'const fs=require("fs");const p=require("./package.json");delete p.devDependencies;delete p.packageManager;fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
+    printf 'legacy-peer-deps=true\n' > .npmrc
+    npm_run install --package-lock-only --legacy-peer-deps >/dev/null 2>&1
+  )
+  [ -f "$work/package/package-lock.json" ] || { log_error "lockfile generation produced no package-lock.json"; rm -rf "$work"; return 1; }
+  mkdir -p "$dest"
+  cp "$work/package/package.json" "$dest/package.json"
+  cp "$work/package/package-lock.json" "$dest/package-lock.json"
+  cp "$work/package/.npmrc" "$dest/.npmrc"
+  rm -rf "$work"
+  log_info "  committed deps/${version}/{package.json,package-lock.json,.npmrc}"
 }
 
 extract_schema_evidence() {
@@ -121,10 +169,6 @@ sanitize_key() {
   printf '%s' "$1" | tr '.+-' '___'
 }
 
-extract_got_hash() {
-  sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
-}
-
 # Current "latest" key recorded in the version table.
 get_current_version() {
   jq -r '.latest // empty' "$releases_file"
@@ -146,14 +190,6 @@ prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
     | jq -r '.hash // empty'
-}
-
-# Recompute a fixed-output hash by building the target attr with FAKE_HASH
-# already written into releases.json and parsing nix's "got:" line.
-build_and_get_hash() {
-  local attr="$1" out
-  out="$(nix build "path:${pkg_dir}#${attr}" --impure --no-write-lock-file --no-link 2>&1 || true)"
-  printf '%s\n' "$out" | extract_got_hash
 }
 
 verify_build() {
@@ -197,13 +233,15 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 
 Appends the newest (or an explicit) command-code npm release to releases.json
 (the JSON version table read by flake.nix) and sets it as .latest. Recomputes
-both the npm tarball hash and the per-system npmDeps FOD hash via jq — the
-version data in flake.nix is never touched.
+the npm tarball hash and (re)generates+commits the pinned
+deps/<version>/{package.json,package-lock.json,.npmrc} lockfile consumed by
+importNpmLock — no aggregate deps hash is needed. The version data in
+flake.nix is never touched.
 
 Options:
   --version VERSION   Append a specific version (default: latest npm version)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute hashes for the current latest version
+  --rehash            Regenerate the committed lockfile for the current latest version
   --no-build          Skip build verification
   --accept-schema-drift
                       Continue after reviewing structural schema drift
@@ -244,7 +282,7 @@ maybe_git_commit() {
 main() {
   ensure_required_tools_installed
   ensure_in_package_directory
-  log_info "Updating package: ${PACKAGE_DIR_NAME} (build system: ${BUILD_SYSTEM})"
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
   local target_version="" check_only=false rehash=false no_build=false do_commit=true accept_schema_drift=false
   while [[ $# -gt 0 ]]; do
@@ -284,7 +322,8 @@ main() {
   log_info "Target version:  $latest_version"
 
   if [ "$check_only" = true ]; then
-    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
+    if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] \
+      && lockfile_exists "$latest_version"; then
       log_info "Already up to date!"
       exit 0
     fi
@@ -293,7 +332,7 @@ main() {
   fi
 
   local tarball_url
-  tarball_url="$NPM_REGISTRY_URL/$NPM_PACKAGE/-/$NPM_PACKAGE-$latest_version.tgz"
+  tarball_url="$NPM_REGISTRY_URL/$NPM_PACKAGE/-/$TARBALL_NAME-$latest_version.tgz"
   staging="$(mktemp -d -t "command-code-${latest_version}.schema.XXXXXX")"
   log_info "Staging release and schema evidence in: $staging"
   if ! curl -fsSL "$tarball_url" -o "$staging/package.tgz"; then
@@ -357,39 +396,48 @@ main() {
   if has_version_entry "$latest_version" \
     && [ "$current_version" = "$latest_version" ] \
     && [ "$rehash" != true ] \
-    && [ "$recorded_schema_sha" = "$schema_sha" ]; then
-    log_info "Already up to date; package metadata and schemaSha256 verified."
+    && [ "$recorded_schema_sha" = "$schema_sha" ] \
+    && lockfile_exists "$latest_version"; then
+    log_info "Already up to date; package metadata, schemaSha256, and lockfile verified."
     rm -rf "$staging"
     exit 0
   fi
-
-  local prior_hashes
-  prior_hashes="$(jq -c --arg k "$latest_version" \
-    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
 
   backup_dir="$(mktemp -d -t command-code-update-backup.XXXXXX)"
   transaction_active=false
   had_schema=false
   had_schema_hash=false
+  had_deps=false
   cp "$releases_file" "$backup_dir/releases.json"
   if [ -f "$schema_file" ]; then cp "$schema_file" "$backup_dir/upstream.json"; had_schema=true; fi
   if [ -f "$schema_hash_file" ]; then cp "$schema_hash_file" "$backup_dir/upstream.sha256"; had_schema_hash=true; fi
+  if [ -d "${pkg_dir}/deps/${latest_version}" ]; then
+    cp -r "${pkg_dir}/deps/${latest_version}" "$backup_dir/deps-version"
+    had_deps=true
+  fi
 
   rollback_update() {
     local status=$?
     if [ "$transaction_active" = true ]; then
-      log_error "Update failed; restoring releases.json and schema evidence"
+      log_error "Update failed; restoring releases.json, schema evidence, and lockfile"
       cp "$backup_dir/releases.json" "$releases_file"
       if [ "$had_schema" = true ]; then cp "$backup_dir/upstream.json" "$schema_file"; else rm -f "$schema_file"; fi
       if [ "$had_schema_hash" = true ]; then cp "$backup_dir/upstream.sha256" "$schema_hash_file"; else rm -f "$schema_hash_file"; fi
+      if [ "$had_deps" = true ]; then
+        rm -rf "${pkg_dir}/deps/${latest_version}"
+        cp -r "$backup_dir/deps-version" "${pkg_dir}/deps/${latest_version}"
+      else
+        rm -rf "${pkg_dir}/deps/${latest_version}"
+      fi
     fi
     rm -rf "$backup_dir"
     [ "$status" -eq 3 ] || rm -rf "$staging"
   }
   trap rollback_update EXIT
 
-  # Seed the entry: real tarball hash, fake npmDeps hash for the build system so
-  # nix reveals the real one on build. Other arches keep their fake placeholder.
+  # Seed the entry: real tarball hash + schemaSha256. No deps hash — importNpmLock
+  # fetches every module as its own content-addressed derivation keyed to the
+  # committed lockfile's integrity hashes.
   local attr tmp
   attr="${PACKAGE_ATTR}_$(sanitize_key "$latest_version")"
   tmp="$staging/releases.json"
@@ -397,21 +445,12 @@ main() {
      --arg ver "$latest_version" \
      --arg rev "$latest_version" \
      --arg hash "$tarball_hash" \
-     --arg fake "$FAKE_HASH" \
-     --arg schemaSha256 "$schema_sha" \
-     --arg bsys "$BUILD_SYSTEM" \
-     --argjson prior "$prior_hashes" '
+     --arg schemaSha256 "$schema_sha" '
        .versions[$k] = {
          version: $ver,
          rev: $rev,
          hash: $hash,
-         schemaSha256: $schemaSha256,
-         npmDepsHashes: ({
-           "x86_64-linux": $fake,
-           "aarch64-linux": $fake,
-           "x86_64-darwin": $fake,
-           "aarch64-darwin": $fake
-         } + $prior + { ($bsys): $fake })
+         schemaSha256: $schemaSha256
        }
        | .latest = $k
      ' "$releases_file" >"$tmp"
@@ -423,19 +462,9 @@ main() {
   mv "$releases_tmp" "$releases_file"
   install_schema_candidate "$staging"
 
-  # Compute the npmDeps FOD hash for the build system.
-  log_info "Computing npmDeps hash for ${BUILD_SYSTEM}..."
-  local npm_hash
-  npm_hash="$(build_and_get_hash "$attr")"
-  if [ -z "$npm_hash" ]; then
-    # No mismatch printed => build already succeeded (hash was correct).
-    log_info "  npmDeps hash already correct (no rehash needed)."
-  else
-    log_info "  npmDeps hash: $npm_hash"
-    tmp="$(mktemp "${pkg_dir}/.releases.json.XXXXXX")"
-    jq --arg k "$latest_version" --arg bsys "$BUILD_SYSTEM" --arg h "$npm_hash" \
-      '.versions[$k].npmDepsHashes[$bsys] = $h' \
-      "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
+  # Generate + commit the package-lock.json for this version.
+  if ! generate_npm_lock "$latest_version" "$tarball_url"; then
+    exit 1
   fi
 
   if [ "$no_build" != true ]; then
@@ -469,7 +498,7 @@ main() {
     else
       msg="chore(${scope}): bump to ${latest_version}"
     fi
-    maybe_git_commit "$msg" "releases.json" "schema/upstream.json" "schema/upstream.sha256"
+    maybe_git_commit "$msg" "releases.json" "schema/upstream.json" "schema/upstream.sha256" "deps/${latest_version}"
   fi
 
   log_info "Successfully appended command-code $latest_version (latest was $current_version)"
