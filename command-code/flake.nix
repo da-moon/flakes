@@ -117,93 +117,31 @@
           key: entry:
           let
             version = entry.version;
+            lockDir = ./deps + "/${version}";
 
-            # NOTE: npm optionalDependencies can be platform-specific,
-            # so the fixed-output hash from "npm install" is not portable across systems.
-            # Untested architectures use lib.fakeHash in releases.json to get the correct
-            # hash on first build.
-            outputHash =
-              entry.npmDepsHashes.${system} or (throw "Missing npmDepsHashes entry for system: ${system}");
-
-            # Fixed-output derivation to fetch npm package with prod dependencies
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
-
-              src = pkgs.fetchurl {
-                url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-                hash = entry.hash;
-              };
-
-              nativeBuildInputs = [
-                nodejs
-                pkgs.cacert
-              ];
-
-              dontPatchShebangs = true;
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              inherit outputHash;
-
-              buildPhase = ''
-                                runHook preBuild
-                                export HOME=$TMPDIR
-                                export npm_config_cache=$TMPDIR/.npm
-                                tar -xzf $src
-                                cd package
-                                ${nodejs}/bin/node <<'NODE'
-                                const fs = require("fs");
-                                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-
-                                // Dev dependencies include platform-specific @lydell/node-pty-* packages
-                                // that fail to resolve in the Nix sandbox; they are not needed at runtime.
-                                delete pkg.devDependencies;
-                                delete pkg.packageManager;
-
-                                function exactSpec(spec) {
-                                  if (typeof spec !== "string") return spec;
-                                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                                  return bare ? bare[1] : spec;
-                                }
-
-                                function isExactInstallSpec(spec) {
-                                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                                }
-
-                                const unresolved = [];
-                                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                                    const next = exactSpec(spec);
-                                    pkg[field][name] = next;
-                                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                                      unresolved.push(field + "." + name + "=" + next);
-                                    }
-                                  }
-                                }
-
-                                if (unresolved.length > 0) {
-                                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                                }
-
-                                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-                NODE
-                                npm install --production --ignore-scripts --legacy-peer-deps \
-                                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
-                                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
-                                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                cp -r . $out/
-                runHook postInstall
-              '';
+            tarball = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
+              hash = entry.hash;
             };
+
+            # The published npm tarball ships no lockfile. Inject our committed,
+            # fully-pinned package.json (devDependencies + packageManager already
+            # stripped) + package-lock.json + .npmrc. This is what makes the
+            # dependency set reproducible: importNpmLock fetches every module as
+            # its own content-addressed derivation keyed to the lockfile's
+            # integrity hashes — there is no drift-prone recursive FOD hash.
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              tar -xzf ${tarball} -C $out --strip-components=1
+              cp ${lockDir}/package.json $out/package.json
+              cp ${lockDir}/package-lock.json $out/package-lock.json
+              cp ${lockDir}/.npmrc $out/.npmrc
+            '';
+
+            npmDeps = pkgs.importNpmLock { npmRoot = src; };
           in
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit pname version src npmDeps;
 
             meta = with pkgs.lib; {
               description = "Command Code - coding agent that continuously learns your taste";
@@ -213,18 +151,22 @@
               platforms = platforms.unix;
             };
 
-            src = npmDeps;
-
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            # npmConfigHook runs `npm ci` offline against npmDeps during the
+            # configure phase, populating node_modules.
+            nativeBuildInputs = [
+              nodejs
+              nodejs.passthru.python
+              pkgs.importNpmLock.npmConfigHook
+              pkgs.makeWrapper
+            ];
 
             dontBuild = true;
-            dontConfigure = true;
 
             installPhase = ''
               runHook preInstall
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
-              cp -r $src/* $out/lib/${pname}/
+              cp -r . $out/lib/${pname}/
 
               for bin_name in cmd cmdc command-code commandcode; do
                 makeWrapper ${nodejs}/bin/node $out/bin/$bin_name \
@@ -250,12 +192,8 @@
             (
               builtins.filter (
                 key:
-                let
-                  hash = releases.versions.${key}.npmDepsHashes.${system} or null;
-                in
-                # fakeHash entries must stay exposed: update-version.sh builds the
-                # attr to learn the real hash from nix's "got:" mismatch line.
-                hash != null
+                # Only expose versions that have a committed lockfile.
+                builtins.pathExists (./deps + "/${key}/package-lock.json")
               ) (builtins.attrNames releases.versions)
             )
         );
