@@ -70,6 +70,7 @@ transaction_active=false
 had_schema=false
 had_schema_hash=false
 had_deps=false
+rollback_version=""
 
 ensure_required_tools_installed() {
   for t in nix curl jq node tar; do
@@ -107,6 +108,10 @@ generate_npm_lock() {
   tar -xzf "$work/pkg.tgz" -C "$work"   # -> $work/package/
   (
     cd "$work/package"
+    # HOME is faked below to isolate npm's cache, but `nix shell` (npm_run)
+    # resolves experimental-features/substituters from the user's nix.conf —
+    # pin XDG_CONFIG_HOME to the real config so nix-command stays enabled.
+    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
     export HOME="$work/home"; mkdir -p "$HOME"
     node -e 'const fs=require("fs");const p=require("./package.json");delete p.devDependencies;delete p.packageManager;fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
     printf 'legacy-peer-deps=true\n' > .npmrc
@@ -408,6 +413,7 @@ main() {
   had_schema=false
   had_schema_hash=false
   had_deps=false
+  rollback_version="$latest_version"
   cp "$releases_file" "$backup_dir/releases.json"
   if [ -f "$schema_file" ]; then cp "$schema_file" "$backup_dir/upstream.json"; had_schema=true; fi
   if [ -f "$schema_hash_file" ]; then cp "$schema_hash_file" "$backup_dir/upstream.sha256"; had_schema_hash=true; fi
@@ -424,10 +430,10 @@ main() {
       if [ "$had_schema" = true ]; then cp "$backup_dir/upstream.json" "$schema_file"; else rm -f "$schema_file"; fi
       if [ "$had_schema_hash" = true ]; then cp "$backup_dir/upstream.sha256" "$schema_hash_file"; else rm -f "$schema_hash_file"; fi
       if [ "$had_deps" = true ]; then
-        rm -rf "${pkg_dir}/deps/${latest_version}"
-        cp -r "$backup_dir/deps-version" "${pkg_dir}/deps/${latest_version}"
+        rm -rf "${pkg_dir}/deps/${rollback_version}"
+        cp -r "$backup_dir/deps-version" "${pkg_dir}/deps/${rollback_version}"
       else
-        rm -rf "${pkg_dir}/deps/${latest_version}"
+        rm -rf "${pkg_dir}/deps/${rollback_version}"
       fi
     fi
     rm -rf "$backup_dir"
