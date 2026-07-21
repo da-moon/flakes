@@ -27,93 +27,40 @@
         pname = "csso-cli";
 
         # Builder: turns one releases.json entry into the csso-cli derivation.
-        # PRESERVES the original build logic exactly; only version/src-url/hash(es)
-        # now come from `entry` instead of let-bindings.
+        # PRESERVES the original install/wrapper logic exactly; dependencies are
+        # now resolved from a committed package-lock.json via importNpmLock
+        # instead of a recursive-hash fixed-output derivation that ran "npm
+        # install" (and drifted across systems/time).
         mk =
           key: entry:
           let
             version = entry.version;
+            lockDir = ./deps + "/${version}";
 
-            # NOTE: npm optionalDependencies can be platform-specific,
-            # so the fixed-output hash from "npm install" is not portable across systems.
-            # Use pkgs.lib.fakeHash for untested architectures to get the correct hash on first build.
-            outputHashBySystem = entry.outputHashBySystem;
-
-            # Fixed-output derivation to fetch npm package with prod dependencies
-            npmDeps = pkgs.stdenv.mkDerivation {
-              name = "${pname}-${version}-npm-deps";
-
-              src = pkgs.fetchurl {
-                url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-                hash = entry.hash;
-              };
-
-              nativeBuildInputs = [
-                nodejs
-                pkgs.cacert
-              ];
-
-              dontPatchShebangs = true;
-              outputHashAlgo = "sha256";
-              outputHashMode = "recursive";
-              outputHash =
-                outputHashBySystem.${system} or (throw "Missing outputHashBySystem entry for system: ${system}");
-
-              buildPhase = ''
-                                runHook preBuild
-                                export HOME=$TMPDIR
-                                export npm_config_cache=$TMPDIR/.npm
-                                tar -xzf $src
-                                cd package
-                                ${nodejs}/bin/node <<'NODE'
-                                const fs = require("fs");
-                                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-
-                                function exactSpec(spec) {
-                                  if (typeof spec !== "string") return spec;
-                                  if (/^(file:|link:|workspace:|git\+|https?:)/.test(spec)) return spec;
-                                  const bare = spec.match(/^[~^](\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
-                                  return bare ? bare[1] : spec;
-                                }
-
-                                function isExactInstallSpec(spec) {
-                                  return /^(file:|link:|workspace:|git\+|https?:)/.test(spec)
-                                    || /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(spec);
-                                }
-
-                                const unresolved = [];
-                                for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-                                  for (const [name, spec] of Object.entries(pkg[field] || {})) {
-                                    const next = exactSpec(spec);
-                                    pkg[field][name] = next;
-                                    if (typeof next === "string" && !isExactInstallSpec(next)) {
-                                      unresolved.push(field + "." + name + "=" + next);
-                                    }
-                                  }
-                                }
-
-                                if (unresolved.length > 0) {
-                                  throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
-                                }
-
-                                fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-                NODE
-                                npm install --production --ignore-scripts \
-                                  --os ${if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux"} \
-                                  --cpu ${if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x64"}
-                                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out
-                cp -r . $out/
-                runHook postInstall
-              '';
+            tarball = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
+              hash = entry.hash;
             };
+
+            # The published npm tarball ships no lockfile. Inject our committed,
+            # fully-pinned package.json (devDependencies stripped, since csso-cli
+            # just repackages its prebuilt bin/lib and needs no build step) +
+            # package-lock.json + .npmrc. This is what makes the dependency set
+            # reproducible: importNpmLock fetches every module as its own
+            # content-addressed derivation keyed to the lockfile's integrity
+            # hashes — there is no drift-prone recursive FOD hash.
+            src = pkgs.runCommand "${pname}-${version}-src" { } ''
+              mkdir -p $out
+              tar -xzf ${tarball} -C $out --strip-components=1
+              cp ${lockDir}/package.json $out/package.json
+              cp ${lockDir}/package-lock.json $out/package-lock.json
+              cp ${lockDir}/.npmrc $out/.npmrc
+            '';
+
+            npmDeps = pkgs.importNpmLock { npmRoot = src; };
           in
           pkgs.stdenv.mkDerivation {
-            inherit pname version;
+            inherit pname version src npmDeps;
 
             meta = with pkgs.lib; {
               description = "Command-line CSS optimizer (CSSO) wrapper from npm";
@@ -122,18 +69,22 @@
               platforms = platforms.unix;
             };
 
-            src = npmDeps;
-
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            # npmConfigHook runs `npm ci` offline against npmDeps during the
+            # configure phase, populating node_modules.
+            nativeBuildInputs = [
+              nodejs
+              nodejs.passthru.python
+              pkgs.importNpmLock.npmConfigHook
+              pkgs.makeWrapper
+            ];
 
             dontBuild = true;
-            dontConfigure = true;
 
             installPhase = ''
               runHook preInstall
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
-              cp -r $src/* $out/lib/${pname}/
+              cp -r . $out/lib/${pname}/
               makeWrapper ${nodejs}/bin/node $out/bin/csso \
                 --add-flags "$out/lib/${pname}/bin/csso" \
                 --set NODE_PATH "$out/lib/${pname}/node_modules"
@@ -153,13 +104,8 @@
             })
             (
               builtins.filter (
-                key:
-                let
-                  hash = releases.versions.${key}.outputHashBySystem.${system} or null;
-                in
-                # fakeHash entries must stay exposed: update-version.sh builds the
-                # attr to learn the real hash from nix's "got:" mismatch line.
-                hash != null
+                # Only expose versions that have a committed lockfile.
+                key: builtins.pathExists (./deps + "/${key}/package-lock.json")
               ) (builtins.attrNames releases.versions)
             )
         );
