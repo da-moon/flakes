@@ -5,21 +5,7 @@
       "version": "1.0.0-unstable-2024-04-05",
       "rev": "8eaa668f804097221dcc6077edf155a052d1e61b",
       "hash": "sha256-s0ZOaDZIhExGh2g+gQzhbQAU6+0+V3iQAKOM9vrNM6k=",
-      "npmDepsHashes": {
-        "x86_64-linux": "sha256-dxYGqQkayBb6ZM1uI2gGH0EqotBBNeN4ThjlBDqGNvk=",
-        "aarch64-linux": "sha256-dxYGqQkayBb6ZM1uI2gGH0EqotBBNeN4ThjlBDqGNvk=",
-        "x86_64-darwin": "sha256-dxYGqQkayBb6ZM1uI2gGH0EqotBBNeN4ThjlBDqGNvk=",
-        "aarch64-darwin": "sha256-dxYGqQkayBb6ZM1uI2gGH0EqotBBNeN4ThjlBDqGNvk="
-      }
-    },
-    "24f8d28": {
-      "version": "1.0.0-unstable-2024-02-14",
-      "rev": "24f8d28cce9f72c6db00a1fad40cbb8241dd87a7",
-      "hash": "sha256-Vg0pagydxKLcEjh//USvw63ScOA9/Vvtp49KLpSKdgU=",
-      "npmDepsHashes": {
-        "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "x86_64-linux": "sha256-YiQ+QFp6rZltGnVzwHsgQuGlREgp+rynWEqYzFZTIpE="
-      }
+      "yarnDepsHash": "sha256-etlPvRYRsY1olijT30LLVL33cpInOK+zQWvx8JTdlLY="
     }
   }
 }
