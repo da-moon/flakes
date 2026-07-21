@@ -7,11 +7,14 @@
 #   key     = the npm version (e.g. "1.4.0")
 #   version = the same npm version
 #
-# Two kinds of hashes are recomputed via jq:
-#   - .hash            : the npm tarball fetchurl hash (single, arch-agnostic)
-#   - .npmDepsHashes.* : per-system pnpm/npm fixed-output-derivation hash
-#     (recomputed from the fakeHash -> nix build -> parse "got:" method for the
-#      build host; other arches keep their existing hash or a fakeHash sentinel).
+# Reproducible-deps model (pnpm): dependencies are pinned by a COMMITTED
+# pnpm-lock.yaml under deps/<version>/, fetched at build time by pnpm.fetchDeps.
+# This script therefore, per version:
+#   - .hash          : the npm tarball fetchurl hash (SRI, arch-agnostic)
+#   - deps/<v>/pnpm-lock.yaml : a freshly resolved, committed lockfile
+#   - .pnpmDepsHash  : the single portable pnpm.fetchDeps hash (same on all
+#     systems — fetchDeps downloads every platform's tarballs), recomputed via
+#     the fakeHash -> nix build -> parse "got:" method.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -28,6 +31,8 @@ readonly NPM_PACKAGE="@opengsd/gsd-pi"
 readonly TARBALL_NAME="gsd-pi"
 readonly PACKAGE_ATTR="gsd-2"
 readonly BIN_NAME="gsd"
+# nixpkgs ref used to obtain the pnpm major that matches flake.nix (pnpm_10).
+readonly NIXPKGS_REF="github:NixOS/nixpkgs/nixos-26.05"
 # lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
 readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
@@ -36,11 +41,9 @@ pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 releases_file="${pkg_dir}/releases.json"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
-# Which system's npmDeps hash to (re)compute — the host we build on.
-BUILD_SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo x86_64-linux)"
 
 ensure_required_tools_installed() {
-  for t in nix curl jq; do
+  for t in nix curl jq tar; do
     command -v "$t" >/dev/null 2>&1 || { log_error "$t is required but not installed."; exit 2; }
   done
 }
@@ -59,12 +62,54 @@ extract_got_hash() {
   sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
 }
 
-# Current "latest" key recorded in the version table.
-get_current_version() {
-  jq -r '.latest // empty' "$releases_file"
+# node + corepack from the pinned nixpkgs, used only as a runtime to invoke the
+# version-pinned pnpm below (nixpkgs' own pnpm derivation is NOT used for lock
+# generation: its patch version floats independently and its lockfile writer
+# emits different metadata across releases, so it would not reproduce the
+# committed lockfiles byte-for-byte).
+node_run() { nix shell "${NIXPKGS_REF}#nodejs_22" --command "$@"; }
+
+# Relative path (from pkg_dir) of a version's committed lockfile.
+lockfile_rel() { printf 'deps/%s/pnpm-lock.yaml' "$1"; }
+
+lockfile_exists() { [ -f "${pkg_dir}/$(lockfile_rel "$1")" ]; }
+
+# Resolve a fresh pnpm-lock.yaml for VERSION from its npm tarball and commit it
+# under deps/<version>/. The lockfile is generated from the tarball's unmodified
+# package.json so pnpm.fetchDeps' --frozen-lockfile check passes at build time.
+#
+# Uses the EXACT pnpm version pinned by the tarball's own package.json
+# "packageManager" field (via corepack), not whatever pnpm nixpkgs currently
+# ships — pnpm's lockfile writer has changed emitted metadata (e.g. a "libc:"
+# field) across releases, so only the pinned version reproduces the committed
+# lockfile byte-for-byte. corepack downloads that pnpm on demand and never
+# edits package.json (no "corepack use").
+generate_pnpm_lock() {
+  local version="$1" tarball_url="$2"
+  local dest="${pkg_dir}/deps/${version}"
+  local work; work="$(mktemp -d)"
+  log_info "Generating pnpm-lock.yaml for ${version}..."
+  curl -fsSL "$tarball_url" -o "$work/pkg.tgz"
+  tar -xzf "$work/pkg.tgz" -C "$work"   # -> $work/package/
+  (
+    cd "$work/package"
+    export HOME="$work/home"; mkdir -p "$HOME"
+    export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+    local pm_spec pm_version
+    pm_spec="$(node_run node -e "console.log(require('./package.json').packageManager || '')")"
+    pm_version="$(printf '%s' "$pm_spec" | sed -E 's/^pnpm@([0-9][0-9.]*).*/\1/')"
+    [ -n "$pm_version" ] || { log_error "no packageManager pnpm version pinned in package.json"; exit 1; }
+    node_run corepack "pnpm@${pm_version}" install --lockfile-only --ignore-scripts
+  )
+  [ -f "$work/package/pnpm-lock.yaml" ] || { log_error "lockfile generation produced no pnpm-lock.yaml"; rm -rf "$work"; return 1; }
+  mkdir -p "$dest"
+  cp "$work/package/pnpm-lock.yaml" "$dest/pnpm-lock.yaml"
+  rm -rf "$work"
+  log_info "  committed $(lockfile_rel "$version")"
 }
 
-# Does the table already have an entry for this key?
+get_current_version() { jq -r '.latest // empty' "$releases_file"; }
+
 has_version_entry() {
   local key="$1"
   [ "$(jq -r --arg k "$key" '.versions | has($k)' "$releases_file")" = "true" ]
@@ -83,7 +128,7 @@ prefetch_sha256_sri() {
     | head -n1
 }
 
-# Recompute a fixed-output hash by building the target attr with a fake hash
+# Recompute the pnpm.fetchDeps hash by building the target attr with a fake hash
 # already written into releases.json and parsing nix's "got:" line.
 build_and_get_hash() {
   local attr="$1" out
@@ -91,12 +136,10 @@ build_and_get_hash() {
   printf '%s\n' "$out" | extract_got_hash
 }
 
-# Is the build-host's npmDeps hash currently a fakeHash sentinel?
+# Is the recorded pnpmDepsHash a fakeHash sentinel (or missing)?
 current_hash_is_fake() {
-  local key="$1"
-  local h
-  h="$(jq -r --arg k "$key" --arg s "$BUILD_SYSTEM" \
-    '.versions[$k].npmDepsHashes[$s] // empty' "$releases_file")"
+  local key="$1" h
+  h="$(jq -r --arg k "$key" '.versions[$k].pnpmDepsHash // empty' "$releases_file")"
   [ -z "$h" ] || [ "$h" = "$FAKE_HASH" ]
 }
 
@@ -105,14 +148,15 @@ print_usage() {
 Usage: ./scripts/update-version.sh [OPTIONS]
 
 Appends the newest (or an explicit) @opengsd/gsd-pi npm release to releases.json
-(the JSON version table read by flake.nix) and sets it as .latest. Recomputes the
-npm tarball hash and the build-host npmDeps FOD hash via jq — the version data in
-flake.nix is never touched.
+and sets it as .latest. For the new version it: prefetches the tarball hash,
+generates+commits deps/<version>/pnpm-lock.yaml, and recomputes the single
+portable .pnpmDepsHash via the fakeHash -> nix build -> parse "got:" method.
+The version data in flake.nix is never touched.
 
 Options:
   --version VERSION   Append a specific version (default: latest npm)
   --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute tarball + current-system npmDeps hash for latest
+  --rehash            Regenerate lockfile + pnpmDepsHash for the latest entry
   --no-build          Skip final build verification
   --no-commit         Do not auto-commit (default: auto-commit is enabled)
   --help              Show this help message
@@ -121,22 +165,14 @@ EOF
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
 maybe_git_commit() {
-  local commit_message="$1"
-  shift
+  local commit_message="$1"; shift
   local -a paths=("$@")
 
   if ! command -v git >/dev/null 2>&1; then
-    log_warn "git not found; skipping auto-commit"
-    return 0
+    log_warn "git not found; skipping auto-commit"; return 0
   fi
   if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    log_warn "not in a git work tree; skipping auto-commit"
-    return 0
-  fi
-
-  if git -C "$pkg_dir" diff --quiet -- "${paths[@]}" \
-    && git -C "$pkg_dir" diff --cached --quiet -- "${paths[@]}"; then
-    return 0
+    log_warn "not in a git work tree; skipping auto-commit"; return 0
   fi
 
   local git_dir lock_file
@@ -157,16 +193,14 @@ maybe_git_commit() {
 main() {
   ensure_required_tools_installed
   ensure_in_package_directory
-  log_info "Updating package: ${PACKAGE_DIR_NAME} (build system: ${BUILD_SYSTEM})"
+  log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
   local target_version="" check_only=false rehash=false no_build=false do_commit=true
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --version)
         [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
-        target_version="$2"
-        shift 2
-        ;;
+        target_version="$2"; shift 2 ;;
       --check) check_only=true; shift ;;
       --rehash) rehash=true; shift ;;
       --no-build) no_build=true; shift ;;
@@ -178,39 +212,28 @@ main() {
 
   local current_version latest_version
   current_version="$(get_current_version)"
-  if [ -z "$current_version" ]; then
-    log_error "Failed to detect current version from releases.json"
-    exit 2
-  fi
+  [ -n "$current_version" ] || { log_error "Failed to detect current version from releases.json"; exit 2; }
   latest_version="${target_version:-$(get_latest_version_from_npm)}"
-  if [ -z "$latest_version" ]; then
-    log_error "Failed to fetch latest version"
-    exit 2
-  fi
+  [ -n "$latest_version" ] || { log_error "Failed to fetch latest version"; exit 2; }
 
   log_info "Current latest: $current_version"
   log_info "Target version:  $latest_version"
 
-  # Treat as "up to date" when the entry already exists, is the latest, and its
-  # build-host hash is real (unless --rehash was requested).
+  # "Up to date" == entry exists, is .latest, has a committed lockfile, and a
+  # real (non-fake) pnpmDepsHash.
   local up_to_date=false
   if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] \
-    && ! current_hash_is_fake "$latest_version"; then
+    && lockfile_exists "$latest_version" && ! current_hash_is_fake "$latest_version"; then
     up_to_date=true
   fi
 
   if [ "$check_only" = true ]; then
-    if [ "$up_to_date" = true ]; then
-      log_info "Already up to date!"
-      exit 0
-    fi
-    log_info "Update available: $current_version -> $latest_version"
-    exit 1
+    if [ "$up_to_date" = true ]; then log_info "Already up to date!"; exit 0; fi
+    log_info "Update available: $current_version -> $latest_version"; exit 1
   fi
 
   if [ "$up_to_date" = true ] && [ "$rehash" != true ]; then
-    log_info "Already up to date!"
-    exit 0
+    log_info "Already up to date!"; exit 0
   fi
 
   local sanitized_key attr
@@ -225,51 +248,36 @@ main() {
   [ -n "$tarball_hash" ] || { log_error "Failed to prefetch tarball hash"; exit 1; }
   log_info "  tarball hash: $tarball_hash"
 
-  local prior_hashes
-  prior_hashes="$(jq -c --arg k "$latest_version" \
-    '.versions[$k].npmDepsHashes // {}' "$releases_file")"
+  # 2) Generate + commit the pnpm lockfile for this version.
+  generate_pnpm_lock "$latest_version" "$tarball_url"
 
   local backup tmp
   backup="$(mktemp -t releases.json.backup.XXXXXX)"
   cp "$releases_file" "$backup"
 
-  # Seed/upsert the entry with the real tarball hash but a fake build-host FOD
-  # hash so nix reveals the real one on build. Set it as .latest.
+  # Seed/upsert the entry with the real tarball hash but a fake deps hash so nix
+  # reveals the real one on build. Set it as .latest.
   tmp="$(mktemp)"
   jq --arg k "$latest_version" \
      --arg ver "$latest_version" \
      --arg rev "$latest_version" \
      --arg hash "$tarball_hash" \
-     --arg fake "$FAKE_HASH" \
-     --arg bsys "$BUILD_SYSTEM" \
-     --argjson prior "$prior_hashes" '
-       .versions[$k] = {
-         version: $ver,
-         rev: $rev,
-         hash: $hash,
-         npmDepsHashes: ({
-           "x86_64-linux": $fake,
-           "aarch64-linux": $fake,
-           "x86_64-darwin": $fake,
-           "aarch64-darwin": $fake
-         } + $prior + { ($bsys): $fake })
-       }
+     --arg fake "$FAKE_HASH" '
+       .versions[$k] = { version: $ver, rev: $rev, hash: $hash, pnpmDepsHash: $fake }
        | .latest = $k
      ' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
 
-  # 2) npmDeps FOD hash for the build system.
-  log_info "Computing npmDeps hash for ${BUILD_SYSTEM}..."
-  local npm_hash
-  npm_hash="$(build_and_get_hash "$attr")"
-  if [ -z "$npm_hash" ]; then
-    # No mismatch printed => build already succeeded (hash was correct).
-    log_info "  npmDeps hash already correct (no rehash needed)."
+  # 3) pnpm.fetchDeps hash (single, portable).
+  log_info "Computing pnpmDepsHash..."
+  local deps_hash
+  deps_hash="$(build_and_get_hash "$attr")"
+  if [ -z "$deps_hash" ]; then
+    log_info "  pnpmDepsHash already correct (no rehash needed)."
   else
-    log_info "  npmDeps hash: $npm_hash"
+    log_info "  pnpmDepsHash: $deps_hash"
     tmp="$(mktemp)"
-    jq --arg k "$latest_version" --arg bsys "$BUILD_SYSTEM" --arg h "$npm_hash" \
-      '.versions[$k].npmDepsHashes[$bsys] = $h' \
-      "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
+    jq --arg k "$latest_version" --arg h "$deps_hash" \
+      '.versions[$k].pnpmDepsHash = $h' "$releases_file" >"$tmp" && mv "$tmp" "$releases_file"
   fi
 
   if [ "$no_build" != true ]; then
@@ -278,23 +286,16 @@ main() {
     if ! out_path="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
       log_error "verification build failed; restoring previous releases.json"
       printf '%s\n' "$out_path" | tail -n 40 >&2
-      cp "$backup" "$releases_file"
-      rm -f "$backup"
-      exit 1
+      cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
     fi
     out_path="$(printf '%s\n' "$out_path" | tail -n1)"
     if [ -z "$out_path" ] || [ ! -x "$out_path/bin/$BIN_NAME" ]; then
       log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
-      cp "$backup" "$releases_file"
-      rm -f "$backup"
-      exit 1
+      cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
     fi
-    # default must also resolve (it points at the new .latest).
     if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
       log_error "nix build failed for default; restoring previous releases.json"
-      cp "$backup" "$releases_file"
-      rm -f "$backup"
-      exit 1
+      cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
     fi
     log_info "Build OK: $out_path"
   fi
@@ -312,10 +313,8 @@ main() {
     else
       msg="chore(${scope}): rehash ${latest_version}"
     fi
-    maybe_git_commit "$msg" "releases.json"
+    maybe_git_commit "$msg" "releases.json" "$(lockfile_rel "$latest_version")"
   fi
-
-  log_warn "Only ${BUILD_SYSTEM} npmDeps hash was refreshed; re-run on other supported systems if needed."
 }
 
 main "$@"
