@@ -2,7 +2,7 @@
 
 This subflake packages Command Code and provides version-coupled, typed Nix
 configuration for global Home Manager use and private project-local use. The
-current package and schema are Command Code 0.52.1.
+current package and schema are Command Code 0.52.2.
 
 ## Outputs
 
@@ -14,7 +14,7 @@ current package and schema are Command Code 0.52.1.
 
 The versioned Home Manager module rejects a package from another Command Code
 release. Historical packages remain available, but this flake does not pretend
-that the 0.52.1 configuration contract applies to them.
+that the 0.52.2 configuration contract applies to them.
 
 ## Home Manager
 
