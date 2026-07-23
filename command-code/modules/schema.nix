@@ -30,6 +30,7 @@ let
       toolDescription = nullable nonEmptyString "Model used to summarize tool permission prompts.";
       tasteLearning = nullable nonEmptyString "Model used by the background taste-learning agent.";
       tasteOnboarding = nullable nonEmptyString "Model used by the /learn-taste observer.";
+      branchSummarization = nullable nonEmptyString "Model used to summarize an abandoned branch when you jump away from it.";
     };
   };
 
@@ -54,7 +55,7 @@ let
             "acceptEdits"
           ])
           ''
-            Default project edit permission mode understood by Command Code 0.52.3.
+            Default project edit permission mode understood by Command Code 1.1.1.
           '';
       autoApprove = mkOption {
         type = autoApproveType;
@@ -92,7 +93,7 @@ let
   };
 in
 rec {
-  schemaVersion = "0.52.3";
+  schemaVersion = "1.1.1";
 
   globalConfigType = types.submodule {
     options = {
@@ -121,7 +122,7 @@ rec {
       featureModels = mkOption {
         type = featureModelsType;
         default = { };
-        description = "Per-feature model overrides supported by Command Code 0.52.3.";
+        description = "Per-feature model overrides supported by Command Code 1.1.1.";
       };
       autoInstallExtension = nullable types.bool "Whether supported editor extensions are installed automatically.";
     };
@@ -160,7 +161,7 @@ rec {
         default = { };
         description = ''
           Effective project-local permission settings. permissions.deny is
-          intentionally absent because Command Code 0.52.3 does not enforce it.
+          intentionally absent because Command Code 1.1.1 does not enforce it.
         '';
       };
     };

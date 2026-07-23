@@ -8,7 +8,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      description = "The Command Code 0.52.3 package to use.";
+      description = "The Command Code 1.1.1 package to use.";
     };
 
     config = lib.mkOption {

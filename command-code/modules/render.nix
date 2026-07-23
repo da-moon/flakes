@@ -33,6 +33,7 @@ let
       toolDescription = value.toolDescription;
       tasteLearning = value.tasteLearning;
       tasteOnboarding = value.tasteOnboarding;
+      branchSummarization = value.branchSummarization;
     });
 
   renderOauth =

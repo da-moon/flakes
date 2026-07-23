@@ -91,12 +91,13 @@ let
       toolDescription = null;
       tasteLearning = null;
       tasteOnboarding = null;
+      branchSummarization = null;
     };
     autoInstallExtension = false;
   };
 
   schemaAssertions =
-    assert schema.schemaVersion == "0.52.3";
+    assert schema.schemaVersion == "1.1.1";
     assert rendered.provider == "command-code";
     assert rendered.model == "dynamic/model";
     assert rendered.reasoningEffort."dynamic/model" == "high";

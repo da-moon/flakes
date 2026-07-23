@@ -371,7 +371,14 @@ async function main() {
   const manifestSnapshot = await readRegular(manifestPath);
   const manifest = manifestSnapshot.exists ? parseDocument(manifestSnapshot, manifestPath) : null;
   if (manifest) {
-    if (manifest.schemaVersion !== 1 || manifest.commandCodeVersion !== "0.52.3" || manifest.scope !== options.scope) {
+    // A newer build may ADOPT an ownership manifest written by a compatible
+    // prior Command Code version and rewrite it to the current version, so a
+    // package bump does not strand an existing managed installation. The managed
+    // config surface is backward compatible across these versions (fields are
+    // added, never renamed or removed), so reconciling an older `desired`
+    // snapshot is safe. Drop old versions here when a future bump is incompatible.
+    const adoptableCommandCodeVersions = new Set(["0.52.3", "1.1.1"]);
+    if (manifest.schemaVersion !== 1 || !adoptableCommandCodeVersions.has(manifest.commandCodeVersion) || manifest.scope !== options.scope) {
       fail(`unsupported or mismatched ownership manifest ${manifestPath}`);
     }
     if (options.force) fail("migration.force is one-time only and must be disabled after the ownership manifest exists");
@@ -486,7 +493,7 @@ async function main() {
 
   const nextManifest = {
     schemaVersion: 1,
-    commandCodeVersion: "0.52.3",
+    commandCodeVersion: "1.1.1",
     scope: options.scope,
     targets,
     desired: {
