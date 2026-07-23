@@ -1,5 +1,5 @@
 {
-  "latest": "55534aa",
+  "latest": "0ac960a",
   "versions": {
     "4795784": {
       "version": "1.0.0-unstable-2026-04-04",
@@ -11,6 +11,12 @@
       "version": "1.0.0-unstable-2026-07-06",
       "rev": "55534aab8c11f24655b7d8d4de82e6bece14c8b4",
       "hash": "sha256-7xjaE6BCSsSTZ88FL6URI3GkPwVzoijz7t3uwFZ41MI=",
+      "npmDepsHash": "sha256-iacdL8fQt4CzCZ8T7qrGgjPD3zEh4BRWASlDMq7GmYM="
+    },
+    "0ac960a": {
+      "version": "1.0.0-unstable-2026-07-21",
+      "rev": "0ac960ad548597d0d1e5fb2bf7bd9a7a50faa87b",
+      "hash": "sha256-Yo1VJY8dk+q5undDNvOgZAAAzP78FEM+pDSRXjT1FZw=",
       "npmDepsHash": "sha256-iacdL8fQt4CzCZ8T7qrGgjPD3zEh4BRWASlDMq7GmYM="
     }
   }
