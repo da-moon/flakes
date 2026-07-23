@@ -2,8 +2,14 @@
   "catalogs": {
     "featureModels": [
       {
+        "description": "Summarizes an abandoned branch when you jump away from it.",
+        "hasFixedDefault": false,
+        "key": "branchSummarization",
+        "label": "/tree branch summaries"
+      },
+      {
         "description": "Summarizes long conversations when context fills up.",
-        "hasFixedDefault": true,
+        "hasFixedDefault": false,
         "key": "compaction",
         "label": "Compaction"
       },
@@ -15,21 +21,21 @@
       },
       {
         "description": "Streams live observations during onboarding.",
-        "hasFixedDefault": true,
+        "hasFixedDefault": false,
         "key": "tasteOnboarding",
         "label": "/learn-taste"
       },
       {
         "description": "Names your sessions after the first exchange.",
-        "hasFixedDefault": true,
+        "hasFixedDefault": false,
         "key": "titleGeneration",
         "label": "Session titles"
       },
       {
         "description": "Writes the one-line command summaries on permission prompts.",
-        "hasFixedDefault": true,
+        "hasFixedDefault": false,
         "key": "toolDescription",
-        "label": "Tool descriptions"
+        "label": "Command explanations"
       }
     ],
     "models": [
@@ -40,14 +46,7 @@
           "image",
           "text"
         ],
-        "label": "Claude Fable 5",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "Claude Fable 5"
       },
       {
         "contextWindow": 200000,
@@ -65,14 +64,7 @@
           "image",
           "text"
         ],
-        "label": "Claude Opus 4.7",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "Claude Opus 4.7"
       },
       {
         "contextWindow": 1000000,
@@ -81,14 +73,7 @@
           "image",
           "text"
         ],
-        "label": "Claude Opus 4.8",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "Claude Opus 4.8"
       },
       {
         "contextWindow": 1000000,
@@ -97,14 +82,7 @@
           "image",
           "text"
         ],
-        "label": "Claude Sonnet 4.6",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "Claude Sonnet 4.6"
       },
       {
         "contextWindow": 1000000,
@@ -113,14 +91,7 @@
           "image",
           "text"
         ],
-        "label": "Claude Sonnet 5",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "Claude Sonnet 5"
       },
       {
         "contextWindow": 1000000,
@@ -175,19 +146,41 @@
         ]
       },
       {
+        "contextWindow": 1000000,
+        "id": "google/gemini-3.5-flash-lite",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 3.5 Flash Lite",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "google/gemini-3.6-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 3.6 Flash",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
         "contextWindow": 400000,
         "id": "gpt-5.3-codex",
         "inputModalities": [
           "image",
           "text"
         ],
-        "label": "GPT-5.3 Codex",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh"
-        ]
+        "label": "GPT-5.3 Codex"
       },
       {
         "contextWindow": 400000,
@@ -196,13 +189,7 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.4",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh"
-        ]
+        "label": "GPT-5.4"
       },
       {
         "contextWindow": 400000,
@@ -224,13 +211,7 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.5",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh"
-        ]
+        "label": "GPT-5.5"
       },
       {
         "contextWindow": 1050000,
@@ -239,14 +220,7 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.6 Luna",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "GPT-5.6 Luna"
       },
       {
         "contextWindow": 1050000,
@@ -255,14 +229,7 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.6 Sol",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "GPT-5.6 Sol"
       },
       {
         "contextWindow": 1050000,
@@ -271,14 +238,7 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.6 Terra",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ]
+        "label": "GPT-5.6 Terra"
       },
       {
         "contextWindow": 1048576,
@@ -374,6 +334,14 @@
           "text"
         ],
         "label": "Nemotron 3 Ultra"
+      },
+      {
+        "contextWindow": 256000,
+        "id": "poolside/laguna-s-2.1-free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Laguna S 2.1"
       },
       {
         "id": "Qwen/Qwen3.6-Max-Preview",
@@ -529,7 +497,7 @@
       },
       {
         "id": "codex",
-        "label": "ChatGPT (Codex)",
+        "label": "OpenAI",
         "requiresAuth": 0
       },
       {
@@ -553,14 +521,14 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 1267914,
-    "modelCount": 44,
+    "bundleBytes": 2308649,
+    "modelCount": 47,
     "pathLiteralCounts": {
-      "config.json": 1,
+      "config.json": 5,
       "mcp-tokens.json": 1,
-      "mcp.json": 1,
-      "settings.json": 5,
-      "settings.local.json": 5,
+      "mcp.json": 21,
+      "settings.json": 19,
+      "settings.local.json": 14,
       "trusted-hooks.json": 1
     },
     "permissionAutoApproveKeys": [
@@ -574,14 +542,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 363913
+    "tokenCount": 627478
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-RtL6I/hD0qNqzOjz+ISLkMWuEF/9HzpcbSpeY2L2cSU=",
+    "entrypointHash": "sha256-NypmvMPNzzkdXshbSvwJ1/FQryWMI5s1WMIzLI3l6KU=",
     "name": "command-code",
-    "packageJsonHash": "sha256-GfvQ+pVnmZ5SozSaTDp43GlFkbmebYZ5mSD0i9iwY6o=",
-    "version": "0.52.3"
+    "packageJsonHash": "sha256-b3rlxv0Z9TFlkUPiLURjgD64Wp+0G/Gj9ZgGIGYSQog=",
+    "version": "1.1.1"
   },
   "schemaVersion": 1,
   "structural": {
@@ -649,6 +617,10 @@
           "ownership": "runtime-preserved",
           "type": "boolean"
         },
+        "ideContextEnabled": {
+          "ownership": "declarative",
+          "type": "unknown"
+        },
         "installed": {
           "ownership": "runtime-preserved",
           "type": "boolean"
@@ -657,6 +629,10 @@
           "ownership": "declarative",
           "type": "string"
         },
+        "path": {
+          "ownership": "declarative",
+          "type": "unknown"
+        },
         "provider": {
           "ownership": "declarative",
           "type": "string"
@@ -664,6 +640,10 @@
         "reasoningEffort": {
           "ownership": "declarative",
           "type": "attrsOf(reasoningEffort)"
+        },
+        "runtime": {
+          "ownership": "declarative",
+          "type": "unknown"
         },
         "tasteLearning": {
           "ownership": "declarative",
@@ -676,6 +656,10 @@
         "theme": {
           "ownership": "declarative",
           "type": "enum(theme)"
+        },
+        "updates": {
+          "ownership": "declarative",
+          "type": "unknown"
         }
       },
       "unknownKeys": "preserve"
