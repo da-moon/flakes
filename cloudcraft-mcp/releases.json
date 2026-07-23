@@ -1,10 +1,15 @@
 {
-  "latest": "0.1.5",
+  "latest": "0.1.6",
   "versions": {
     "0.1.5": {
       "version": "0.1.5",
       "rev": "v0.1.5",
       "hash": "sha256-CS+pk3LJJB0Y/yd+X3Ci7WjnL5q0BhBVOPVZV5QlDaI="
+    },
+    "0.1.6": {
+      "version": "0.1.6",
+      "rev": "v0.1.6",
+      "hash": "sha256-Ou48ATNJrkSgt4VebcNKFCzJeVgISTYoPvaaKm2eiDM="
     }
   }
 }
