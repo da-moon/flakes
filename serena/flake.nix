@@ -32,7 +32,65 @@
 
       schema = import ./lib/config-schema.nix { lib = nixpkgs.lib; };
       renderFor = lib: import ./lib/render.nix { inherit lib; };
-      packageFor = system: serena-upstream.packages.${system}.serena;
+
+      # Upstream Serena autogenerates .serena/project.local.yml in a project
+      # with shutil.copy(), which propagates the template file's permission
+      # bits. Nix store files are read-only (0444), so the generated
+      # project.local.yml is born unwritable — and the NEXT autogeneration
+      # (upgrade, config migration) crashes with EACCES, failing project
+      # activation at startup. Patch the installed source to shutil.copyfile()
+      # (content only; the new file gets default umask permissions) and swap
+      # the patched env into upstream's thin `serena` wrapper derivation.
+      packageFor =
+        system:
+        let
+          upstream = serena-upstream.packages.${system};
+          patchedEnv = upstream.serena-env.overrideAttrs (old: {
+            postInstall = (old.postInstall or "") + ''
+              cd "$out"
+              relpath=$(echo lib/python*/site-packages/serena/config/serena_config.py)
+              if [ ! -e "$relpath" ]; then
+                echo "serena copyfile patch: $relpath not found in env output" >&2
+                exit 1
+              fi
+
+              # make_venv links whole directory trees straight into the
+              # store, so path components above serena_config.py may be
+              # symlinks into read-only store directories. Walk the path and
+              # replace every symlinked component with a real directory of
+              # symlinks (symlink forest) to make the target replaceable.
+              dir=.
+              IFS='/' read -r -a parts <<< "$(dirname "$relpath")"
+              for part in "''${parts[@]}"; do
+                dir="$dir/$part"
+                if [ -L "$dir" ]; then
+                  real=$(readlink -f "$dir")
+                  rm "$dir"
+                  mkdir "$dir"
+                  cp -rs "$real/." "$dir/"
+                else
+                  chmod u+w "$dir"
+                fi
+              done
+
+              real=$(readlink -f "$relpath")
+              if ! grep -qF 'shutil.copy(PROJECT_LOCAL_TEMPLATE_FILE, project_local_yml_path)' "$real"; then
+                echo "serena copyfile patch: expected shutil.copy line missing in $real" >&2
+                echo "upstream changed serena_config.py; re-review this patch" >&2
+                exit 1
+              fi
+              rm -f "$relpath"
+              sed 's/shutil\.copy(PROJECT_LOCAL_TEMPLATE_FILE, project_local_yml_path)/shutil.copyfile(PROJECT_LOCAL_TEMPLATE_FILE, project_local_yml_path)/' \
+                "$real" > "$relpath"
+              grep -qF 'shutil.copyfile(PROJECT_LOCAL_TEMPLATE_FILE, project_local_yml_path)' "$relpath"
+            '';
+          });
+          swapEnv = builtins.replaceStrings [ "${upstream.serena-env}" ] [ "${patchedEnv}" ];
+        in
+        upstream.serena.overrideAttrs (old: {
+          installPhase = swapEnv old.installPhase;
+          preFixup = swapEnv (old.preFixup or "");
+        });
 
       homeManagerModule =
         { lib, pkgs, ... }:
