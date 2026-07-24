@@ -241,6 +241,14 @@
         "label": "GPT-5.6 Terra"
       },
       {
+        "contextWindow": 256000,
+        "id": "inclusionai/ling-3.0-flash-free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Ling 3.0 Flash"
+      },
+      {
         "contextWindow": 1048576,
         "id": "meta/muse-spark-1.1",
         "inputModalities": [
@@ -411,6 +419,14 @@
         "inputModalities": [
           "text"
         ],
+        "label": "Tencent Hy3 (Free)"
+      },
+      {
+        "contextWindow": 262144,
+        "id": "tencent/hy3-paid",
+        "inputModalities": [
+          "text"
+        ],
         "label": "Tencent Hy3"
       },
       {
@@ -521,8 +537,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2308649,
-    "modelCount": 47,
+    "bundleBytes": 2310139,
+    "modelCount": 49,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
@@ -542,14 +558,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 627478
+    "tokenCount": 627805
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-NypmvMPNzzkdXshbSvwJ1/FQryWMI5s1WMIzLI3l6KU=",
+    "entrypointHash": "sha256-eH7+470ZC1smJsI+OtaHm9M6T2RJE2JA470EciSpYA4=",
     "name": "command-code",
-    "packageJsonHash": "sha256-b3rlxv0Z9TFlkUPiLURjgD64Wp+0G/Gj9ZgGIGYSQog=",
-    "version": "1.1.1"
+    "packageJsonHash": "sha256-b5HlTYWR4q2lNpqclfnd5Qv5oXu8Dl9/Tjl644W6cQA=",
+    "version": "1.3.1"
   },
   "schemaVersion": 1,
   "structural": {
