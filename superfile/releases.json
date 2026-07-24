@@ -1,0 +1,13 @@
+{
+  "latest": "1.6.0",
+  "versions": {
+    "1.6.0": {
+      "version": "1.6.0",
+      "rev": "1.6.0",
+      "hashes": {
+        "x86_64-linux": "sha256-1FsOlQcmKaaqeYOoTu3KnNepiGHmfvkb4UFUluPdowk=",
+        "aarch64-darwin": "sha256-Ex9lTn+DZv032+k2Nzn42C5X/z9jL0WWPNIzwEnPrSo="
+      }
+    }
+  }
+}
