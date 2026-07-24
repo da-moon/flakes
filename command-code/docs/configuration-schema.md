@@ -13,6 +13,10 @@ The 1.1.1 review cross-referenced the public [documentation index](https://comma
 [`schema/upstream.json`](../schema/upstream.json) evidence. The source artifact
 records the exact npm package and entrypoint hashes used for that comparison.
 
+The 1.3.1 review found catalog-only drift (new entries in the bundled model
+catalog); the structural schema is unchanged from 1.1.1, so the typed surface
+below still applies.
+
 ## Configuration scopes
 
 | Scope | File | Nix ownership |
