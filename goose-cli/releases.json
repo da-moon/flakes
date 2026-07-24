@@ -1,5 +1,5 @@
 {
-  "latest": "1.43.0",
+  "latest": "1.44.0",
   "versions": {
     "1.39.0": {
       "version": "1.39.0",
@@ -52,6 +52,19 @@
         "aarch64-darwin": "sha256-YZvmqN5CPnEimma/WVWN0zYl2Df51q3A6uKgfx6+n+Y="
       },
       "srcHash": "sha256-lmeS+iOyZ262H9NykK3GFIEA7ipOnqnurRKPY8xbwKw=",
+      "cargoOutputHashes": {
+        "cudaforge-0.1.6": "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY="
+      }
+    },
+    "1.44.0": {
+      "version": "1.44.0",
+      "rev": "v1.44.0",
+      "prebuiltHashes": {
+        "x86_64-linux": "sha256-B/68i09zvf3D7OPTTQ4hsAXzpPQwCPlbhdZTjaj2usE=",
+        "x86_64-darwin": "sha256-Ok+Ju8FESMpMuPKLe0Hn6JHBMKVG1u5qzYyy/3fLO00=",
+        "aarch64-darwin": "sha256-+hcpPUh3is5gvzzc+7L8vXRighaiLMRbAgvRykW0IXA="
+      },
+      "srcHash": "sha256-/UTdXth/o9IkDx2Amf645vasaknIhYpnFIuoqLfIgfU=",
       "cargoOutputHashes": {
         "cudaforge-0.1.6": "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY="
       }
