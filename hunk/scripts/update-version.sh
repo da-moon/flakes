@@ -86,6 +86,13 @@ prefetch_sha256_sri() {
     | jq -r '.hash'
 }
 
+# HTTP status code (200/404/...) for a release asset URL, following redirects.
+# No -f: an HTTP 404 is a successful transfer from curl's view, so this returns
+# the real status rather than masking it as a connection error.
+asset_http_code() {
+  curl -sIL -o /dev/null -w '%{http_code}' "$1" 2>/dev/null || printf '000'
+}
+
 # Append/upsert an entry into releases.json and set .latest.
 upsert_release_entry() {
   local key="$1"
@@ -255,6 +262,27 @@ main() {
   if [ "$rehash" = false ] && has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
     log_info "${PACKAGE_DIR_NAME} is already at ${current_version}"
     exit 0
+  fi
+
+  # Guard: upstream occasionally publishes a "latest" tag whose binary assets
+  # are missing (e.g. modem-dev/hunk v0.17.5 was the web-/releases/latest target
+  # with zero assets, while the API latest stayed v0.17.4). Verify the release
+  # actually ships every required asset before prefetching; if any is absent,
+  # stay on the current (last good) version instead of aborting the run.
+  if [ "$rehash" = false ]; then
+    local missing_asset=""
+    for system_key in "${!ASSET_BY_SYSTEM[@]}"; do
+      asset="${ASSET_BY_SYSTEM[$system_key]}"
+      if [ "$(asset_http_code "$(asset_url "$latest_version" "$asset")")" != "200" ]; then
+        missing_asset="$asset"
+        break
+      fi
+    done
+    if [ -n "$missing_asset" ]; then
+      log_warn "Latest tag v${latest_version} is missing asset ${missing_asset};"
+      log_warn "release not fully published. Staying on ${current_version}."
+      exit 0
+    fi
   fi
 
   # Compute per-arch SRI hashes from the prebuilt release tarballs.
