@@ -236,6 +236,7 @@ main() {
 
   # 2) generate + commit the package-lock.json for this version.
   generate_npm_lock "$version" "$tag"
+  git -C "$pkg_dir" add "deps/$version"
 
   local backup tmp
   backup="$(mktemp -t releases.json.backup.XXXXXX)"

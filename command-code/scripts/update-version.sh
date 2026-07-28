@@ -470,6 +470,7 @@ main() {
 
   # Generate + commit the package-lock.json for this version.
   if ! generate_npm_lock "$latest_version" "$tarball_url"; then
+  git -C "$pkg_dir" add "deps/$latest_version"
     exit 1
   fi
 

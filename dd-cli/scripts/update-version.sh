@@ -234,6 +234,7 @@ main() {
 
   # 2) generate + commit the yarn.lock.
   generate_yarn_lock "$rev" "$short_key"
+  git -C "$pkg_dir" add "deps/${short_key}"
 
   local backup tmp
   backup="$(mktemp -t releases.json.backup.XXXXXX)"

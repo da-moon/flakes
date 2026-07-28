@@ -375,6 +375,7 @@ main() {
   upsert_release_entry "$short_key" "$entry_json"
 
   if ! generate_npm_lock "$short_key" "$target_rev"; then
+  git -C "$pkg_dir" add "deps/$short_key"
     log_error "Lockfile generation failed; restoring previous releases.json and deps/"
     cp "$backup" "$releases_file"
     if [ -n "$deps_backup" ]; then

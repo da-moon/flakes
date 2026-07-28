@@ -409,6 +409,7 @@ main() {
   # 2) Generate + commit the pnpm lockfile for this version (replays the
   # package.json mutation flake.nix applies before generating).
   generate_pnpm_lock "$latest_version" "$tarball_url"
+  git -C "$pkg_dir" add "deps/$latest_version"
 
   local backup tmp
   backup="$(mktemp -t releases.json.backup.XXXXXX)"
