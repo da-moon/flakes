@@ -546,7 +546,7 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2313123,
+    "bundleBytes": 2306329,
     "modelCount": 50,
     "pathLiteralCounts": {
       "config.json": 5,
@@ -567,14 +567,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 628633
+    "tokenCount": 626612
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-M8wGRKSn6HvbW2g8Pt0XWQDChib4Ip5q0lDQon0weN4=",
+    "entrypointHash": "sha256-YP7RxF7Qxqeme5cYlSyNgbsEFWmzsR6IVmjmeeTL070=",
     "name": "command-code",
-    "packageJsonHash": "sha256-Tr/7B7aYEhily6b8T0i3Nb7Ct00tlbajyGp3m7qxGl0=",
-    "version": "1.4.4"
+    "packageJsonHash": "sha256-8X/5yFXtcsACVeNE6NA+/wneeyKwmQKL0pss2uwh2Sg=",
+    "version": "1.4.5"
   },
   "schemaVersion": 1,
   "structural": {
