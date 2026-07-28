@@ -62,7 +62,7 @@ extract_got_hash() {
 }
 
 # yarn classic from the pinned nixpkgs.
-yarn_run() { nix shell "${NIXPKGS_REF}#yarn" --command yarn "$@"; }
+yarn_run() { nix --extra-experimental-features 'nix-command flakes' shell "${NIXPKGS_REF}#yarn" --command yarn "$@"; }
 
 lockfile_rel() { printf 'deps/%s/yarn.lock' "$1"; }
 lockfile_exists() { [ -f "${pkg_dir}/$(lockfile_rel "$1")" ]; }

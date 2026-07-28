@@ -74,7 +74,7 @@ ensure_in_package_directory() {
 sanitize_key() { printf '%s' "$1" | tr '.+-' '___'; }
 
 # npm from the pinned nixpkgs (major must match flake.nix's nodejs_22).
-npm_run() { nix shell "${NIXPKGS_REF}#nodejs_22" --command npm "$@"; }
+npm_run() { nix --extra-experimental-features 'nix-command flakes' shell "${NIXPKGS_REF}#nodejs_22" --command npm "$@"; }
 
 lockfile_rel() { printf 'deps/%s/package-lock.json' "$1"; }
 lockfile_exists() { [ -f "${pkg_dir}/$(lockfile_rel "$1")" ]; }
