@@ -4,11 +4,11 @@
     "1.0.227": {
       "version": "1.0.227",
       "hash": "sha256-/+m51ouQY6cBomJtGsbZJHHE48Il9chiFyMXFjqpvjg=",
-      "stubsVersion": "17944",
-      "stubsHash": "sha256-0fMnn2Ct3CNOar0BpXU8E8a0svhj1uMSsBT4qq3NPAk=",
-      "engineImageTag": "17945",
-      "engineImageDigest": "sha256:5bf2251c837eedc80a924e6a598de5cada86565e2af76edc22e527ec13c5e961",
-      "researchImageDigest": "sha256:ca78fa820f6ec068c892526eb36b01ba5860259c22ca802486d2275f1ea65aef"
+      "stubsVersion": "17948",
+      "stubsHash": "sha256-0uIuRAFI0hqnT4PsS55WppqRFvhOKcINb0TZAvNNZw8=",
+      "engineImageTag": "17948",
+      "engineImageDigest": "sha256:265f5c70592d3fbd690babc7de9f80311b13caaf1461d2662772208114091eed",
+      "researchImageDigest": "sha256:ef5c593f64de4d1c270dbad057e5b53c4911fb5690258de24e05cde1df9927cb"
     }
   }
 }
