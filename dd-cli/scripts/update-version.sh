@@ -85,12 +85,14 @@ resolve_head() {
   printf '%s|%s\n' "$full_sha" "$date"
 }
 
-# fetchFromGitHub source hash, prefetched (unpacked NAR) independently of the build.
+# fetchFromGitHub source hash, prefetched (unpacked NAR) independently of the
+# build. Uses nix-prefetch-url + to-sri conversion: it works on every nix
+# version (unlike `nix store prefetch-file --unpack`, which is not a valid flag).
 prefetch_github_src() {
   local rev="$1"
-  nix store prefetch-file --unpack --json --hash-type sha256 \
-    "https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/${rev}.tar.gz" \
-    | jq -r '.hash // empty'
+  local hash
+  hash="$(nix-prefetch-url --type sha256 --unpack "https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/${rev}.tar.gz" 2>/dev/null | tail -n1)"
+  nix hash to-sri --type sha256 "$hash"
 }
 
 # Resolve + commit a COMPLETE yarn.lock for REV under deps/<key>/. Generated

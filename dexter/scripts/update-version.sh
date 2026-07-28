@@ -87,12 +87,14 @@ latest_version() {
     | tail -n1
 }
 
-# fetchFromGitHub source hash, prefetched (unpacked NAR) independently of the build.
+# fetchFromGitHub source hash, prefetched (unpacked NAR) independently of the
+# build. Uses nix-prefetch-url + to-sri conversion: it works on every nix
+# version (unlike `nix store prefetch-file --unpack`, which is not a valid flag).
 prefetch_github_src() {
   local rev="$1"
-  nix store prefetch-file --unpack --json --hash-type sha256 \
-    "${REPO_URL}/archive/${rev}.tar.gz" \
-    | jq -r '.hash // empty'
+  local hash
+  hash="$(nix-prefetch-url --type sha256 --unpack "${REPO_URL}/archive/${rev}.tar.gz" 2>/dev/null | tail -n1)"
+  nix hash to-sri --type sha256 "$hash"
 }
 
 # Resolve + commit a package-lock.json for VERSION (upstream tag "v<version>")
