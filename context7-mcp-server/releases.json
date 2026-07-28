@@ -1,10 +1,15 @@
 {
-  "latest": "3.2.4",
+  "latest": "3.2.5",
   "versions": {
     "3.2.4": {
       "version": "3.2.4",
       "rev": "3.2.4",
       "hash": "sha256-pyGoGEUUzNcBUFaIMqCAQlOZDyIX81VUKSZGhJNUCeM="
+    },
+    "3.2.5": {
+      "version": "3.2.5",
+      "rev": "3.2.5",
+      "hash": "sha256-64AdyLbymzFUgfEx+/UlipkpL78zJbDvLKKlrFJMk8s="
     }
   }
 }
