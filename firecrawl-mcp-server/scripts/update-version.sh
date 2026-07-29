@@ -111,6 +111,10 @@ generate_yarn_lock() {
   [ -d "$work/package" ] || { log_error "could not locate extracted source dir"; rm -rf "$work"; return 1; }
   (
     cd "$work/package"
+    # HOME is faked below to isolate yarn's cache, but `nix shell` (yarn_run)
+    # resolves experimental-features/substituters from the user's nix.conf —
+    # pin XDG_CONFIG_HOME to the real config so nix-command stays enabled.
+    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
     export HOME="$work/home"; mkdir -p "$HOME"
     yarn_run install --ignore-scripts --non-interactive --no-progress >/dev/null 2>&1
   )

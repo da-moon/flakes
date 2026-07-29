@@ -113,6 +113,9 @@ generate_npm_lock() {
   [ -n "$srcdir" ] || { log_error "could not locate extracted source dir"; rm -rf "$work"; return 1; }
   (
     cd "$srcdir"
+    # Pin XDG_CONFIG_HOME to the real user config before faking HOME below:
+    # nix shell (*_run) reads experimental-features/substituters from nix.conf.
+    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
     export HOME="$work/home"; mkdir -p "$HOME"
     node -e 'const fs=require("fs");const p=require("./package.json");delete p.devDependencies;delete p.packageManager;fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
     printf 'ignore-scripts=true\n' > .npmrc

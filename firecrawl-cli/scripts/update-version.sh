@@ -97,6 +97,9 @@ generate_pnpm_lock() {
   tar -xzf "$work/pkg.tgz" -C "$work"   # -> $work/package/
   (
     cd "$work/package"
+    # Pin XDG_CONFIG_HOME to the real user config before faking HOME below:
+    # nix shell (*_run) reads experimental-features/substituters from nix.conf.
+    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
     export HOME="$work/home"; mkdir -p "$HOME"
     export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
     local pm_spec pm_version

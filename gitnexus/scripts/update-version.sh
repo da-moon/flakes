@@ -179,6 +179,9 @@ generate_pnpm_lock() {
   (
     cd "$work/package"
     node_run "$work/mutate.js"
+    # Pin XDG_CONFIG_HOME to the real user config before faking HOME below:
+    # nix shell (*_run) reads experimental-features/substituters from nix.conf.
+    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
     export HOME="$work/home"; mkdir -p "$HOME"
     pnpm_run config set manage-package-manager-versions false >/dev/null 2>&1 || true
     pnpm_run install --lockfile-only --ignore-scripts
