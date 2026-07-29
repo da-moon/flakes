@@ -377,6 +377,14 @@
       },
       {
         "contextWindow": 1000000,
+        "id": "Qwen/Qwen3.7-Flash",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Qwen 3.7 Flash"
+      },
+      {
+        "contextWindow": 1000000,
         "id": "Qwen/Qwen3.7-Max",
         "inputModalities": [
           "text"
@@ -546,8 +554,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2306329,
-    "modelCount": 50,
+    "bundleBytes": 2306904,
+    "modelCount": 51,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
@@ -567,14 +575,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 626612
+    "tokenCount": 626726
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-YP7RxF7Qxqeme5cYlSyNgbsEFWmzsR6IVmjmeeTL070=",
+    "entrypointHash": "sha256-S+Rr3hxdNXW89uOtF7l9oc5j98rH2ppGrKRrDOaXz7w=",
     "name": "command-code",
-    "packageJsonHash": "sha256-8X/5yFXtcsACVeNE6NA+/wneeyKwmQKL0pss2uwh2Sg=",
-    "version": "1.4.5"
+    "packageJsonHash": "sha256-kS7U27R41zhSOA/NzaatI1z05/VCoMy/EyqREx6kBng=",
+    "version": "1.4.6"
   },
   "schemaVersion": 1,
   "structural": {
