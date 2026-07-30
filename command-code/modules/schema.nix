@@ -28,6 +28,7 @@ let
       titleGeneration = nullable nonEmptyString "Model used to generate session titles.";
       compaction = nullable nonEmptyString "Model used to compact long conversations.";
       toolDescription = nullable nonEmptyString "Model used to summarize tool permission prompts.";
+      vision = nullable nonEmptyString "Model used to describe attached images for text-only models.";
       tasteLearning = nullable nonEmptyString "Model used by the background taste-learning agent.";
       tasteOnboarding = nullable nonEmptyString "Model used by the /learn-taste observer.";
       branchSummarization = nullable nonEmptyString "Model used to summarize an abandoned branch when you jump away from it.";
@@ -93,7 +94,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.4.6";
+  schemaVersion = "1.5.0";
 
   globalConfigType = types.submodule {
     options = {
@@ -125,6 +126,7 @@ rec {
         description = "Per-feature model overrides supported by Command Code 1.1.1.";
       };
       autoInstallExtension = nullable types.bool "Whether supported editor extensions are installed automatically.";
+      imageVisionEnabled = nullable types.bool "Whether image vision descriptions are enabled for text-only models.";
     };
   };
 
