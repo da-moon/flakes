@@ -36,6 +36,12 @@
         "hasFixedDefault": false,
         "key": "toolDescription",
         "label": "Command explanations"
+      },
+      {
+        "description": "Describes attached images so a text-only model can read them.",
+        "hasFixedDefault": false,
+        "key": "vision",
+        "label": "Image vision"
       }
     ],
     "models": [
@@ -379,6 +385,7 @@
         "contextWindow": 1000000,
         "id": "Qwen/Qwen3.7-Flash",
         "inputModalities": [
+          "image",
           "text"
         ],
         "label": "Qwen 3.7 Flash"
@@ -554,7 +561,7 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2306904,
+    "bundleBytes": 2320137,
     "modelCount": 51,
     "pathLiteralCounts": {
       "config.json": 5,
@@ -575,14 +582,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 626726
+    "tokenCount": 629270
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-S+Rr3hxdNXW89uOtF7l9oc5j98rH2ppGrKRrDOaXz7w=",
+    "entrypointHash": "sha256-SxUTVb1Pw6tGNOzKbZKlwmmQjZPvNJIrZFxJfwblmGM=",
     "name": "command-code",
-    "packageJsonHash": "sha256-kS7U27R41zhSOA/NzaatI1z05/VCoMy/EyqREx6kBng=",
-    "version": "1.4.6"
+    "packageJsonHash": "sha256-0t4qbx24E5W6tRGuH9pffHQp1hkOy4gGIbdBgrdwu/E=",
+    "version": "1.5.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -651,6 +658,10 @@
           "type": "boolean"
         },
         "ideContextEnabled": {
+          "ownership": "declarative",
+          "type": "unknown"
+        },
+        "imageVisionEnabled": {
           "ownership": "declarative",
           "type": "unknown"
         },
