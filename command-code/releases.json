@@ -1,5 +1,5 @@
 {
-  "latest": "1.5.0",
+  "latest": "1.6.0",
   "versions": {
     "0.52.2": {
       "version": "0.52.2",
@@ -54,6 +54,12 @@
       "rev": "1.5.0",
       "hash": "sha256-sksPsRzk0QrCX0omrMFJtJRYdEljBhWTIBsP9g1oQDU=",
       "schemaSha256": "sha256-v4mpsu/6K9KAdDuMwIAu8eHzaR4C6N5ihosjM9GF6Fk="
+    },
+    "1.6.0": {
+      "version": "1.6.0",
+      "rev": "1.6.0",
+      "hash": "sha256-waxrgNDTx5QLoodEg7D/f9C5LEOhJ451jlqnv/d7yo0=",
+      "schemaSha256": "sha256-LbjMmk/noDdNj60oDJGRcpwsg/JOThFrPnnY/9xh22Y="
     }
   }
 }

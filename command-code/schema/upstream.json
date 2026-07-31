@@ -463,6 +463,15 @@
         "label": "Inkling"
       },
       {
+        "contextWindow": 1000000,
+        "id": "thinkingmachines/inkling-small",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Inkling Small"
+      },
+      {
         "contextWindow": 500000,
         "id": "xai/grok-4.5",
         "inputModalities": [
@@ -561,8 +570,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2320137,
-    "modelCount": 51,
+    "bundleBytes": 2320757,
+    "modelCount": 52,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
@@ -582,14 +591,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 629270
+    "tokenCount": 629376
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-SxUTVb1Pw6tGNOzKbZKlwmmQjZPvNJIrZFxJfwblmGM=",
+    "entrypointHash": "sha256-DKfNnoan5VmC++pyMJU13TeWBIFk4ryJtrSI4XhvFow=",
     "name": "command-code",
-    "packageJsonHash": "sha256-0t4qbx24E5W6tRGuH9pffHQp1hkOy4gGIbdBgrdwu/E=",
-    "version": "1.5.0"
+    "packageJsonHash": "sha256-WyRyCGVgS2Hwj9L2ja0e+dJfX6NDP8gsf0OMyyM3mRg=",
+    "version": "1.6.0"
   },
   "schemaVersion": 1,
   "structural": {
