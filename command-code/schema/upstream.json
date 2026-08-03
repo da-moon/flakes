@@ -409,6 +409,20 @@
       },
       {
         "contextWindow": 1000000,
+        "id": "Qwen/Qwen3.8-Max",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Qwen 3.8 Max",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "xhigh"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
         "id": "sakana/fugu-ultra",
         "inputModalities": [
           "image",
@@ -570,8 +584,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2322194,
-    "modelCount": 52,
+    "bundleBytes": 2328102,
+    "modelCount": 53,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
@@ -591,14 +605,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 629771
+    "tokenCount": 631286
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-tSMJ4tUEQC3XSc1uK/7MAVh3EmPXd5H0grq6ImVvhUQ=",
+    "entrypointHash": "sha256-HDSrR+W5RfAM5QL12TrCuhj9WCnblkyKZWjGQMBLVfk=",
     "name": "command-code",
-    "packageJsonHash": "sha256-SZjtll70SCfuI397cjqQ6ivqADibFuLOZS8dQ7Ptm0k=",
-    "version": "1.7.1"
+    "packageJsonHash": "sha256-6v/H0vh+8wuENqCk7Fc1AW9sOvI9sDfmY5DoVA3O+Js=",
+    "version": "1.9.0"
   },
   "schemaVersion": 1,
   "structural": {
