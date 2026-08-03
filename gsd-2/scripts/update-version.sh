@@ -135,7 +135,7 @@ prefetch_sha256_sri() {
 # already written into releases.json and parsing nix's "got:" line.
 build_and_get_hash() {
   local attr="$1" out
-  out="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link 2>&1 || true)"
+  out="$(nix build "path:${pkg_dir}#${attr}" --no-write-lock-file --no-link 2>&1 || true)"
   printf '%s\n' "$out" | extract_got_hash
 }
 
@@ -286,7 +286,7 @@ main() {
   if [ "$no_build" != true ]; then
     log_info "Verifying build of ${attr}..."
     local out_path
-    if ! out_path="$(cd "$pkg_dir" && nix build ".#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
+    if ! out_path="$(nix build "path:${pkg_dir}#${attr}" --no-write-lock-file --no-link --print-out-paths 2>&1)"; then
       log_error "verification build failed; restoring previous releases.json"
       printf '%s\n' "$out_path" | tail -n 40 >&2
       cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
@@ -296,7 +296,7 @@ main() {
       log_error "Build succeeded but expected binary not found at: $out_path/bin/$BIN_NAME"
       cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
     fi
-    if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
+    if ! nix build "path:${pkg_dir}#default" --no-link --no-write-lock-file; then
       log_error "nix build failed for default; restoring previous releases.json"
       cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
     fi
