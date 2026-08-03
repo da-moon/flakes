@@ -4,8 +4,8 @@
     "1.0.227": {
       "version": "1.0.227",
       "hash": "sha256-/+m51ouQY6cBomJtGsbZJHHE48Il9chiFyMXFjqpvjg=",
-      "stubsVersion": "17970",
-      "stubsHash": "sha256-13e+btW1H1wTdcHc9aDi8gFoyfyinMDLDyzXMLXGfRU=",
+      "stubsVersion": "17971",
+      "stubsHash": "sha256-UxMptq7MGbCxga290WuW+fPb6PqGqpo3zfmVWykj7Pw=",
       "engineImageTag": "17970",
       "engineImageDigest": "sha256:4878006a1a0dbe9e695966fdb98812c7ee87c3d92811873bdd0cdcf3de70d94c",
       "researchImageDigest": "sha256:124139d462e48bd7f6b57810c5bb68ac497da8cfd60593f6dfce5a25ccb10781"
