@@ -1,11 +1,17 @@
 {
-  "latest": "1.19.27",
+  "latest": "1.19.29",
   "versions": {
     "1.19.27": {
       "version": "1.19.27",
       "rev": "1.19.27",
       "hash": "sha256-YhkNCBgeHEOYgMZjjK2c3AbhYBeMfaavIQvNQqyEMLU=",
       "pnpmDepsHash": "sha256-RujUxgDN7J3OR2CJcgl5WtzzbsV6IrscYyzA7iHw934="
+    },
+    "1.19.29": {
+      "version": "1.19.29",
+      "rev": "1.19.29",
+      "hash": "sha256-Zot1ggImY4/+Cr2wa+OynTH9Mcid2cFG6IBcpvDJYT4=",
+      "pnpmDepsHash": "sha256-7XL0bNS6wqWuR+mfc+DIZKHm9yxQz8Xh+acYsMU2Osw="
     }
   }
 }
