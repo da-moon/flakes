@@ -114,7 +114,7 @@
         "inputModalities": [
           "text"
         ],
-        "label": "DeepSeek V4 Flash",
+        "label": "DeepSeek V4 Flash (latest)",
         "reasoningEfforts": [
           "high",
           "max"
@@ -584,13 +584,13 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2328102,
+    "bundleBytes": 2350077,
     "modelCount": 53,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
       "mcp.json": 21,
-      "settings.json": 19,
+      "settings.json": 20,
       "settings.local.json": 14,
       "trusted-hooks.json": 1
     },
@@ -605,14 +605,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 631286
+    "tokenCount": 637859
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-HDSrR+W5RfAM5QL12TrCuhj9WCnblkyKZWjGQMBLVfk=",
+    "entrypointHash": "sha256-LlBhopCTgatT7HLapBVfGmbA2QgDycMaioDRfyKUTvI=",
     "name": "command-code",
-    "packageJsonHash": "sha256-6v/H0vh+8wuENqCk7Fc1AW9sOvI9sDfmY5DoVA3O+Js=",
-    "version": "1.9.0"
+    "packageJsonHash": "sha256-R5Dk1bCdOl7gf2yPyAxveplEQlYE5XBxxTRqDjZwttQ=",
+    "version": "1.11.1"
   },
   "schemaVersion": 1,
   "structural": {
