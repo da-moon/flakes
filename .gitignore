@@ -5,3 +5,7 @@
 # nixpkgs; we deliberately do not pin/commit a lock. The update-version.sh
 # scripts pass --no-write-lock-file so builds never create one.
 flake.lock
+
+# Nix build result symlinks.
+result
+result-*
