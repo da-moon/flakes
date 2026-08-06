@@ -273,6 +273,24 @@
         "label": "Muse Spark 1.1"
       },
       {
+        "contextWindow": 1048576,
+        "id": "meta/muse-spark-1.2",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Muse Spark 1.2"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "meta/muse-spark-1.2-contributor",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Muse Spark 1.2 Contributor"
+      },
+      {
         "contextWindow": 200000,
         "id": "MiniMaxAI/MiniMax-M2.5",
         "inputModalities": [
@@ -584,8 +602,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2350581,
-    "modelCount": 53,
+    "bundleBytes": 2353215,
+    "modelCount": 55,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
@@ -605,14 +623,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 637960
+    "tokenCount": 638452
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-0aTOh1Ezr1fysoab5tb99wxvt2FguVtWgNi5N9j3K44=",
+    "entrypointHash": "sha256-P7Eg4v5vbFqC8BUybp1/hsnojO0rHrRHaLiHG5JXUc0=",
     "name": "command-code",
-    "packageJsonHash": "sha256-uT7kz1+Gf8PdhQBlQblXgp+xz945kwo1lnzYEdkd4tM=",
-    "version": "1.12.0"
+    "packageJsonHash": "sha256-vtpFWOn1ZGwIN8R5nzO5bRLUq1iGegwBbFXpad3WqIQ=",
+    "version": "1.14.0"
   },
   "schemaVersion": 1,
   "structural": {
