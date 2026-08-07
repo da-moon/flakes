@@ -21,6 +21,45 @@
         "aarch64-darwin"
       ];
 
+      # Version table: consumers select the latest OR any past version.
+      # New entries are appended by scripts/update-version.sh via jq — do
+      # NOT hand-edit the version data in this file.
+      releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+      # Hard schema contract (command-code convention): the committed upstream
+      # settings-registry evidence, the reviewed Nix defaults, and the latest
+      # releases.json entry must all agree, or evaluation throws. Bump-time
+      # workflow lives in scripts/update-version.sh (extract -> classify
+      # drift -> record).
+      latestRelease = releases.versions.${releases.latest};
+      defaults = import ./modules/defaults.nix { };
+      uncheckedConfigSchema = builtins.fromJSON (builtins.readFile ./schema/upstream.json);
+      recordedSchemaHash = nixpkgs.lib.removeSuffix "\n" (builtins.readFile ./schema/upstream.sha256);
+      upstreamConfigSchema =
+        if uncheckedConfigSchema.package.version != latestRelease.version then
+          throw "omp schema artifact version does not match releases.json"
+        else if defaults.schemaVersion != latestRelease.version then
+          throw "omp Nix schema version does not match releases.json"
+        else if recordedSchemaHash != (latestRelease.schemaSha256 or "") then
+          throw "omp schema hash does not match releases.json"
+        else
+          uncheckedConfigSchema;
+
+      # Flatten nested settings attrsets to dotted-path entries (empty
+      # attrsets are leaves: they are record-valued settings).
+      flattenSettings =
+        prefix: attrs:
+        builtins.concatLists (
+          map (
+            k:
+            let
+              v = attrs.${k};
+              p = if prefix == "" then k else "${prefix}.${k}";
+            in
+            if builtins.isAttrs v && v != { } then flattenSettings p v else [ { key = p; value = v; } ]
+          ) (builtins.attrNames attrs)
+        );
+
       # Overlay consumed by other flakes that want `omp` in nixpkgs.
       overlay = final: prev: {
         omp =
@@ -106,6 +145,36 @@
           key: entry: lib.nameValuePair "omp_${sanitizeKey key}" (mk key entry)
         ) releases.versions;
 
+        defaultsJson = pkgs.writeText "omp-defaults-flat.json" (
+          builtins.toJSON (flattenSettings "" defaults.defaultSettings)
+        );
+
+        # Hard schema-artifact check: re-extract the settings registry from
+        # the built binary, byte-compare it with the committed evidence, and
+        # cross-check every key modules/defaults.nix manages against it
+        # (existence, type, enum membership). Fails when upstream removes or
+        # renames a setting the flake still writes.
+        schemaArtifactCheck =
+          pkgs.runCommand "omp-schema-artifact-check"
+            { nativeBuildInputs = [ pkgs.nodejs ]; }
+            ''
+              node ${./scripts/extract-config-schema.mjs} \
+                --binary ${latestPkg}/bin/omp \
+                --version ${lib.escapeShellArg upstreamConfigSchema.package.version} \
+                --output candidate.json \
+                --hash-output candidate.sha256
+              diff -u ${./schema/upstream.json} candidate.json
+              diff -u ${./schema/upstream.sha256} candidate.sha256
+              node ${./scripts/verify-config-schema.mjs} \
+                --schema ${./schema/upstream.json} \
+                --hash ${./schema/upstream.sha256} \
+                --expected-version ${lib.escapeShellArg upstreamConfigSchema.package.version} \
+                --expected-sha256 ${lib.escapeShellArg latestRelease.schemaSha256} \
+                --defaults ${defaultsJson} \
+                > "$out"
+              test -x ${latestPkg}/bin/omp
+            '';
+
       in
       {
         packages = {
@@ -124,6 +193,10 @@
             program = "${latestPkg}/bin/omp";
           };
         };
+
+        checks = {
+          schema-artifact = schemaArtifactCheck;
+        };
       }
     )
     // {
@@ -131,5 +204,9 @@
 
       homeManagerModules.default = ./modules/home-manager.nix;
       nixosModules.default = ./modules/nixos.nix;
+
+      lib = {
+        inherit upstreamConfigSchema;
+      };
     };
 }

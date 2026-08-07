@@ -1,7 +1,14 @@
 # Default settings and keybindings for oh-my-pi.
 # Generated from https://github.com/can1357/oh-my-pi defaults.
+#
+# schemaVersion marks the omp release these defaults were last reviewed
+# against. flake.nix throws when it does not match the latest release, so
+# every version bump forces a human review of the defaults (command-code
+# convention). scripts/update-version.sh refreshes it on drift-accept.
 { }:
 {
+  schemaVersion = "17.2.10";
+
   defaultSettings = {
     setupVersion = 0;
     autoResume = false;
@@ -28,10 +35,12 @@
       anthropic = {
         serverSideFallback = false;
       };
-      webSearch = "auto";
+      # Upstream replaced the single-preference `webSearch`/`image` options
+      # ("auto" sentinel) with priority-list orders (empty list = auto).
+      webSearchOrder = [ ];
       webSearchExclude = [ ];
       antigravityEndpoint = "auto";
-      image = "auto";
+      imageOrder = [ ];
       fireworksTier = "standard";
       tts = "auto";
       tinyModel = "online";
@@ -85,8 +94,7 @@
       intentTracing = true;
       abortOnFabricatedResult = true;
       maxTimeout = 0;
-      discoveryMode = "auto";
-      essentialOverride = [ ];
+      # Upstream removed tools.discoveryMode / tools.essentialOverride.
     };
     terminal = {
       showImages = true;
@@ -179,11 +187,12 @@
       showSplash = false;
       setupWizard = true;
       checkUpdate = true;
+      # Replaces the removed top-level `collapseChangelog` (false -> expanded).
+      changelogMode = "expanded";
     };
     marketplace = {
       autoUpdate = "notify";
     };
-    collapseChangelog = false;
     magicKeywords = {
       enabled = true;
       ultrathink = true;
@@ -440,7 +449,8 @@
     todo = {
       enabled = true;
       reminders = true;
-      "reminders.max" = 3;
+      # Upstream renamed "reminders.max" (dotted form) to remindersMax.
+      remindersMax = 3;
       eager = "default";
     };
     glob = {
@@ -504,8 +514,7 @@
     };
     mcp = {
       enableProjectConfig = true;
-      discoveryMode = false;
-      discoveryDefaultServers = [ ];
+      # Upstream removed mcp.discoveryMode / mcp.discoveryDefaultServers.
       notifications = false;
       notificationDebounceMs = 500;
     };
@@ -609,7 +618,8 @@
       autoqaPush = {
         endpoint = "https://qa.omp.sh/v1/grievances";
       };
-      "autoqa.consent" = "unset";
+      # Upstream renamed "autoqa.consent" (dotted form) to autoqaConsent;
+      # its default is already "unset", so nothing is declared here.
     };
     gc = {
       blobs = true;
