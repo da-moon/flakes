@@ -54,7 +54,7 @@ versions; `scripts/update-version.sh` appends new ones).
               defaultModel = "kimi-code/k3";
               thinking = { enabled = true; effort = "max"; };
               loopControl = {
-                maxRetriesPerStep = 3;
+                maxAttemptsPerStep = 3;
                 # freeform passthrough for keys the typed schema doesn't cover:
                 extraSettings = { compaction_trigger_ratio = 0.85; };
               };
