@@ -1,0 +1,221 @@
+{
+  "catalogs": {},
+  "package": {
+    "name": "kimi-code",
+    "version": "0.34.0"
+  },
+  "schemaVersion": 1,
+  "structural": {
+    "sections": {
+      "background": {
+        "deprecations": [],
+        "fields": [
+          "bashAutoBackgroundOnTimeout",
+          "bashTaskTimeoutS",
+          "keepAliveOnExit",
+          "killGracePeriodMs",
+          "maxRunningTasks",
+          "printBackgroundMode",
+          "printMaxTurns",
+          "printWaitCeilingS"
+        ]
+      },
+      "builtinProductSkills": {
+        "deprecations": [],
+        "fields": null
+      },
+      "cron": {
+        "deprecations": [],
+        "fields": null
+      },
+      "defaultPermissionMode": {
+        "deprecations": [],
+        "fields": null
+      },
+      "defaultPlanMode": {
+        "deprecations": [],
+        "fields": null
+      },
+      "experimental": {
+        "deprecations": [],
+        "fields": null
+      },
+      "extraAgentDirs": {
+        "deprecations": [],
+        "fields": null
+      },
+      "extraSkillDirs": {
+        "deprecations": [],
+        "fields": null
+      },
+      "hooks": {
+        "deprecations": [],
+        "fields": null
+      },
+      "identity": {
+        "deprecations": [],
+        "fields": [
+          "name",
+          "slug"
+        ]
+      },
+      "image": {
+        "deprecations": [],
+        "fields": [
+          "maxEdgePx",
+          "readByteBudget"
+        ]
+      },
+      "loopControl": {
+        "deprecations": [
+          {
+            "key": "max_retries_per_step",
+            "replacement": "max_attempts_per_step"
+          },
+          {
+            "key": "max_steps_per_run",
+            "replacement": "max_steps_per_turn"
+          }
+        ],
+        "fields": [
+          "compactionTriggerRatio",
+          "maxAttemptsPerStep",
+          "maxRalphIterations",
+          "maxStepsPerTurn",
+          "reservedContextSize"
+        ]
+      },
+      "mcp": {
+        "deprecations": [],
+        "fields": [
+          "startupTimeoutMs",
+          "toolTimeoutMs"
+        ]
+      },
+      "mergeAllAvailableSkills": {
+        "deprecations": [],
+        "fields": null
+      },
+      "modelCatalog": {
+        "deprecations": [],
+        "fields": [
+          "refreshIntervalMs",
+          "refreshOnStart"
+        ]
+      },
+      "models": {
+        "deprecations": [],
+        "fields": null
+      },
+      "permission": {
+        "deprecations": [],
+        "fields": [
+          "rules"
+        ]
+      },
+      "providers": {
+        "deprecations": [],
+        "fields": null
+      },
+      "secondaryModel": {
+        "deprecations": [],
+        "fields": null
+      },
+      "services": {
+        "deprecations": [],
+        "fields": [
+          "moonshotFetch",
+          "moonshotSearch"
+        ]
+      },
+      "subagent": {
+        "deprecations": [],
+        "fields": [
+          "timeoutMs"
+        ]
+      },
+      "task": {
+        "deprecations": [],
+        "fields": [
+          "bashAutoBackgroundOnTimeout",
+          "bashTaskTimeoutS",
+          "keepAliveOnExit",
+          "killGracePeriodMs",
+          "maxRunningTasks",
+          "printBackgroundMode",
+          "printMaxTurns",
+          "printWaitCeilingS"
+        ]
+      },
+      "thinking": {
+        "deprecations": [],
+        "fields": [
+          "effort",
+          "enabled",
+          "forcedEffort",
+          "keep"
+        ]
+      },
+      "tokenCounting": {
+        "deprecations": [],
+        "fields": [
+          "strategy"
+        ]
+      },
+      "tools": {
+        "deprecations": [],
+        "fields": [
+          "disabled",
+          "enabled"
+        ]
+      }
+    },
+    "topLevel": [
+      "background",
+      "defaultModel",
+      "defaultPermissionMode",
+      "defaultPlanMode",
+      "defaultProvider",
+      "experimental",
+      "extraAgentDirs",
+      "extraSkillDirs",
+      "hooks",
+      "image",
+      "loopControl",
+      "mcp",
+      "mergeAllAvailableSkills",
+      "modelCatalog",
+      "models",
+      "permission",
+      "planMode",
+      "providers",
+      "raw",
+      "secondaryModel",
+      "services",
+      "subagent",
+      "telemetry",
+      "thinking",
+      "yolo"
+    ],
+    "tui": {
+      "sections": {
+        "editor": [
+          "command"
+        ],
+        "notifications": [
+          "enabled",
+          "notification_condition"
+        ],
+        "upgrade": [
+          "auto_install"
+        ]
+      },
+      "topLevel": [
+        "cache_expiry_hint",
+        "disable_paste_burst",
+        "status_line",
+        "theme"
+      ]
+    }
+  }
+}

@@ -134,6 +134,9 @@ into the live files with declarative-core semantics:
 - **Typed-but-undeclared keys inside a declared section are removed** (back
   to upstream defaults). Sections (`thinking`, `loop_control`, `background`,
   `subagent`, `image`) and scalars are only managed when declared.
+- **Retired keys are purged.** Keys upstream removed or renamed (see the
+  manifest's `retired` map) are deleted from the live file when their
+  section is declared, so stale values never survive a switch.
 - **Replace tables** (`providers`, `models`, `services`, `permission`) are
   replaced wholesale when declared — hand-added entries are dropped.
 - **OAuth graft:** `[providers.<name>.oauth]` and `[services.<name>.oauth]`
@@ -243,3 +246,14 @@ without isolation (project entries override user-level ones by name).
   `scripts/update-version.sh`, not self-update.
 - `scripts/update-version.sh` appends new upstream releases to
   `releases.json` and verifies the build; it does not touch the module code.
+- **Hard config-schema checks** keep the typed module in lockstep with the
+  release binary (see `schema/README.md`): `schema/upstream.json` is extracted
+  statically from the binary at bump time, `checks.<system>.schema-artifact`
+  byte-compares the committed evidence with a fresh extraction and cross-checks
+  the merge manifests against it (managed keys must exist upstream and not be
+  deprecated; upstream deprecations must be retired via the manifest), and
+  `checks.<system>.doctor` runs the CLI's own `kimi doctor config/tui`
+  validator on the fully-populated fixture. Structural schema drift blocks
+  version bumps until reviewed (`--accept-schema-drift`); evaluation throws
+  when the artifact, the Nix `schemaVersion` marker, and `releases.json`
+  disagree.

@@ -28,7 +28,7 @@ let
       extraSettings.custom_thinking_key = "x";
     };
     loopControl = {
-      maxRetriesPerStep = 3;
+      maxAttemptsPerStep = 3;
       extraSettings.max_ralph_iterations = 0;
     };
     providers."managed:kimi-code" = {
@@ -108,6 +108,7 @@ in
 
       [loop_control]
       max_retries_per_step = 10
+      max_steps_per_run = 7
       reserved_context_size = 99999
       max_ralph_iterations = 5
 
@@ -178,8 +179,11 @@ in
       [ "$(cfg '.thinking.future_thinking_key')" = "1" ]
       # typed-but-undeclared section key deleted (reset to upstream default)
       [ "$(cfg '.loop_control.reserved_context_size // "gone"')" = "gone" ]
+      # retired keys purged from the live file (upstream-renamed)
+      [ "$(cfg '.loop_control.max_retries_per_step // "gone"')" = "gone" ]
+      [ "$(cfg '.loop_control.max_steps_per_run // "gone"')" = "gone" ]
       # declared + passthrough keys win over live
-      [ "$(cfg '.loop_control.max_retries_per_step')" = "3" ]
+      [ "$(cfg '.loop_control.max_attempts_per_step')" = "3" ]
       [ "$(cfg '.loop_control.max_ralph_iterations')" = "0" ]
       # replace tables: hand-added entries dropped, oauth grafted
       [ "$(cfg '.providers["hand-added"] // "gone"')" = "gone" ]

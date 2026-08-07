@@ -78,7 +78,7 @@ let
       s.extraSettings
       // {
         max_steps_per_turn = s.maxStepsPerTurn;
-        max_retries_per_step = s.maxRetriesPerStep;
+        max_attempts_per_step = s.maxAttemptsPerStep;
         reserved_context_size = s.reservedContextSize;
       }
     );

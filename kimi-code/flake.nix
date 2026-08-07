@@ -39,6 +39,24 @@
       schemaFor = lib: import ./modules/config-schema.nix { inherit lib; };
       renderFor = lib: import ./modules/render.nix { inherit lib; };
 
+      # Hard schema contract (command-code convention): the committed upstream
+      # schema evidence, the typed Nix schema, and the latest releases.json
+      # entry must all agree, or evaluation throws. Bump-time workflow lives
+      # in scripts/update-version.sh (extract -> classify drift -> record).
+      latestRelease = releases.versions.${releases.latest};
+      schemaTypes = schemaFor nixpkgs.lib;
+      uncheckedConfigSchema = builtins.fromJSON (builtins.readFile ./schema/upstream.json);
+      recordedSchemaHash = nixpkgs.lib.removeSuffix "\n" (builtins.readFile ./schema/upstream.sha256);
+      upstreamConfigSchema =
+        if uncheckedConfigSchema.package.version != latestRelease.version then
+          throw "Kimi Code schema artifact version does not match releases.json"
+        else if schemaTypes.schemaVersion != latestRelease.version then
+          throw "Kimi Code Nix schema version does not match releases.json"
+        else if recordedSchemaHash != (latestRelease.schemaSha256 or "") then
+          throw "Kimi Code schema hash does not match releases.json"
+        else
+          uncheckedConfigSchema;
+
       homeManagerModule =
         {
           config,
@@ -199,7 +217,7 @@
                   };
                   loopControl = {
                     maxStepsPerTurn = 0;
-                    maxRetriesPerStep = 3;
+                    maxAttemptsPerStep = 3;
                     reservedContextSize = 50000;
                     extraSettings = {
                       max_ralph_iterations = 0;
@@ -296,6 +314,70 @@
           inherit pkgs;
           inherit (pkgs) lib;
         };
+
+        mergeManifestJson = pkgs.writeText "kimi-merge-manifest.json" (
+          builtins.toJSON (schemaFor lib).manifest
+        );
+        tuiMergeManifestJson = pkgs.writeText "kimi-tui-merge-manifest.json" (
+          builtins.toJSON (schemaFor lib).tuiManifest
+        );
+
+        # Hard schema-artifact check: re-extract the upstream config contract
+        # from the built binary, byte-compare it with the committed evidence,
+        # and cross-check the Nix merge manifests against it. Fails when
+        # upstream removes, renames, or deprecates a key the flake still
+        # manages (or when the committed evidence goes stale).
+        schemaArtifactCheck =
+          pkgs.runCommand "kimi-code-schema-artifact-check"
+            { nativeBuildInputs = [ pkgs.nodejs ]; }
+            ''
+              node ${./scripts/extract-config-schema.mjs} \
+                --binary ${latestPkg}/bin/kimi \
+                --version ${lib.escapeShellArg upstreamConfigSchema.package.version} \
+                --output candidate.json \
+                --hash-output candidate.sha256
+              diff -u ${./schema/upstream.json} candidate.json
+              diff -u ${./schema/upstream.sha256} candidate.sha256
+              node ${./scripts/verify-config-schema.mjs} \
+                --schema ${./schema/upstream.json} \
+                --hash ${./schema/upstream.sha256} \
+                --expected-version ${lib.escapeShellArg upstreamConfigSchema.package.version} \
+                --expected-sha256 ${lib.escapeShellArg latestRelease.schemaSha256} \
+                --manifest ${mergeManifestJson} \
+                --tui-manifest ${tuiMergeManifestJson} \
+                > "$out"
+              test -x ${latestPkg}/bin/kimi
+            '';
+
+        # Runtime proof: render the module-check fixture (every typed surface
+        # populated) and let the CLI's own validator vet it. Any warning —
+        # deprecation, unknown key — fails the build.
+        doctorCheck =
+          let
+            kcfg = moduleCheck.config.programs.kimi-code;
+            render = renderFor lib;
+            configJson = render.mkConfigJson { inherit pkgs; settings = kcfg.settings; };
+            tuiJson = render.mkTuiJson { inherit pkgs; tui = kcfg.tui; };
+          in
+          pkgs.runCommand "kimi-code-doctor-check"
+            { nativeBuildInputs = [
+                pkgs.remarshal
+                pkgs.gnugrep
+              ];
+            }
+            ''
+              export HOME="$TMPDIR"
+              remarshal -i ${configJson} -if json -of toml -o "$TMPDIR/config.toml"
+              remarshal -i ${tuiJson} -if json -of toml -o "$TMPDIR/tui.toml"
+              ${latestPkg}/bin/kimi doctor config "$TMPDIR/config.toml" > config.out 2>&1 || { cat config.out; exit 1; }
+              ${latestPkg}/bin/kimi doctor tui "$TMPDIR/tui.toml" > tui.out 2>&1 || { cat tui.out; exit 1; }
+              cat config.out tui.out
+              if grep -Eiq 'deprecated|unknown|warn' config.out tui.out; then
+                echo "kimi doctor reported configuration warnings" >&2
+                exit 1
+              fi
+              echo "kimi doctor: clean" > "$out"
+            '';
       in
       {
         packages = {
@@ -317,6 +399,8 @@
 
         checks = {
           module-eval = moduleCheck.activationPackage;
+          schema-artifact = schemaArtifactCheck;
+          doctor = doctorCheck;
         }
         // mergeChecks
         // projectChecks;
@@ -335,7 +419,7 @@
       };
 
       lib = {
-        inherit mkProjectIntegration;
+        inherit mkProjectIntegration upstreamConfigSchema;
         projectModule = flakePartsModule;
         configSchema = (schemaFor nixpkgs.lib).manifest;
         tuiConfigSchema = (schemaFor nixpkgs.lib).tuiManifest;

@@ -209,7 +209,8 @@
         "x86_64-linux": "sha256-HgW5t4xPxpq7f5w63n5ud02qh8xKMXc829cvBH0ucy4=",
         "x86_64-darwin": "sha256-L6az4iSPnt7gsFqi1iEg9nyasP4W/AWk3EomwXayhqM=",
         "aarch64-darwin": "sha256-n0M34Q2keEP2tVBHQBKlO6izDdZl+DsXalzUecX36Fk="
-      }
+      },
+      "schemaSha256": "sha256-TwRB8v7cnKYlJDBitXQYWrT/RZHDKpysk3jNMCQnWdE="
     }
   }
 }

@@ -202,7 +202,7 @@ let
   loopControlType = types.submodule {
     options = {
       maxStepsPerTurn = intOpt "Max agent steps per turn (unset/0 = unlimited).";
-      maxRetriesPerStep = intOpt "Retries per step (default 10 upstream).";
+      maxAttemptsPerStep = intOpt "Attempts per step (default 10 upstream; renamed from max_retries_per_step).";
       reservedContextSize = intOpt "Auto-compaction triggers when remaining context falls below this.";
       extraSettings = extraSettingsOption;
     };
@@ -462,12 +462,23 @@ in
     jsonValueType
     ;
 
+  # Version of the kimi-code release this typed Nix schema was last reviewed
+  # against. flake.nix throws when it does not match the latest release, so
+  # every version bump forces a human review of the schema (command-code
+  # convention). scripts/update-version.sh refreshes it on drift-accept.
+  schemaVersion = "0.34.0";
+
   # Merge manifest for config.toml consumed by the jq merge engine
   # (modules/lib.nix). Meaning:
   # - scalars: managed individually, only when present in the declared render.
   # - sections: object tables managed key-by-key when the section is declared;
   #   typed-but-undeclared keys are deleted from the live file (reset to
   #   upstream default), unknown keys are preserved.
+  # - retired: per-section keys upstream has removed or renamed; always
+  #   deleted from the live file when the section is declared (stale-key
+  #   purge). The schema-artifact check requires each retired key to be
+  #   upstream-deprecated evidence, and upstream deprecations in a managed
+  #   section must be listed here (or still be managed keys).
   # - replaceTables: tables replaced wholesale when declared.
   # - graftTables: replaceTables whose entries get a missing `oauth`
   #   sub-table grafted from the live file (or the external oauth source).
@@ -489,7 +500,7 @@ in
       ];
       loop_control = [
         "max_steps_per_turn"
-        "max_retries_per_step"
+        "max_attempts_per_step"
         "reserved_context_size"
       ];
       background = [
@@ -518,6 +529,14 @@ in
       "providers"
       "services"
     ];
+    retired = {
+      # Upstream 0.34.0 renamed both keys (see schema/upstream.json
+      # deprecations); purge stale values from live config.toml on sync.
+      loop_control = [
+        "max_retries_per_step"
+        "max_steps_per_run"
+      ];
+    };
     hooksManaged = true;
   };
 

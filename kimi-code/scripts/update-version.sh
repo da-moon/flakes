@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# Appends the newest (or an explicit) kimi-code release to releases.json
+# (the JSON version table read by flake.nix) and sets it as .latest. Never
+# hand-edits the version data in flake.nix.
+#
+# Each release also records .schemaSha256, coupling it to the committed,
+# statically extracted schema/upstream.json artifact (see schema/README.md).
+# Schema evidence is extracted from the host-platform release binary WITHOUT
+# executing it; structural drift (removed keys or deprecation-table changes)
+# aborts the update with exit 3 unless --accept-schema-drift is passed after
+# review. A clean update still fails at the end if modules/config-schema.nix
+# was not reviewed for the new version (its schemaVersion marker must match).
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -22,6 +33,12 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 releases_file="${pkg_dir}/releases.json"
+schema_dir="${pkg_dir}/schema"
+schema_file="${schema_dir}/upstream.json"
+schema_hash_file="${schema_dir}/upstream.sha256"
+schema_extractor="${script_dir}/extract-config-schema.mjs"
+schema_comparator="${script_dir}/compare-config-schema.mjs"
+schema_verifier="${script_dir}/verify-config-schema.mjs"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 DOWNLOADER=""
@@ -29,6 +46,7 @@ DOWNLOADER=""
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
   command -v jq >/dev/null 2>&1 || { log_error "jq is required but not installed."; exit 2; }
+  command -v node >/dev/null 2>&1 || { log_error "node is required but not installed."; exit 2; }
 
   if command -v curl >/dev/null 2>&1; then
     DOWNLOADER="curl"
@@ -49,6 +67,9 @@ ensure_in_package_directory() {
     log_error "releases.json not found at: $releases_file"
     exit 2
   fi
+  [ -f "$schema_extractor" ] || { log_error "schema extractor not found at: $schema_extractor"; exit 2; }
+  [ -f "$schema_comparator" ] || { log_error "schema comparator not found at: $schema_comparator"; exit 2; }
+  [ -f "$schema_verifier" ] || { log_error "schema verifier not found at: $schema_verifier"; exit 2; }
 }
 
 download_file() {
@@ -101,6 +122,59 @@ sha256_hex_to_sri() {
   nix hash to-sri --type sha256 "$hex_hash"
 }
 
+# Release platform for the machine running this script (schema evidence is
+# extracted from the host binary; the embedded sources are arch-independent).
+host_release_platform() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+  case "$os:$arch" in
+    Linux:x86_64) printf 'linux-x64' ;;
+    Linux:aarch64 | Linux:arm64) printf 'linux-arm64' ;;
+    Darwin:x86_64) printf 'darwin-x64' ;;
+    Darwin:arm64) printf 'darwin-arm64' ;;
+    *) return 1 ;;
+  esac
+}
+
+# Statically extract the config-schema evidence from a release binary into
+# "$2"/upstream.json + upstream.sha256 (never executes the binary).
+extract_schema_evidence() {
+  local binary="$1" staging="$2" version="$3"
+  node "$schema_extractor" \
+    --binary "$binary" \
+    --version "$version" \
+    --output "$staging/upstream.json" \
+    --hash-output "$staging/upstream.sha256" \
+    >"$staging/schema-metadata.json"
+  node "$schema_verifier" \
+    --schema "$staging/upstream.json" \
+    --hash "$staging/upstream.sha256" \
+    >"$staging/schema-verification.json"
+}
+
+classify_schema_drift() {
+  local candidate="$1"
+  if [ ! -f "$schema_file" ] || [ ! -f "$schema_hash_file" ]; then
+    printf '%s\n' '{"classification":"structural","reason":"no-baseline"}'
+    return 20
+  fi
+  node "$schema_verifier" --schema "$schema_file" --hash "$schema_hash_file" >/dev/null
+  node "$schema_comparator" --baseline "$schema_file" --candidate "$candidate"
+}
+
+install_schema_candidate() {
+  local staging="$1" schema_tmp hash_tmp
+  mkdir -p "$schema_dir"
+  schema_tmp="$(mktemp "${schema_dir}/.upstream.json.XXXXXX")"
+  hash_tmp="$(mktemp "${schema_dir}/.upstream.sha256.XXXXXX")"
+  cp "$staging/upstream.json" "$schema_tmp"
+  cp "$staging/upstream.sha256" "$hash_tmp"
+  chmod 0644 "$schema_tmp" "$hash_tmp"
+  mv "$schema_tmp" "$schema_file"
+  mv "$hash_tmp" "$schema_hash_file"
+}
+
 # Append/upsert an entry into releases.json and set .latest.
 upsert_release_entry() {
   local key="$1"
@@ -132,6 +206,22 @@ verify_build() {
   fi
   timeout 30 "$out_path/bin/kimi" --version >/dev/null 2>&1 || true
   log_info "Build successful!"
+}
+
+verify_flake_schema_contract() {
+  local expected_version="$1" evaluated_version
+  if ! evaluated_version="$(
+    nix eval --raw --impure --no-write-lock-file \
+      "path:${pkg_dir}#lib.upstreamConfigSchema.package.version"
+  )"; then
+    log_error "The Nix module schema has not been reviewed for $expected_version"
+    log_error "Review modules/config-schema.nix against schema/upstream.json and set its schemaVersion marker to $expected_version."
+    return 1
+  fi
+  if [ "$evaluated_version" != "$expected_version" ]; then
+    log_error "Flake schema version mismatch: expected $expected_version, got $evaluated_version"
+    return 1
+  fi
 }
 
 show_changes() {
@@ -187,18 +277,23 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 
 Appends the newest (or an explicit) kimi-code release to releases.json as a new
 version-table entry (keyed by version) and sets .latest to it. Existing entries
-are preserved so consumers can still select past versions.
+are preserved so consumers can still select past versions. Each entry records
+.schemaSha256, coupling it to the committed schema/upstream.json artifact;
+structural schema drift aborts the update unless accepted after review.
 
 Options:
   --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
   --no-build          Skip build verification
+  --accept-schema-drift
+                      Continue after reviewing structural schema drift
   --help              Show this help message
 
 Examples:
   ./scripts/update-version.sh
   ./scripts/update-version.sh --check
   ./scripts/update-version.sh --version 0.21.1
+  ./scripts/update-version.sh --version 0.35.0 --accept-schema-drift
 EOF
 }
 
@@ -210,6 +305,7 @@ main() {
   local target_version=""
   local check_only=false
   local no_build=false
+  local accept_schema_drift=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -224,6 +320,10 @@ main() {
         ;;
       --no-build)
         no_build=true
+        shift
+        ;;
+      --accept-schema-drift)
+        accept_schema_drift=true
         shift
         ;;
       --help)
@@ -268,7 +368,8 @@ main() {
     exit 1
   fi
 
-  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] \
+    && [ -n "$(jq -r --arg k "$latest_version" '.versions[$k].schemaSha256 // empty' "$releases_file")" ]; then
     log_info "Already up to date!"
     exit 0
   fi
@@ -297,36 +398,128 @@ main() {
       '$h + {($s): $v}')"
   done
 
+  # Stage the host-platform binary and statically extract schema evidence.
+  local staging host_platform
+  staging="$(mktemp -d -t "kimi-code-${latest_version}.schema.XXXXXX")"
+  host_platform="$(host_release_platform || true)"
+  if [ -z "$host_platform" ]; then
+    log_error "Unsupported host platform for schema extraction"
+    rm -rf "$staging"
+    exit 2
+  fi
+  log_info "Downloading host binary for schema extraction..."
+  if ! download_file "$DOWNLOAD_BASE_URL/binaries/$latest_version/kimi-code-$host_platform" "$staging/kimi-code"; then
+    log_error "Failed to download host binary for schema extraction"
+    rm -rf "$staging"
+    exit 2
+  fi
+  log_info "Extracting configuration schema without executing Kimi Code..."
+  if ! extract_schema_evidence "$staging/kimi-code" "$staging" "$latest_version"; then
+    log_error "Static schema extraction failed; staging retained for inspection: $staging"
+    exit 2
+  fi
+  local schema_sha
+  schema_sha="$(tr -d '\n' <"$staging/upstream.sha256")"
+  if [ -z "$schema_sha" ] || ! printf '%s' "$schema_sha" | grep -Eq '^sha256-[A-Za-z0-9+/]+={0,2}$'; then
+    log_error "Extractor returned an invalid schemaSha256"
+    rm -rf "$staging"
+    exit 2
+  fi
+  log_info "Schema evidence: $(jq -c '{packageVersion,sections,deprecations,hash}' "$staging/schema-metadata.json")"
+
+  local drift_output drift_status
+  if drift_output="$(classify_schema_drift "$staging/upstream.json")"; then
+    drift_status=0
+  else
+    drift_status=$?
+  fi
+  case "$drift_status" in
+    0)
+      log_info "Schema drift: $(printf '%s' "$drift_output" | jq -r '.classification')" ;;
+    10)
+      log_info "Schema drift: catalog-only (allowed)" ;;
+    20)
+      if [ "$accept_schema_drift" != true ]; then
+        log_error "Structural configuration-schema drift requires review."
+        log_error "Candidate retained at: $staging/upstream.json"
+        log_error "After reviewing modules/config-schema.nix, rerun with --accept-schema-drift."
+        exit 3
+      fi
+      log_warn "Accepting reviewed structural schema drift: $drift_output" ;;
+    *)
+      log_error "Could not validate the checked-in schema baseline"
+      rm -rf "$staging"
+      exit 2 ;;
+  esac
+
+  local recorded_schema_sha
+  recorded_schema_sha="$(jq -r --arg k "$latest_version" '.versions[$k].schemaSha256 // empty' "$releases_file")"
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] \
+    && [ "$recorded_schema_sha" = "$schema_sha" ]; then
+    log_info "Already up to date; package metadata and schemaSha256 verified."
+    rm -rf "$staging"
+    exit 0
+  fi
+
   local entry_json
   entry_json="$(jq -n \
     --arg v "$latest_version" \
     --arg rev "$latest_version" \
+    --arg schemaSha256 "$schema_sha" \
     --argjson hashes "$hashes_json" \
-    '{version: $v, rev: $rev, hashes: $hashes}')"
+    '{version: $v, rev: $rev, hashes: $hashes, schemaSha256: $schemaSha256}')"
 
-  local backup
+  local backup had_schema=false had_schema_hash=false
   backup="$(mktemp -t releases.json.backup.XXXXXX)"
   cp "$releases_file" "$backup"
+  if [ -f "$schema_file" ]; then cp "$schema_file" "$backup.upstream.json"; had_schema=true; fi
+  if [ -f "$schema_hash_file" ]; then cp "$schema_hash_file" "$backup.upstream.sha256"; had_schema_hash=true; fi
+
+  restore_on_failure() {
+    cp "$backup" "$releases_file"
+    if [ "$had_schema" = true ]; then cp "$backup.upstream.json" "$schema_file"; else rm -f "$schema_file"; fi
+    if [ "$had_schema_hash" = true ]; then cp "$backup.upstream.sha256" "$schema_hash_file"; else rm -f "$schema_hash_file"; fi
+    rm -f "$backup" "$backup.upstream.json" "$backup.upstream.sha256"
+  }
 
   upsert_release_entry "$latest_version" "$entry_json"
+  install_schema_candidate "$staging"
 
   local sanitized_key
   sanitized_key="$(sanitize_key "$latest_version")"
 
+  # The eval-time flake contract (artifact version/hash + Nix schemaVersion
+  # marker) must hold before the build is even attempted.
+  if ! verify_flake_schema_contract "$latest_version"; then
+    log_error "Schema contract failed; restoring previous releases.json and schema evidence"
+    restore_on_failure
+    exit 1
+  fi
+
   if [ "$no_build" != true ]; then
     if ! verify_build "$sanitized_key"; then
-      log_error "Build verification failed; restoring previous releases.json"
-      cp "$backup" "$releases_file"
-      rm -f "$backup"
+      log_error "Build verification failed; restoring previous releases.json and schema evidence"
+      restore_on_failure
       exit 1
     fi
   fi
 
-  rm -f "$backup"
+  local installed_schema_sha
+  installed_schema_sha="$(jq -r --arg k "$latest_version" '.versions[$k].schemaSha256 // empty' "$releases_file")"
+  node "$schema_verifier" \
+    --schema "$schema_file" \
+    --hash "$schema_hash_file" \
+    --expected-version "$latest_version" \
+    --expected-sha256 "$installed_schema_sha" \
+    >/dev/null
+
+  rm -f "$backup" "$backup.upstream.json" "$backup.upstream.sha256"
+  rm -rf "$staging"
 
   show_changes
 
-  maybe_git_commit "chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}" "releases.json"
+  maybe_git_commit "chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}" \
+    "releases.json" "schema/upstream.json" "schema/upstream.sha256"
 
   log_info "Successfully appended kimi-code $latest_version (latest was $current_version)"
 }

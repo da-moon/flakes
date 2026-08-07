@@ -63,6 +63,8 @@ let
   # - sections (object tables): when the section is declared, typed-but-
   #   undeclared keys are deleted from the live file (reset to upstream
   #   defaults), declared keys win, unknown keys are preserved.
+  # - retired: per-section keys (upstream-removed/renamed) always deleted
+  #   from the live file when the section is declared.
   # - replaceTables: replaced wholesale when declared; for graftTables a
   #   missing `oauth` sub-table is grafted back per entry (live file first,
   #   then the external oauth source).
@@ -92,7 +94,7 @@ let
         if ($d | has($s)) then
           .[$s] = (
             ((.[$s] // {})
-              | reduce (($m.sections[$s] // [])[]) as $k (.;
+              | reduce ((($m.sections[$s] // []) + ($m.retired[$s] // []))[]) as $k (.;
                   if ($d[$s] | has($k)) | not then del(.[$k]) else . end))
             + $d[$s]
           )
