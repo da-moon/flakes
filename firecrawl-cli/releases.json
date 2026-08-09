@@ -1,5 +1,5 @@
 {
-  "latest": "1.19.29",
+  "latest": "1.19.30",
   "versions": {
     "1.19.27": {
       "version": "1.19.27",
@@ -12,6 +12,12 @@
       "rev": "1.19.29",
       "hash": "sha256-Zot1ggImY4/+Cr2wa+OynTH9Mcid2cFG6IBcpvDJYT4=",
       "pnpmDepsHash": "sha256-7XL0bNS6wqWuR+mfc+DIZKHm9yxQz8Xh+acYsMU2Osw="
+    },
+    "1.19.30": {
+      "version": "1.19.30",
+      "rev": "1.19.30",
+      "hash": "sha256-FyL8zAOapNcfH3g9dr66xBTDAjTKAT2kYrbu1aIPQYk=",
+      "pnpmDepsHash": "sha256-p2tj3weLuUZF+JYDDfiNVX+Ba+jUWHXEYQgfJDpnAeM="
     }
   }
 }
