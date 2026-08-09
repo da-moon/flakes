@@ -1,5 +1,5 @@
 {
-  "latest": "3.23.4",
+  "latest": "3.23.6",
   "versions": {
     "3.22.4": {
       "version": "3.22.4",
@@ -24,6 +24,12 @@
       "rev": "3.23.4",
       "hash": "sha256-VaZWpioykH1UucoYc+rguL/35XZuZhB5/c0mVibeCdI=",
       "yarnDepsHash": "sha256-+8cyMDfvwD9GNjBXgnlbZfRzop4rDj+aNx8JWd/zMVI="
+    },
+    "3.23.6": {
+      "version": "3.23.6",
+      "rev": "3.23.6",
+      "hash": "sha256-1/5yUYcHqfm+Djw5a0qu/n8wHTIgw1bnMM3gwxs4xCM=",
+      "yarnDepsHash": "sha256-Q8qiepnbeaipLsdagNU4TN53CB6uRxM/AjocC4Kppl8="
     }
   }
 }
