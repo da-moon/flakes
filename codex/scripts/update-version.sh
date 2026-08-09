@@ -23,9 +23,12 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly GITHUB_API_BASE="https://api.github.com"
 readonly REPO_OWNER="openai"
 readonly REPO_NAME="codex"
+# Starting with 0.147.0 the Linux bundle asset was renamed from
+# codex-<arch>-unknown-linux-musl-bundle.tar.zst to
+# codex-package-<arch>-unknown-linux-musl.tar.zst.
 declare -Ar ASSET_BY_SYSTEM=(
-  [x86_64-linux]="codex-x86_64-unknown-linux-musl-bundle.tar.zst"
-  [aarch64-linux]="codex-aarch64-unknown-linux-musl-bundle.tar.zst"
+  [x86_64-linux]="codex-package-x86_64-unknown-linux-musl.tar.zst"
+  [aarch64-linux]="codex-package-aarch64-unknown-linux-musl.tar.zst"
   [x86_64-darwin]="codex-package-x86_64-apple-darwin.tar.gz"
   [aarch64-darwin]="codex-package-aarch64-apple-darwin.tar.gz"
 )

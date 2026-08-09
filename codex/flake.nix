@@ -35,15 +35,33 @@
 
         # Linux ships a ready-to-flatten bundle. Darwin's package archive has
         # the same binaries under bin/ plus signed native resources.
-        releaseBySystem = {
-          "aarch64-linux" = {
-            asset = "codex-aarch64-unknown-linux-musl-bundle.tar.zst";
-            packageLayout = false;
-          };
-          "x86_64-linux" = {
-            asset = "codex-x86_64-unknown-linux-musl-bundle.tar.zst";
-            packageLayout = false;
-          };
+        # Starting with 0.147.0 the Linux bundle is renamed from
+        # codex-<arch>-unknown-linux-musl-bundle.tar.zst to
+        # codex-package-<arch>-unknown-linux-musl.tar.zst and uses the same
+        # bin/ layout as Darwin.
+        releaseBySystem = version: {
+          "aarch64-linux" =
+            if builtins.compareVersions version "0.147.0" >= 0 then
+              {
+                asset = "codex-package-aarch64-unknown-linux-musl.tar.zst";
+                packageLayout = true;
+              }
+            else
+              {
+                asset = "codex-aarch64-unknown-linux-musl-bundle.tar.zst";
+                packageLayout = false;
+              };
+          "x86_64-linux" =
+            if builtins.compareVersions version "0.147.0" >= 0 then
+              {
+                asset = "codex-package-x86_64-unknown-linux-musl.tar.zst";
+                packageLayout = true;
+              }
+            else
+              {
+                asset = "codex-x86_64-unknown-linux-musl-bundle.tar.zst";
+                packageLayout = false;
+              };
           "aarch64-darwin" = {
             asset = "codex-package-aarch64-apple-darwin.tar.gz";
             packageLayout = true;
@@ -54,8 +72,6 @@
           };
         };
 
-        release = releaseBySystem.${system};
-
         # Builder: derive a codex package from one releases.json entry.
         # PRESERVES the original build logic exactly; only version/src-url/hash
         # now come from `entry` instead of let-bindings.
@@ -64,6 +80,7 @@
           let
             version = entry.version;
             sha256 = entry.hashes.${system};
+            release = (releaseBySystem version).${system};
           in
           pkgs.stdenv.mkDerivation rec {
             pname = "codex";
