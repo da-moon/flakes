@@ -71,10 +71,14 @@ let
     "ada"
     "gdscript"
     "qml"
+    "gleam"
+    "nextflow"
+    "wolfram"
     "typescript_vts"
     "python_jedi"
     "python_ty"
     "python_pyrefly"
+    "python_basedpyright"
     "csharp_omnisharp"
     "ruby_solargraph"
     "php_phpactor"
@@ -91,6 +95,7 @@ let
     "html"
     "scss"
     "angular"
+    "deno"
   ];
 
   builtinContexts = [
@@ -140,6 +145,7 @@ let
     trustedProjectPathPatterns = [ ];
     logLevel = 20;
     traceLspCommunication = false;
+    lsPriorities = null;
     lsSpecificSettings = { };
     ignoredPaths = [ ];
     readOnlyMemoryPatterns = [ ];
@@ -219,6 +225,7 @@ let
     trustedProjectPathPatterns = "trusted_project_path_patterns";
     logLevel = "log_level";
     traceLspCommunication = "trace_lsp_communication";
+    lsPriorities = "ls_priorities";
     lsSpecificSettings = "ls_specific_settings";
     ignoredPaths = "ignored_paths";
     readOnlyMemoryPatterns = "read_only_memory_patterns";
@@ -238,7 +245,7 @@ let
 
   projectFieldMappings = {
     projectName = "project_name";
-    languages = "languages";
+    languages = "language_servers";
     encoding = "encoding";
     lineEnding = "line_ending";
     languageBackend = "language_backend";
@@ -304,11 +311,13 @@ let
     csharpOmnisharp = "csharp_omnisharp";
     cue = "cue";
     dart = "dart";
+    deno = "deno";
     elixir = "elixir";
     elm = "elm";
     fortran = "fortran";
     fsharp = "fsharp";
     gdscript = "gdscript";
+    gleam = "gleam";
     go = "go";
     groovy = "groovy";
     haxe = "haxe";
@@ -322,6 +331,8 @@ let
     luau = "luau";
     markdown = "markdown";
     matlab = "matlab";
+    nextflow = "nextflow";
+    nix = "nix";
     pascal = "pascal";
     perl = "perl";
     php = "php";
@@ -329,6 +340,7 @@ let
     phpPhpantom = "php_phpantom";
     powershell = "powershell";
     python = "python";
+    pythonBasedpyright = "python_basedpyright";
     pythonPyrefly = "python_pyrefly";
     pythonTy = "python_ty";
     ruby = "ruby";
@@ -343,6 +355,7 @@ let
     typescript = "typescript";
     typescriptVts = "typescript_vts";
     vue = "vue";
+    wolfram = "wolfram";
     yaml = "yaml";
   };
 
@@ -404,6 +417,7 @@ let
       cueVersion = "cue_version";
     };
     dart.dartSdkVersion = "dart_sdk_version";
+    deno = { };
     elixir.expertVersion = "expert_version";
     elm = {
       elmLanguageServerVersion = "elm_language_server_version";
@@ -419,6 +433,7 @@ let
       port = "port";
       requestTimeout = "request_timeout";
     };
+    gleam = { };
     go.goplsSettings = "gopls_settings";
     groovy = {
       lsJarPath = "ls_jar_path";
@@ -455,12 +470,9 @@ let
       runtimes = "runtimes";
       gradleVersion = "gradle_version";
       vscodeJavaVersion = "vscode_java_version";
-      intellicodeVersion = "intellicode_version";
       lombokShowGenerated = "lombok_show_generated";
       jdtlsXmx = "jdtls_xmx";
       jdtlsXms = "jdtls_xms";
-      intellicodeXmx = "intellicode_xmx";
-      intellicodeXms = "intellicode_xms";
     };
     json = {
       lsPath = "ls_path";
@@ -487,6 +499,15 @@ let
     matlab = {
       matlabPath = "matlab_path";
       matlabExtensionVersion = "matlab_extension_version";
+    };
+    nextflow = {
+      excludePatterns = "exclude_patterns";
+      javaHome = "java_home";
+      jvmOptions = "jvm_options";
+      nextflowLsVersion = "nextflow_ls_version";
+    };
+    nix = {
+      configPath = "config_path";
     };
     pascal = {
       paslsVersion = "pasls_version";
@@ -525,6 +546,10 @@ let
     python = {
       lsPath = "ls_path";
       pyrightVersion = "pyright_version";
+      basedpyrightVersion = "basedpyright_version";
+    };
+    pythonBasedpyright = {
+      basedpyrightVersion = "basedpyright_version";
     };
     pythonPyrefly = {
       indexingMode = "indexing_mode";
@@ -542,6 +567,9 @@ let
       clientName = "client_name";
       onStaleLock = "on_stale_lock";
       logMultiInstanceNotice = "log_multi_instance_notice";
+      autoImportBuild = "auto_import_build";
+      projectRoots = "project_roots";
+      projectRootScanDepth = "project_root_scan_depth";
     };
     scss = {
       lsPath = "ls_path";
@@ -578,6 +606,7 @@ let
       typescriptVersion = "typescript_version";
       typescriptLanguageServerVersion = "typescript_language_server_version";
       npmRegistry = "npm_registry";
+      indexingStartGrace = "indexing_start_grace";
       indexingTimeout = "indexing_timeout";
       serverReadyTimeout = "server_ready_timeout";
     };
@@ -590,6 +619,7 @@ let
       vueLanguageServerVersion = "vue_language_server_version";
       npmRegistry = "npm_registry";
     };
+    wolfram = { };
     yaml = {
       lsPath = "ls_path";
       yamlLanguageServerVersion = "yaml_language_server_version";
@@ -801,6 +831,7 @@ let
     dart = mkLanguageOption "Dart language-server settings." {
       dartSdkVersion = mkStr "3.7.1" "Dart SDK version.";
     };
+    deno = mkLanguageOption "Deno language-server settings." { };
     elixir = mkLanguageOption "Elixir Expert settings." {
       expertVersion = mkStr "v0.1.0-rc.6" "Expert release version.";
     };
@@ -828,6 +859,7 @@ let
         description = "Godot LSP request timeout in seconds.";
       };
     };
+    gleam = mkLanguageOption "Gleam language-server settings." { };
     go = mkLanguageOption "gopls settings." {
       goplsSettings = mkOption {
         type = types.nullOr jsonObjectType;
@@ -885,12 +917,9 @@ let
         default = "1.54.0-923";
         description = "Pinned vscode-java bundle version supported by Serena v1.6.1.";
       };
-      intellicodeVersion = mkStr "1.2.30" "IntelliCode extension version.";
       lombokShowGenerated = mkBool true "Show Lombok-generated symbols.";
       jdtlsXmx = mkStr "3G" "Maximum JDTLS JVM heap.";
       jdtlsXms = mkStr "100m" "Initial JDTLS JVM heap.";
-      intellicodeXmx = mkStr "1G" "Maximum IntelliCode JVM heap.";
-      intellicodeXms = mkStr "100m" "Initial IntelliCode JVM heap.";
     };
     json = mkLanguageOption "JSON language-server settings." {
       lsPath = lsPathOption;
@@ -899,7 +928,7 @@ let
     };
     kotlin = mkLanguageOption "Kotlin language-server settings." {
       lsPath = lsPathOption;
-      kotlinLspVersion = mkStr "261.13587.0" "Kotlin language-server version.";
+      kotlinLspVersion = mkStr "262.9593.0" "Kotlin language-server version.";
       jvmOptions = mkStr "-Xmx2G" "JAVA_TOOL_OPTIONS for the Kotlin server; empty disables JVM options.";
     };
     lean4 = mkLanguageOption "Lean 4 language-server settings." { lsPath = lsPathOption; };
@@ -935,6 +964,23 @@ let
     matlab = mkLanguageOption "MATLAB language-server settings." {
       matlabPath = mkNullableStr "MATLAB installation path; omitted enables auto-detection.";
       matlabExtensionVersion = mkStr "1.3.9" "MathWorks VS Code extension version.";
+    };
+    nextflow = mkLanguageOption "Nextflow language-server settings." {
+      excludePatterns = mkOption {
+        type = types.listOf types.str;
+        default = [ "work" ".nextflow" ];
+        description = "Glob patterns excluded from Nextflow project indexing.";
+      };
+      javaHome = mkNullableStr "JDK home used to launch the Nextflow language server.";
+      jvmOptions = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = "JVM options passed to the Nextflow language server.";
+      };
+      nextflowLsVersion = mkStr "26.04.3" "Nextflow language-server version.";
+    };
+    nix = mkLanguageOption "Nix language-server settings." {
+      configPath = mkNullableStr "Path to the nixd configuration file.";
     };
     pascal = mkLanguageOption "Pascal language-server settings." {
       paslsVersion = mkStr "v0.2.0" "pasls release version.";
@@ -993,6 +1039,10 @@ let
     python = mkLanguageOption "Pyright settings." {
       lsPath = lsPathOption;
       pyrightVersion = mkStr "1.1.403" "Pyright PyPI version.";
+      basedpyrightVersion = mkStr "1.39.9" "BasedPyright PyPI version used by the Python language server.";
+    };
+    pythonBasedpyright = mkLanguageOption "BasedPyright settings." {
+      basedpyrightVersion = mkStr "1.39.9" "BasedPyright PyPI version.";
     };
     pythonPyrefly = mkLanguageOption "Astral Pyrefly settings." {
       indexingMode = mkNullableStr "Pyrefly indexing mode forwarded as --indexing-mode; null uses Pyrefly's default.";
@@ -1024,6 +1074,17 @@ let
         description = "Behavior when a stale Metals database lock is found.";
       };
       logMultiInstanceNotice = mkBool true "Log when another Metals instance is detected.";
+      autoImportBuild = mkBool true "Automatically import the build on startup.";
+      projectRoots = mkOption {
+        type = types.nullOr (types.listOf types.str);
+        default = null;
+        description = "Repository-relative directories treated as Metals project roots; null uses Serena's default.";
+      };
+      projectRootScanDepth = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = "Maximum directory depth when scanning for Metals project roots; null uses Serena's default.";
+      };
     };
     scss = mkLanguageOption "SCSS/Sass/CSS language-server settings." {
       lsPath = lsPathOption;
@@ -1070,6 +1131,11 @@ let
       typescriptVersion = mkStr "5.9.3" "TypeScript version.";
       typescriptLanguageServerVersion = mkStr "5.1.3" "typescript-language-server version.";
       npmRegistry = npmRegistryOption;
+      indexingStartGrace = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = "Grace period in seconds before Serena reports TypeScript indexing as timed out; null uses Serena's default.";
+      };
       indexingTimeout = mkOption {
         type = types.nullOr numberType;
         default = null;
@@ -1094,6 +1160,7 @@ let
       vueLanguageServerVersion = mkStr "3.1.5" "@vue/language-server version.";
       npmRegistry = npmRegistryOption;
     };
+    wolfram = mkLanguageOption "Wolfram Language server settings." { };
     yaml = mkLanguageOption "YAML language-server settings." {
       lsPath = lsPathOption;
       yamlLanguageServerVersion = mkStr "1.19.2" "yaml-language-server version.";
@@ -1187,6 +1254,11 @@ let
         description = "Python logging threshold (10 debug, 20 info, 30 warning, 40 error).";
       };
       traceLspCommunication = mkBool globalDefaults.traceLspCommunication "Trace LSP communication.";
+      lsPriorities = mkOption {
+        type = types.nullOr jsonObjectType;
+        default = globalDefaults.lsPriorities;
+        description = "Language-server priority overrides keyed by language; null omits the key.";
+      };
       lsSpecificSettings = mkLsSpecificSettingsOption { };
       ignoredPaths = mkOption {
         type = types.listOf types.str;
@@ -1523,7 +1595,7 @@ let
       "Serena ${scope} configuration: Clojure sourcePaths takes precedence over configEdnPath."
     ]
     ++ lib.optionals (svelte != null && svelte.lsPath != null) [
-      "Serena ${scope} configuration: v1.6.1 svelte.lsPath bypasses installation but still expects managed companion TypeScript files."
+      "Serena ${scope} configuration: v1.7.0 svelte.lsPath bypasses installation but still expects managed companion TypeScript files."
     ]
     ++
       lib.optionals
@@ -1575,7 +1647,7 @@ rec {
 
   manifest = {
     schemaVersion = 2;
-    upstreamVersion = "1.6.1";
+    upstreamVersion = "1.7.0";
     inherit languageValues builtinContexts builtinModes;
     defaults = {
       global = globalDefaults;

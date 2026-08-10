@@ -285,7 +285,7 @@ ls_config_tree = parse(ls_config_path)
 language_names: dict[str, str] = {}
 module_languages: dict[str, str] = {}
 for node in getattr(ls_config_tree, "body", []):
-    if isinstance(node, ast.ClassDef) and node.name == "Language":
+    if isinstance(node, ast.ClassDef) and node.name in ("Language", "LanguageServerId"):
         for statement in node.body:
             if (
                 isinstance(statement, ast.Assign)
@@ -421,7 +421,7 @@ for path in sorted((root / "src/solidlsp/language_servers").rglob("*.py")):
             or not call.args
             or not isinstance(call.args[0], ast.Attribute)
             or not isinstance(call.args[0].value, ast.Name)
-            or call.args[0].value.id != "Language"
+            or call.args[0].value.id not in ("Language", "LanguageServerId")
         ):
             continue
         receiver_language = language_names.get(call.args[0].attr)
