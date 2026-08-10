@@ -7,7 +7,7 @@
 # convention). scripts/update-version.sh refreshes it on drift-accept.
 { }:
 {
-  schemaVersion = "17.2.10";
+  schemaVersion = "17.2.12";
 
   defaultSettings = {
     setupVersion = 0;
@@ -600,10 +600,7 @@
     };
     exa = {
       enabled = true;
-      enableSearch = true;
       searchDelayMs = 1000;
-      enableResearcher = false;
-      enableWebsets = false;
     };
     commit = {
       mapReduceEnabled = true;
