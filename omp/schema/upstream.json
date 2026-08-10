@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "17.2.10"
+    "version": "17.2.12"
   },
   "schemaVersion": 1,
   "structural": {
@@ -494,18 +494,6 @@
         "type": "boolean"
       },
       "eval.rb": {
-        "default": false,
-        "type": "boolean"
-      },
-      "exa.enableResearcher": {
-        "default": false,
-        "type": "boolean"
-      },
-      "exa.enableSearch": {
-        "default": true,
-        "type": "boolean"
-      },
-      "exa.enableWebsets": {
         "default": false,
         "type": "boolean"
       },
