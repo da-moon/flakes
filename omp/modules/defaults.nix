@@ -7,7 +7,7 @@
 # convention). scripts/update-version.sh refreshes it on drift-accept.
 { }:
 {
-  schemaVersion = "17.2.12";
+  schemaVersion = "17.2.14";
 
   defaultSettings = {
     setupVersion = 0;
@@ -39,6 +39,8 @@
       # ("auto" sentinel) with priority-list orders (empty list = auto).
       webSearchOrder = [ ];
       webSearchExclude = [ ];
+      # 17.2.14 added dotted key "searxng.safesearch" (number); its default is
+      # null, so nothing is declared here.
       antigravityEndpoint = "auto";
       imageOrder = [ ];
       fireworksTier = "standard";
@@ -127,6 +129,8 @@
     hideThinkingBlock = false;
     proseOnlyThinking = true;
     omitThinking = false;
+    # 17.2.14 added top-level externalThinking (boolean, default false).
+    externalThinking = false;
     model = {
       loopGuard = {
         enabled = true;
