@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "17.2.12"
+    "version": "17.2.14"
   },
   "schemaVersion": 1,
   "structural": {
@@ -508,6 +508,10 @@
       "extensions": {
         "default": null,
         "type": "array"
+      },
+      "externalThinking": {
+        "default": false,
+        "type": "boolean"
       },
       "features.unexpectedStopDetection": {
         "default": false,
@@ -1443,6 +1447,10 @@
       "searxng.language": {
         "default": null,
         "type": "string"
+      },
+      "searxng.safesearch": {
+        "default": null,
+        "type": "number"
       },
       "searxng.token": {
         "default": null,
