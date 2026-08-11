@@ -74,5 +74,90 @@ in
         variables are respected.
       '';
     };
+
+    mcpServers = mkOption {
+      type = types.attrsOf (
+        types.submodule (
+          { name, ... }:
+          {
+            options = {
+              type = mkOption {
+                type = types.enum [
+                  "stdio"
+                  "http"
+                  "sse"
+                ];
+                default = "stdio";
+                description = "MCP server transport.";
+              };
+
+              command = mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "Executable for a stdio server (required when {nix}`type = \"stdio\"`).";
+              };
+
+              args = mkOption {
+                type = types.listOf types.str;
+                default = [ ];
+                description = "Arguments for the stdio command.";
+              };
+
+              env = mkOption {
+                type = types.attrsOf types.str;
+                default = { };
+                description = "Environment variables injected into the stdio child process.";
+              };
+
+              cwd = mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "Working directory for the stdio child process.";
+              };
+
+              url = mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "URL for an HTTP or SSE server (required when {nix}`type` is {nix}`\"http\"` or {nix}`\"sse\"`).";
+              };
+
+              headers = mkOption {
+                type = types.attrsOf types.str;
+                default = { };
+                description = "Static request headers (HTTP/SSE).";
+              };
+
+              enabled = mkOption {
+                type = types.bool;
+                default = true;
+                description = "Set to false to disable the server without removing it.";
+              };
+
+              requestIdFormat = mkOption {
+                type = types.nullOr (
+                  types.enum [
+                    "string"
+                    "number"
+                  ]
+                );
+                default = null;
+                description = ''
+                  JSON-RPC request id encoding. omp defaults to per-connection
+                  sequential integers; set to {nix}`"string"` for servers that
+                  need collision-resistant string ids.
+                '';
+              };
+            };
+          }
+        )
+      );
+      default = { };
+      description = ''
+        Declarative MCP servers written to {file}`~/.omp/agent/mcp.json`
+        (omp's global, non-project MCP config; see {file}`.omp/mcp.json` /
+        project {file}`.mcp.json` for per-project servers). The file is fully
+        declarative: it contains exactly the servers declared here.
+      '';
+    };
   };
 }

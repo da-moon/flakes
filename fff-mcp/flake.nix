@@ -96,6 +96,34 @@
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
+        # Wrapper: MCP clients (Claude Code, Codex, Kimi, ...) spawn fff-mcp
+        # with cwd = the session's project root, which is sometimes $HOME or
+        # `/`. fff-mcp hard-refuses to index those paths unless explicitly
+        # told it's OK (see dmtrKovalenko/fff.nvim PR #720), so a session
+        # rooted there would otherwise crash-loop. This wrapper always passes
+        # $PWD as the explicit index path, and when $PWD canonicalizes to
+        # $HOME or `/` it opts in via FFF_ENABLE_*_SCAN and drops the
+        # filesystem watcher (watching all of home/root is wasteful and not
+        # what a degraded home-rooted session needs). The shared default
+        # frecency/history DBs are left untouched - --frecency-db is
+        # intentionally never set here.
+        fffMcpAutoPkg = pkgs.writeShellScriptBin "fff-mcp-auto" ''
+          set -euo pipefail
+
+          real_pwd=$(readlink -f "$PWD")
+          real_home=$(readlink -f "$HOME")
+
+          args=("$PWD" --no-update-check)
+          if [ "$real_pwd" = "/" ] || [ "$real_pwd" = "$real_home" ]; then
+            export FFF_ENABLE_HOME_SCAN=1
+            export FFF_ENABLE_ROOT_SCAN=1
+            args+=(--no-watch)
+          fi
+          args+=("$@")
+
+          exec "${latestPkg}/bin/fff-mcp" "''${args[@]}"
+        '';
+
         # One `fff-mcp_<sanitized-key>` package per entry in the table.
         versionedPackages = builtins.listToAttrs (
           builtins.map (key: {
@@ -109,6 +137,7 @@
         packages = versionedPackages // {
           default = latestPkg;
           fff-mcp = latestPkg;
+          fff-mcp-auto = fffMcpAutoPkg;
         };
 
         apps = {
