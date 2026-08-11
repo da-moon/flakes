@@ -33,7 +33,18 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
-        py = pkgs.python3Packages;
+        # fastmcp -> py-key-value-aio carries test-only KV-store backends
+        # (duckdb -> arrow-cpp, ...) in its check inputs; arrow-cpp is marked
+        # broken on x86_64-darwin, which would refuse evaluation on Intel macs
+        # even though the runtime closure never imports those backends. Strip
+        # py-key-value-aio's check inputs via a scope override so fastmcp
+        # (and this package) build on all four systems.
+        py = pkgs.python3Packages.overrideScope (final: prev: {
+          py-key-value-aio = prev.py-key-value-aio.overridePythonAttrs (_: {
+            doCheck = false;
+            nativeCheckInputs = [ ];
+          });
+        });
         pname = "mcp-atlassian";
 
         # markdown-to-confluence is not packaged in nixpkgs. Build it from the
