@@ -1,0 +1,10 @@
+{
+  "latest": "0.23.0",
+  "versions": {
+    "0.23.0": {
+      "version": "0.23.0",
+      "url": "https://files.pythonhosted.org/packages/4a/0b/2ca4875a53d8924191b5b9dffe9b7c95be75ac4a28d8deeee83784262902/mcp_atlassian-0.23.0.tar.gz",
+      "hash": "sha256-l1fr8UWwNqKirPlDKH32b62G2ZDEmQC+Q+geGNVpHEk="
+    }
+  }
+}
