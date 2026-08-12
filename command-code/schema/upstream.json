@@ -126,7 +126,7 @@
         "inputModalities": [
           "text"
         ],
-        "label": "DeepSeek V4 Pro",
+        "label": "DeepSeek V4 Pro (latest)",
         "reasoningEfforts": [
           "high",
           "max"
@@ -602,7 +602,7 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2379110,
+    "bundleBytes": 2391000,
     "modelCount": 55,
     "pathLiteralCounts": {
       "config.json": 5,
@@ -623,14 +623,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 645316
+    "tokenCount": 651322
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-hupWFiH7m6G1GGrbGCS72/69khdQLvbWKAx+kB/GWS4=",
+    "entrypointHash": "sha256-ql8+njIHJJkBjHbAxxoRYvkeHvsFlUbgQvOBcIpQgFE=",
     "name": "command-code",
-    "packageJsonHash": "sha256-JTgYz4AkLGmgqdN+eeCxNAoTnalZGqTZKqlmFrXFR7Q=",
-    "version": "1.17.0"
+    "packageJsonHash": "sha256-BtWuMBw0XOmClqSq/Z4hDSZRJi5PbM1s+PYceL5QWA0=",
+    "version": "1.20.0"
   },
   "schemaVersion": 1,
   "structural": {
