@@ -94,6 +94,12 @@
             installPhase = ''
               runHook preInstall
               install -m755 -D hunk $out/bin/hunk
+              # The release tarball bundles the agent-facing review skill.
+              # Install it next to bin/ so `hunk skill path` resolves it:
+              # hunk walks up from its own realpath looking for skills/.
+              if [ -d skills ]; then
+                cp -R --no-preserve=mode skills $out/skills
+              fi
               runHook postInstall
             '';
 
