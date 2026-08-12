@@ -7,7 +7,9 @@
       "hashes": {
         "x86_64-linux": "sha256-J5pIr+qUA/M0h4FPgUOX9R9ocdJtL8PVoolh+xFnJmA=",
         "x86_64-darwin": "sha256-AjouurLXOoTpQtO5ZISer7m17Y63njcNSbS8+2l3dUA="
-      }
+      },
+      "srcHash": "sha256-oF9TDS4HauwvHwCl9TnTBnQ9Oe84QDmxWOngPOeDZFE=",
+      "cargoHash": "sha256-lgWDrzUDzFkpFmW2nlH87kcSXd+fTpJ+AJxjqEUDtCY="
     }
   }
 }
