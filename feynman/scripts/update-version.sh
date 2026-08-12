@@ -34,7 +34,8 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 releases_file="${pkg_dir}/releases.json"
-readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+readonly PACKAGE_DIR_NAME
 
 ensure_required_tools_installed() {
   for t in nix curl jq; do
@@ -64,9 +65,20 @@ has_version_entry() {
 }
 
 get_latest_release_tag() {
-  local effective_url
-  effective_url="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest")"
-  printf '%s\n' "${effective_url##*/}"
+  local effective_url tag
+  if ! effective_url="$(
+    curl --retry 5 --retry-all-errors -fsSL -o /dev/null -w '%{url_effective}' \
+      "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest"
+  )"; then
+    log_error "Failed to resolve the latest GitHub release"
+    return 1
+  fi
+  tag="${effective_url##*/}"
+  if [[ "$tag" != v* || "$tag" = "latest" ]]; then
+    log_error "GitHub returned an invalid latest release tag: ${tag}"
+    return 1
+  fi
+  printf '%s\n' "$tag"
 }
 
 tag_to_version() {
@@ -207,13 +219,18 @@ main() {
     esac
   done
 
-  local current_version latest_version
+  local current_version latest_version latest_tag
   current_version="$(get_current_version)"
   if [ -z "$current_version" ]; then
     log_error "Failed to detect current version from releases.json"
     exit 2
   fi
-  latest_version="${target_version:-$(tag_to_version "$(get_latest_release_tag)")}"
+  if [ -n "$target_version" ]; then
+    latest_version="${target_version#v}"
+  else
+    latest_tag="$(get_latest_release_tag)"
+    latest_version="$(tag_to_version "$latest_tag")"
+  fi
   if [ -z "$latest_version" ]; then
     log_error "Failed to fetch latest version"
     exit 2

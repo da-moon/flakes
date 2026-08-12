@@ -22,14 +22,16 @@ let
       jsonValue = valueType // {
         description = "JSON value";
       };
-      valueType = types.nullOr (types.oneOf [
-        types.bool
-        types.int
-        types.float
-        types.str
-        (types.listOf jsonValue)
-        (types.attrsOf jsonValue)
-      ]);
+      valueType = types.nullOr (
+        types.oneOf [
+          types.bool
+          types.int
+          types.float
+          types.str
+          (types.listOf jsonValue)
+          (types.attrsOf jsonValue)
+        ]
+      );
     in
     jsonValue;
 
@@ -44,29 +46,37 @@ let
     '';
   };
 
-  strOpt = description: mkOption {
-    type = types.nullOr types.str;
-    default = null;
-    inherit description;
-  };
+  strOpt =
+    description:
+    mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      inherit description;
+    };
 
-  intOpt = description: mkOption {
-    type = types.nullOr types.int;
-    default = null;
-    inherit description;
-  };
+  intOpt =
+    description:
+    mkOption {
+      type = types.nullOr types.int;
+      default = null;
+      inherit description;
+    };
 
-  boolOpt = description: mkOption {
-    type = types.nullOr types.bool;
-    default = null;
-    inherit description;
-  };
+  boolOpt =
+    description:
+    mkOption {
+      type = types.nullOr types.bool;
+      default = null;
+      inherit description;
+    };
 
-  strListOpt = description: mkOption {
-    type = types.nullOr (types.listOf types.str);
-    default = null;
-    inherit description;
-  };
+  strListOpt =
+    description:
+    mkOption {
+      type = types.nullOr (types.listOf types.str);
+      default = null;
+      inherit description;
+    };
 
   # The 16 hook events documented at
   # https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html
@@ -187,7 +197,15 @@ let
     options = {
       enabled = boolOpt "Enable thinking (default true upstream).";
       effort = mkOption {
-        type = types.nullOr (types.enum [ "low" "medium" "high" "xhigh" "max" ]);
+        type = types.nullOr (
+          types.enum [
+            "low"
+            "medium"
+            "high"
+            "xhigh"
+            "max"
+          ]
+        );
         default = null;
         description = "Thinking effort level.";
       };
@@ -216,7 +234,13 @@ let
       bashAutoBackgroundOnTimeout = boolOpt "Auto-background Bash commands that hit the timeout (default true).";
       bashTaskTimeoutS = intOpt "Foreground Bash timeout in seconds (default 600; 0 = no timeout).";
       printBackgroundMode = mkOption {
-        type = types.nullOr (types.enum [ "exit" "drain" "steer" ]);
+        type = types.nullOr (
+          types.enum [
+            "exit"
+            "drain"
+            "steer"
+          ]
+        );
         default = null;
         description = "Background behavior for print (non-interactive) mode (default \"steer\").";
       };
@@ -258,7 +282,11 @@ let
   permissionRuleType = types.submodule {
     options = {
       decision = mkOption {
-        type = types.enum [ "allow" "deny" "ask" ];
+        type = types.enum [
+          "allow"
+          "deny"
+          "ask"
+        ];
         description = "Rule decision.";
       };
       pattern = mkOption {
@@ -294,7 +322,13 @@ let
     options = {
       defaultModel = strOpt "Alias of the default model; must exist in `models`.";
       defaultPermissionMode = mkOption {
-        type = types.nullOr (types.enum [ "manual" "auto" "yolo" ]);
+        type = types.nullOr (
+          types.enum [
+            "manual"
+            "auto"
+            "yolo"
+          ]
+        );
         default = null;
         description = "Default permission mode (default \"manual\" upstream).";
       };
@@ -425,7 +459,12 @@ let
       cwd = strOpt "Working directory for the stdio child process.";
       url = strOpt "URL for an HTTP server (or SSE when transport = \"sse\").";
       transport = mkOption {
-        type = types.nullOr (types.enum [ "http" "sse" ]);
+        type = types.nullOr (
+          types.enum [
+            "http"
+            "sse"
+          ]
+        );
         default = null;
         description = "Explicit transport; only needed for legacy SSE servers.";
       };
@@ -466,7 +505,7 @@ in
   # against. flake.nix throws when it does not match the latest release, so
   # every version bump forces a human review of the schema (command-code
   # convention). scripts/update-version.sh refreshes it on drift-accept.
-  schemaVersion = "0.34.0";
+  schemaVersion = "0.35.0";
 
   # Merge manifest for config.toml consumed by the jq merge engine
   # (modules/lib.nix). Meaning:

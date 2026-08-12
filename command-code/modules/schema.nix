@@ -56,7 +56,7 @@ let
             "acceptEdits"
           ])
           ''
-            Default project edit permission mode understood by Command Code 1.1.1.
+            Default project edit permission mode understood by Command Code 1.20.0.
           '';
       autoApprove = mkOption {
         type = autoApproveType;
@@ -94,7 +94,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.17.0";
+  schemaVersion = "1.20.0";
 
   globalConfigType = types.submodule {
     options = {
@@ -123,7 +123,7 @@ rec {
       featureModels = mkOption {
         type = featureModelsType;
         default = { };
-        description = "Per-feature model overrides supported by Command Code 1.1.1.";
+        description = "Per-feature model overrides supported by Command Code 1.20.0.";
       };
       autoInstallExtension = nullable types.bool "Whether supported editor extensions are installed automatically.";
       imageVisionEnabled = nullable types.bool "Whether image vision descriptions are enabled for text-only models.";
@@ -163,7 +163,7 @@ rec {
         default = { };
         description = ''
           Effective project-local permission settings. permissions.deny is
-          intentionally absent because Command Code 1.1.1 does not enforce it.
+          intentionally absent because Command Code 1.20.0 does not enforce it.
         '';
       };
     };

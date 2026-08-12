@@ -44,7 +44,8 @@ schema_hash_file="${schema_dir}/upstream.sha256"
 schema_extractor="${script_dir}/extract-config-schema.mjs"
 schema_comparator="${script_dir}/compare-config-schema.mjs"
 schema_verifier="${script_dir}/verify-config-schema.mjs"
-readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+readonly PACKAGE_DIR_NAME
 
 ensure_required_tools_installed() {
   command -v nix >/dev/null 2>&1 || { log_error "nix is required but not installed."; exit 2; }
@@ -73,14 +74,25 @@ has_version_entry() {
 }
 
 get_latest_release_tag() {
-  local effective_url
-  effective_url="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest")"
-  printf '%s\n' "${effective_url##*/}"
+  local effective_url tag
+  if ! effective_url="$(
+    curl --retry 5 --retry-all-errors -fsSL -o /dev/null -w '%{url_effective}' \
+      "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest"
+  )"; then
+    log_error "Failed to resolve the latest GitHub release"
+    return 1
+  fi
+  tag="${effective_url##*/}"
+  if [[ "$tag" != "${TAG_PREFIX}"* || "$tag" = "latest" ]]; then
+    log_error "GitHub returned an invalid latest release tag: ${tag}"
+    return 1
+  fi
+  printf '%s\n' "$tag"
 }
 
 tag_to_version() {
   local tag="$1"
-  tag="${tag#${TAG_PREFIX}}"
+  tag="${tag#"${TAG_PREFIX}"}"
   printf '%s\n' "$tag"
 }
 
