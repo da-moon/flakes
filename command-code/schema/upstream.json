@@ -189,6 +189,20 @@
         ]
       },
       {
+        "contextWindow": 1048576,
+        "id": "google/gemini-3.7-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 3.7 Flash",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
         "contextWindow": 400000,
         "id": "gpt-5.3-codex",
         "inputModalities": [
@@ -518,6 +532,20 @@
         ]
       },
       {
+        "contextWindow": 500000,
+        "id": "xai/grok-4.6",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Grok 4.6",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
         "contextWindow": 1000000,
         "id": "xiaomi/mimo-v2.5",
         "inputModalities": [
@@ -602,8 +630,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2391000,
-    "modelCount": 55,
+    "bundleBytes": 2403677,
+    "modelCount": 57,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
@@ -623,14 +651,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 651322
+    "tokenCount": 655427
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-ql8+njIHJJkBjHbAxxoRYvkeHvsFlUbgQvOBcIpQgFE=",
+    "entrypointHash": "sha256-HlyxRBZuoNIC6ayKUyvz7A4txrjE1jEeRgQY//GSZ28=",
     "name": "command-code",
-    "packageJsonHash": "sha256-BtWuMBw0XOmClqSq/Z4hDSZRJi5PbM1s+PYceL5QWA0=",
-    "version": "1.20.0"
+    "packageJsonHash": "sha256-cKT9PWYj9VO3PIZ9M1+2xPS48ZHzObaZaafI2FUKAgI=",
+    "version": "1.24.0"
   },
   "schemaVersion": 1,
   "structural": {
