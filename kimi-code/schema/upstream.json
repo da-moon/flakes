@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "0.35.0"
+    "version": "0.36.1"
   },
   "schemaVersion": 1,
   "structural": {
@@ -119,7 +119,22 @@
       },
       "secondaryModel": {
         "deprecations": [],
-        "fields": null
+        "fields": [
+          "adaptiveThinking",
+          "capabilities",
+          "defaultEffort",
+          "defaultModel",
+          "displayName",
+          "force",
+          "maxContextSize",
+          "maxInputSize",
+          "maxOutputSize",
+          "model",
+          "models",
+          "offEffort",
+          "reasoningKey",
+          "supportEfforts"
+        ]
       },
       "services": {
         "deprecations": [],
@@ -213,6 +228,7 @@
       "topLevel": [
         "cache_expiry_hint",
         "disable_paste_burst",
+        "render_latex",
         "status_line",
         "theme"
       ]
