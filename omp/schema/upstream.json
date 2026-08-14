@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "17.2.15"
+    "version": "17.3.4"
   },
   "schemaVersion": 1,
   "structural": {
@@ -14,10 +14,6 @@
       "advisor.immuneTurns": {
         "default": 3,
         "type": "number"
-      },
-      "advisor.subagents": {
-        "default": false,
-        "type": "boolean"
       },
       "advisor.syncBacklog": {
         "default": "off",
@@ -1728,6 +1724,10 @@
           "nerd",
           "ascii"
         ]
+      },
+      "task.agentAdvisor": {
+        "default": null,
+        "type": "record"
       },
       "task.agentIdleTtlMs": {
         "default": 420000,
