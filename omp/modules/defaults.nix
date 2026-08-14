@@ -7,7 +7,7 @@
 # convention). scripts/update-version.sh refreshes it on drift-accept.
 { }:
 {
-  schemaVersion = "17.2.15";
+  schemaVersion = "17.3.4";
 
   defaultSettings = {
     setupVersion = 0;
@@ -17,7 +17,6 @@
     };
     advisor = {
       enabled = false;
-      subagents = false;
       syncBacklog = "off";
       immuneTurns = 3;
     };
@@ -554,6 +553,7 @@
       disabledAgents = [ ];
       agentModelOverrides = { };
       showResolvedModelBadge = false;
+      agentAdvisor = false;
     };
     tasks = {
       todoClearDelay = 60;
