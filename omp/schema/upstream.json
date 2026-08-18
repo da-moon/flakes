@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "17.3.4"
+    "version": "17.3.7"
   },
   "schemaVersion": 1,
   "structural": {
@@ -499,6 +499,10 @@
       },
       "exa.searchDelayMs": {
         "default": 1000,
+        "type": "number"
+      },
+      "extensionHandlers.toolCallTimeoutMs": {
+        "default": 30000,
         "type": "number"
       },
       "extensions": {
