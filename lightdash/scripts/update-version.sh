@@ -95,7 +95,7 @@ generate_deps_lock() {
 
   local tmp
   tmp="$(mktemp -d -t "${PACKAGE_DIR_NAME}-${version}-deps.XXXXXX")"
-  trap 'rm -rf "$tmp"' RETURN
+  trap 'rm -rf "${tmp:-}"' RETURN
 
   local tarball="${tmp}/cli-${version}.tgz"
   log_info "Downloading npm tarball..."
@@ -174,6 +174,19 @@ build_commit_message() {
   else
     printf 'chore(%s): rehash %s\n' "$scope" "$new_version"
   fi
+}
+
+# Stage new files so Nix flake evaluation (which reads from the git tree)
+# can see them before the build verification runs.
+stage_release_files() {
+  if ! command -v git >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! git -C "$pkg_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return 0
+  fi
+  local -a paths=("$@")
+  git -C "$pkg_dir" add -- "${paths[@]}"
 }
 
 # Parallel-safe auto-commit. flock serialises the git index across concurrent updaters.
@@ -336,6 +349,9 @@ main() {
   local sanitized_key
   sanitized_key="$(sanitize_key "$latest_version")"
 
+  local -a commit_paths=("releases.json" "deps/${latest_version}")
+  stage_release_files "${commit_paths[@]}"
+
   if [ "$no_build" != true ]; then
     if ! verify_build "$sanitized_key"; then
       log_error "Build verification failed; restoring previous releases.json"
@@ -350,7 +366,7 @@ main() {
   show_changes
 
   maybe_git_commit "$(build_commit_message "$current_version" "$latest_version")" \
-    "releases.json" "deps/${latest_version}"
+    "${commit_paths[@]}"
 
   log_info "Successfully appended lightdash ${latest_version} (latest was $current_version)"
 }
