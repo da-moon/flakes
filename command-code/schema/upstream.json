@@ -596,6 +596,19 @@
           "text"
         ],
         "label": "GLM-5.2 Fast"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "zai-org/GLM-5.3",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "GLM-5.3",
+        "reasoningEfforts": [
+          "low",
+          "high",
+          "max"
+        ]
       }
     ],
     "providers": [
@@ -630,8 +643,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2403677,
-    "modelCount": 57,
+    "bundleBytes": 2407700,
+    "modelCount": 58,
     "pathLiteralCounts": {
       "config.json": 5,
       "mcp-tokens.json": 1,
@@ -651,14 +664,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 655427
+    "tokenCount": 656391
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-HlyxRBZuoNIC6ayKUyvz7A4txrjE1jEeRgQY//GSZ28=",
+    "entrypointHash": "sha256-zxopL+ipnuvgp5XYE5pFdr2GX6xN1MwdZrPTm2u+9Eg=",
     "name": "command-code",
-    "packageJsonHash": "sha256-cKT9PWYj9VO3PIZ9M1+2xPS48ZHzObaZaafI2FUKAgI=",
-    "version": "1.24.0"
+    "packageJsonHash": "sha256-+eExzgvohpOf6u6GGzzb3VaigxCalCxwhtKk2EcYkxY=",
+    "version": "1.27.1"
   },
   "schemaVersion": 1,
   "structural": {
