@@ -7,7 +7,7 @@
 # convention). scripts/update-version.sh refreshes it on drift-accept.
 { }:
 {
-  schemaVersion = "17.3.4";
+  schemaVersion = "17.3.7";
 
   defaultSettings = {
     setupVersion = 0;
