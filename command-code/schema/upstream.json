@@ -446,7 +446,12 @@
           "image",
           "text"
         ],
-        "label": "Qwen 3.8 27B"
+        "label": "Qwen 3.8 27B",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -652,7 +657,7 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2409233,
+    "bundleBytes": 2409321,
     "modelCount": 59,
     "pathLiteralCounts": {
       "config.json": 5,
@@ -673,14 +678,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 656794
+    "tokenCount": 656816
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-Kf4F9WOA7tUFjaFtBuqgoovzKqBOS3NtDQ/GmfczF20=",
+    "entrypointHash": "sha256-6i4RNssSsEUoLfKEr/WQb4VoCc82QZwNztQqgOtcbUU=",
     "name": "command-code",
-    "packageJsonHash": "sha256-0B8eMCRQvTW0dQPyXkqdlIY4MdPIEI9wgfyBqAv/SCc=",
-    "version": "1.28.0"
+    "packageJsonHash": "sha256-g2n8gXmdKDNy+mOVj5a3KUtYrR8BNb6IIQPq4w3FCPM=",
+    "version": "1.28.1"
   },
   "schemaVersion": 1,
   "structural": {
