@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "17.3.7"
+    "version": "17.4.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -250,6 +250,10 @@
         "default": 120000,
         "type": "number"
       },
+      "compaction.asyncEnabled": {
+        "default": true,
+        "type": "boolean"
+      },
       "compaction.autoContinue": {
         "default": true,
         "type": "boolean"
@@ -282,11 +286,11 @@
         "default": 20000,
         "type": "number"
       },
-      "compaction.midTurnEnabled": {
-        "default": true,
-        "type": "boolean"
+      "compaction.methodOrder": {
+        "default": null,
+        "type": "array"
       },
-      "compaction.remoteEnabled": {
+      "compaction.midTurnEnabled": {
         "default": true,
         "type": "boolean"
       },
@@ -301,17 +305,6 @@
       "compaction.reserveTokens": {
         "default": null,
         "type": "number"
-      },
-      "compaction.strategy": {
-        "default": "snapcompact",
-        "type": "enum",
-        "values": [
-          "context-full",
-          "handoff",
-          "shake",
-          "snapcompact",
-          "off"
-        ]
       },
       "compaction.supersedeReads": {
         "default": true,
@@ -336,6 +329,10 @@
           "on",
           "off"
         ]
+      },
+      "composer.shape": {
+        "default": "box",
+        "type": "string"
       },
       "computer.display": {
         "default": "all",
@@ -477,6 +474,14 @@
           "off"
         ]
       },
+      "eval.autoBackground.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "eval.autoBackground.thresholdMs": {
+        "default": 60000,
+        "type": "number"
+      },
       "eval.jl": {
         "default": false,
         "type": "boolean"
@@ -500,6 +505,10 @@
       "exa.searchDelayMs": {
         "default": 1000,
         "type": "number"
+      },
+      "extendedContext": {
+        "default": true,
+        "type": "boolean"
       },
       "extensionHandlers.toolCallTimeoutMs": {
         "default": 30000,
@@ -1189,6 +1198,16 @@
         "default": null,
         "type": "enum"
       },
+      "providers.cacheRetention": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "short",
+          "long",
+          "none"
+        ]
+      },
       "providers.fetch": {
         "default": "auto",
         "type": "enum",
@@ -1645,6 +1664,10 @@
       "statusLine.compactThinkingLevel": {
         "default": false,
         "type": "boolean"
+      },
+      "statusLine.contextLine": {
+        "default": "annotated",
+        "type": "enum"
       },
       "statusLine.leftSegments": {
         "default": null,
