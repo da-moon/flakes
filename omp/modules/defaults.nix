@@ -12,7 +12,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "17.3.7";
+  schemaVersion = "17.4.0";
 
   defaultSettings = {
     setupVersion = 0;
@@ -46,6 +46,7 @@
       # 17.2.14 added dotted key "searxng.safesearch" (number); its default is
       # null, so nothing is declared here.
       antigravityEndpoint = "auto";
+      cacheRetention = "auto";
       imageOrder = [ ];
       fireworksTier = "standard";
       tts = "auto";
@@ -92,9 +93,13 @@
       transparent = false;
       compactThinkingLevel = false;
       showHookStatus = true;
+      contextLine = "annotated";
       leftSegments = [ ];
       rightSegments = [ ];
       segmentOptions = { };
+    };
+    composer = {
+      shape = "box";
     };
     tools = {
       artifactSpillThreshold = 50;
@@ -150,6 +155,8 @@
     omitThinking = false;
     # 17.2.14 added top-level externalThinking (boolean, default false).
     externalThinking = false;
+    # 17.4.0 added top-level extendedContext (boolean, default true).
+    extendedContext = true;
     model = {
       loopGuard = {
         enabled = true;
@@ -259,11 +266,11 @@
     compaction = {
       enabled = true;
       midTurnEnabled = true;
-      strategy = "snapcompact";
+      asyncEnabled = true;
+      methodOrder = [ ];
       thresholdPercent = -1;
       thresholdTokens = -1;
       handoffSaveToDisk = false;
-      remoteEnabled = true;
       remoteStreamingV2Enabled = true;
       keepRecentTokens = 20000;
       autoContinue = true;
@@ -485,6 +492,10 @@
       js = true;
       rb = false;
       jl = false;
+      autoBackground = {
+        enabled = false;
+        thresholdMs = 60000;
+      };
     };
     python = {
       kernelMode = "session";
