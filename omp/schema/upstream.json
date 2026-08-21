@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "17.4.0"
+    "version": "17.4.1"
   },
   "schemaVersion": 1,
   "structural": {
@@ -1252,6 +1252,19 @@
       "providers.ollama-cloud.maxConcurrency": {
         "default": 3,
         "type": "number"
+      },
+      "providers.openai-codex.codeMode": {
+        "default": "off",
+        "type": "enum",
+        "values": [
+          "off",
+          "on",
+          "auto"
+        ]
+      },
+      "providers.openai-codex.codeModeDirectTools": {
+        "default": null,
+        "type": "array"
       },
       "providers.openaiWebsockets": {
         "default": "auto",
