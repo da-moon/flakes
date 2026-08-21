@@ -52,7 +52,14 @@
           "image",
           "text"
         ],
-        "label": "Claude Fable 5"
+        "label": "Claude Fable 5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 200000,
@@ -70,7 +77,14 @@
           "image",
           "text"
         ],
-        "label": "Claude Opus 4.7"
+        "label": "Claude Opus 4.7",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -79,7 +93,14 @@
           "image",
           "text"
         ],
-        "label": "Claude Opus 4.8"
+        "label": "Claude Opus 4.8",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -88,7 +109,14 @@
           "image",
           "text"
         ],
-        "label": "Claude Opus 5"
+        "label": "Claude Opus 5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -97,7 +125,14 @@
           "image",
           "text"
         ],
-        "label": "Claude Sonnet 4.6"
+        "label": "Claude Sonnet 4.6",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -106,7 +141,14 @@
           "image",
           "text"
         ],
-        "label": "Claude Sonnet 5"
+        "label": "Claude Sonnet 5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -115,6 +157,19 @@
           "text"
         ],
         "label": "DeepSeek V4 Flash (latest)",
+        "reasoningEfforts": [
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "deepseek/deepseek-v4-flash-vision-exp",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "DeepSeek V4 Flash Vision (exp)",
         "reasoningEfforts": [
           "high",
           "max"
@@ -209,7 +264,13 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.3 Codex"
+        "label": "GPT-5.3 Codex",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 400000,
@@ -218,7 +279,13 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.4"
+        "label": "GPT-5.4",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 400000,
@@ -235,12 +302,19 @@
         ]
       },
       {
+        "contextWindow": 400000,
         "id": "gpt-5.5",
         "inputModalities": [
           "image",
           "text"
         ],
-        "label": "GPT-5.5"
+        "label": "GPT-5.5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 1050000,
@@ -249,7 +323,14 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.6 Luna"
+        "label": "GPT-5.6 Luna",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1050000,
@@ -258,7 +339,14 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.6 Sol"
+        "label": "GPT-5.6 Sol",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1050000,
@@ -267,7 +355,14 @@
           "image",
           "text"
         ],
-        "label": "GPT-5.6 Terra"
+        "label": "GPT-5.6 Terra",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 256000,
@@ -481,6 +576,20 @@
         ]
       },
       {
+        "contextWindow": 1048576,
+        "id": "stealth/ox-alpha",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Ox Alpha",
+        "reasoningEfforts": [
+          "low",
+          "high",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 1000000,
         "id": "stepfun/Step-3.5-Flash",
         "inputModalities": [
@@ -633,7 +742,7 @@
       },
       {
         "id": "codex",
-        "label": "OpenAI",
+        "label": "OpenAI ChatGPT/Codex",
         "requiresAuth": 0
       },
       {
@@ -657,10 +766,10 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2411034,
-    "modelCount": 59,
+    "bundleBytes": 2488028,
+    "modelCount": 61,
     "pathLiteralCounts": {
-      "config.json": 5,
+      "config.json": 6,
       "mcp-tokens.json": 1,
       "mcp.json": 21,
       "settings.json": 20,
@@ -678,14 +787,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 657422
+    "tokenCount": 680974
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-QfM3vrzaMa83IQFishfyLYyzISeK8btUJuGVVgJAqqo=",
+    "entrypointHash": "sha256-1ASqHmbZ5K2/oPmY0yhgm1DOpdeIEs/hGa0tpSnAiYg=",
     "name": "command-code",
-    "packageJsonHash": "sha256-g0a0jecf/5lQlE9Kt8sxio5uBkuXXINklRpeyctmxl0=",
-    "version": "1.28.4"
+    "packageJsonHash": "sha256-xuH+ZXsSHHwQogNjDsEdCJmpQP2KVFGFN9wgbkJzPEA=",
+    "version": "1.32.1"
   },
   "schemaVersion": 1,
   "structural": {
@@ -749,10 +858,6 @@
           "ownership": "runtime-preserved",
           "type": "boolean"
         },
-        "forceOAuth": {
-          "ownership": "runtime-preserved",
-          "type": "boolean"
-        },
         "ideContextEnabled": {
           "ownership": "declarative",
           "type": "unknown"
@@ -768,6 +873,10 @@
         "model": {
           "ownership": "declarative",
           "type": "string"
+        },
+        "modelProvider": {
+          "ownership": "declarative",
+          "type": "unknown"
         },
         "path": {
           "ownership": "declarative",
