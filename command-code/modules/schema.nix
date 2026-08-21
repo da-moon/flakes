@@ -94,7 +94,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.28.4";
+  schemaVersion = "1.32.1";
 
   globalConfigType = types.submodule {
     options = {
@@ -127,6 +127,7 @@ rec {
       };
       autoInstallExtension = nullable types.bool "Whether supported editor extensions are installed automatically.";
       imageVisionEnabled = nullable types.bool "Whether image vision descriptions are enabled for text-only models.";
+      modelProvider = nullable nonEmptyString "Default model provider/route identifier.";
     };
   };
 
