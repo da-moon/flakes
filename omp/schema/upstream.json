@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "17.4.1"
+    "version": "18.0.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -82,7 +82,7 @@
         "type": "boolean"
       },
       "autocompleteMaxVisible": {
-        "default": 5,
+        "default": 10,
         "type": "number"
       },
       "autolearn.autoContinue": {
@@ -751,6 +751,46 @@
       "images.describeForTextModels": {
         "default": true,
         "type": "boolean"
+      },
+      "images.urls.backends": {
+        "default": null,
+        "type": "array"
+      },
+      "images.urls.bindHost": {
+        "default": "127.0.0.1",
+        "type": "string"
+      },
+      "images.urls.command": {
+        "default": null,
+        "type": "string"
+      },
+      "images.urls.credentials": {
+        "default": null,
+        "type": "record"
+      },
+      "images.urls.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "images.urls.options": {
+        "default": null,
+        "type": "record"
+      },
+      "images.urls.publicBaseUrl": {
+        "default": null,
+        "type": "string"
+      },
+      "images.urls.sshRemotePort": {
+        "default": 8787,
+        "type": "number"
+      },
+      "images.urls.sshTarget": {
+        "default": null,
+        "type": "string"
+      },
+      "images.urls.ttlHours": {
+        "default": 72,
+        "type": "number"
       },
       "includeModelInPrompt": {
         "default": true,
@@ -1649,6 +1689,18 @@
         "default": false,
         "type": "boolean"
       },
+      "spelling.autocomplete": {
+        "default": true,
+        "type": "boolean"
+      },
+      "spelling.autocorrect": {
+        "default": false,
+        "type": "boolean"
+      },
+      "spelling.typoDetection": {
+        "default": true,
+        "type": "boolean"
+      },
       "startup.changelogMode": {
         "default": "summary",
         "type": "enum",
@@ -1679,7 +1731,7 @@
         "type": "boolean"
       },
       "statusLine.contextLine": {
-        "default": "annotated",
+        "default": "embedded",
         "type": "enum"
       },
       "statusLine.leftSegments": {
@@ -2158,6 +2210,15 @@
       "tui.renderMermaid": {
         "default": true,
         "type": "boolean"
+      },
+      "tui.resizeScrollback": {
+        "default": "append",
+        "type": "enum",
+        "values": [
+          "append",
+          "rebuild",
+          "preserve"
+        ]
       },
       "tui.scrollbackRebuild": {
         "default": false,
