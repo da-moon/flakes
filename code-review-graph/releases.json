@@ -1,5 +1,5 @@
 {
-  "latest": "2.3.7",
+  "latest": "2.3.8",
   "versions": {
     "2.3.6": {
       "version": "2.3.6",
@@ -12,6 +12,12 @@
       "rev": "2.3.7",
       "url": "https://files.pythonhosted.org/packages/f3/8f/2df3fcca285b489d195706b09cefda3e57e7158185cb83905200d7b27199/code_review_graph-2.3.7-py3-none-any.whl",
       "hash": "sha256-Ehltzj5nO97H+6l65cTf91ia3uc6chN09i76524P3Yg="
+    },
+    "2.3.8": {
+      "version": "2.3.8",
+      "rev": "2.3.8",
+      "url": "https://files.pythonhosted.org/packages/b9/f7/7b329026ab076149bbef7c98a6d62f2f23b50e76f4a7d9726d7ef46a3b86/code_review_graph-2.3.8-py3-none-any.whl",
+      "hash": "sha256-ATrjwRnMfeM3+eiP422u+C4tTe+UKgFO3Pl/Em4ghUc="
     }
   }
 }
