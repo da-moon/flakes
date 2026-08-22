@@ -72,13 +72,36 @@ in
 
     home.packages = [ cfg.package ];
 
-    home.file = {
-      ".omp/agent/config.yml".source = configFile;
-      ".omp/agent/keybindings.yml".source = keybindingsFile;
-    }
-    // lib.optionalAttrs (cfg.mcpServers != { }) {
-      ".omp/agent/mcp.json".source = mcpServersFile;
-    };
+    home.file.".omp/agent/keybindings.yml".source = keybindingsFile;
+
+    # config.yml and mcp.json are omp runtime write targets: every settings
+    # save takes a native lock on `${realpath(file)}.lock` and writes an
+    # atomic `.tmp` sibling next to the file (upstream
+    # packages/utils/src/file-lock.ts; on macOS the lock itself is a
+    # flock(2) sidecar file). home.file would symlink them into the
+    # read-only Nix store, where lock creation (macOS) and writes (all
+    # platforms) fail. Materialize real writable copies at activation
+    # instead. A plain file whose content matches this generation is left
+    # alone, so runtime edits (e.g. `omp config set`) survive switches that
+    # did not change programs.omp; stale HM symlinks and content drift are
+    # overwritten.
+    home.activation.ompAgentConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      agentDir="${config.home.homeDirectory}/.omp/agent"
+      mkdir -p "$agentDir"
+
+      installManaged() {
+        if [ ! -L "$2" ] && cmp -s "$1" "$2" 2>/dev/null; then
+          return 0
+        fi
+        rm -f "$2"
+        install -m 600 "$1" "$2"
+      }
+
+      installManaged "${configFile}" "$agentDir/config.yml"
+      ${lib.optionalString (cfg.mcpServers != { }) ''
+        installManaged "${mcpServersFile}" "$agentDir/mcp.json"
+      ''}
+    '';
 
     home.sessionVariables = envVars;
   };
