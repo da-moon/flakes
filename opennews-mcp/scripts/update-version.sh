@@ -72,7 +72,9 @@ get_latest_commit_sha() {
 
 get_commit_date() {
   local sha="$1"
-  curl -fsSL "https://api.github.com/repos/${OWNER}/${REPO}/commits/${sha}" \
+  local -a auth_header=()
+  [ -n "${GITHUB_TOKEN:-}" ] && auth_header=(-H "Authorization: token ${GITHUB_TOKEN}")
+  curl -fsSL "${auth_header[@]}" "https://api.github.com/repos/${OWNER}/${REPO}/commits/${sha}" \
     | sed -n 's/.*"date":[[:space:]]*"\([0-9-]\{10\}\)T.*/\1/p' \
     | head -n1
 }
