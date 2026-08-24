@@ -147,7 +147,7 @@
                   $out/lib/${pname}/node_modules/node-llama-cpp/llama/localBuilds
 
                 makeWrapper ${pkgs.bun}/bin/bun $out/bin/qmd \
-                  --add-flags "$out/lib/${pname}/src/qmd.ts" \
+                  --add-flags "$out/lib/${pname}/src/cli/qmd.ts" \
                   --set-default NODE_LLAMA_CPP_BUILD_DIR "/tmp/node-llama-cpp" \
                   --set NODE_LLAMA_CPP_SKIP_DOWNLOAD "true" \
                   --run "mkdir -p /tmp/node-llama-cpp/localBuilds" \
