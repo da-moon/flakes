@@ -17,6 +17,7 @@
         "x86_64-linux"
         "aarch64-linux"
         "x86_64-darwin"
+        "aarch64-darwin"
       ];
 
       # Version table: consumers select the latest OR any past version.
