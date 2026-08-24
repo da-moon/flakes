@@ -103,8 +103,16 @@ verify_build() {
     log_error "nix build failed for codex_${sanitized_key}"
     return 1
   fi
+  # bwrap (bubblewrap sandboxing) is a Linux-only resource; the Darwin
+  # package layout ships codex-resources/zsh instead, with no bwrap binary.
+  local -a expected_rels=(bin/codex bin/codex-code-mode-host)
+  if [ "$(uname -s)" = "Linux" ]; then
+    expected_rels+=(bin/codex-resources/bwrap)
+  else
+    expected_rels+=(bin/codex-resources/zsh/bin/zsh)
+  fi
   local rel
-  for rel in bin/codex bin/codex-code-mode-host bin/codex-resources/bwrap; do
+  for rel in "${expected_rels[@]}"; do
     if [ ! -x "$out_path/$rel" ]; then
       log_error "Build succeeded but expected binary not found at: $out_path/$rel"
       return 1
