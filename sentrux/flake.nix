@@ -93,6 +93,9 @@
             ]
             ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.autoPatchelfHook
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+              pkgs.darwin.sigtool
             ];
 
             buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux (
@@ -134,7 +137,24 @@
               install -m755 -D $src $out/libexec/sentrux/sentrux
               mkdir -p $out/share/sentrux/grammars
               tar -xzf ${grammars} -C $out/share/sentrux/grammars
-
+            ''
+            # Upstream's darwin binary is linked against Homebrew's OpenSSL
+            # (/opt/homebrew/opt/openssl@3/...), which doesn't exist on a
+            # plain Nix install. Repoint those two load commands at the
+            # Nix-store OpenSSL and re-sign (ad-hoc) so Gatekeeper/dyld will
+            # still load the now-modified binary on Apple Silicon.
+            + lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+              install_name_tool -change \
+                /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib \
+                ${pkgs.openssl.out}/lib/libssl.3.dylib \
+                $out/libexec/sentrux/sentrux
+              install_name_tool -change \
+                /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib \
+                ${pkgs.openssl.out}/lib/libcrypto.3.dylib \
+                $out/libexec/sentrux/sentrux
+              codesign -f -s - $out/libexec/sentrux/sentrux
+            ''
+            + ''
               makeWrapper $out/libexec/sentrux/sentrux $out/bin/sentrux \
                 --set SENTRUX_GRAMMARS_DIR "$out/share/sentrux/grammars"
 
