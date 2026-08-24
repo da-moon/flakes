@@ -37,8 +37,12 @@
         # nixpkgs marks it broken on Darwin because its own test suite is not
         # reliable there. PolyTerm only imports it at runtime, so keep checks
         # disabled and clear that metadata gate for this package closure.
+        # nixpkgs' plyer runs its macOS-only pytest cases in installCheckPhase
+        # (doInstallCheck), not checkPhase, so doCheck alone leaves them
+        # running on darwin — disable both.
         plyerForPolyterm = python.pkgs.plyer.overrideAttrs (old: {
           doCheck = false;
+          doInstallCheck = false;
           meta = old.meta // {
             broken = false;
           };
