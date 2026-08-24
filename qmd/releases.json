@@ -20,7 +20,7 @@
         "x86_64-linux": "sha256-YiuNqpGAzKmz5EQvXG8IS6XyJ5p70qBfzQ2PFTdoAyE=",
         "aarch64-linux": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "x86_64-darwin": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "aarch64-darwin": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        "aarch64-darwin": "sha256-ryrqAH6LkRnLpaW3azhKvK/VJXToA4W7nlk/vmqExnY="
       }
     }
   }
