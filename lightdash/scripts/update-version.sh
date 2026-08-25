@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Appends the newest (or an explicit) @lightdash/cli npm release to releases.json
-# and commits a fully-pinned package-lock.json under deps/<version>. Existing
-# entries are preserved so consumers can still select past versions.
-#
-# The published npm tarball ships no lockfile, so this script:
-#   1. Downloads the tarball.
-#   2. Extracts it and strips devDependencies/scripts from package.json.
-#   3. Generates a package-lock.json with `npm install --package-lock-only`
-#      using Node 24 from nixpkgs.
-#   4. Commits package.json, package-lock.json and .npmrc so the flake can
-#      install every dependency offline via importNpmLock.
+# Appends the newest (or an explicit) lightdash release to releases.json.
+# flake.nix builds darwin from upstream's native GitHub-release binary
+# (no npm/lockfile involved) and linux from the npm tarball via
+# importNpmLock (npm publishes no linux binary release), so this script
+# populates both:
+#   1. Prefetches the darwin GitHub-release asset hashes (arm64 + x64) —
+#      fetchable from any host, not gated on running this on darwin.
+#   2. Downloads the npm tarball, extracts it, strips devDependencies/
+#      scripts from package.json, and generates a package-lock.json with
+#      `npm install --package-lock-only` (Node 24 from nixpkgs), committing
+#      package.json/package-lock.json/.npmrc under deps/<version> so the
+#      flake can install every linux dependency offline via importNpmLock.
 #
 # The version data in flake.nix is never touched.
 set -euo pipefail
@@ -26,6 +27,12 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 readonly NPM_REGISTRY_BASE="https://registry.npmjs.org/@lightdash/cli"
 readonly PACKAGE_SCOPE="@lightdash"
 readonly NPM_NAME="cli"
+readonly GITHUB_RELEASES_BASE="https://github.com/lightdash/lightdash/releases/download"
+# nix system -> upstream's darwin asset arch suffix
+readonly -A DARWIN_ASSET_ARCH=(
+  [aarch64-darwin]="arm64"
+  [x86_64-darwin]="x64"
+)
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -65,6 +72,28 @@ prefetch_sha256_sri() {
   nix store prefetch-file --json --hash-type sha256 "$url" \
     | jq -r '.hash // empty' \
     | head -n1
+}
+
+# Prefetch upstream's native darwin release binaries (arm64 + x64) for one
+# version. Outputs a JSON object {aarch64-darwin: "sha256-...", x86_64-darwin:
+# "sha256-..."} on stdout. Fails loudly if either asset is missing/unfetchable
+# — a real upstream regression, not something to silently skip.
+prefetch_darwin_hashes() {
+  local version="$1"
+  local result="{}"
+  local system asset_arch url hash
+  for system in "${!DARWIN_ASSET_ARCH[@]}"; do
+    asset_arch="${DARWIN_ASSET_ARCH[$system]}"
+    url="${GITHUB_RELEASES_BASE}/${version}/lightdash-cli-${version}-macos-${asset_arch}.tar.gz"
+    log_info "Prefetching darwin (${system}) hash from ${url}..." >&2
+    hash="$(prefetch_sha256_sri "$url")"
+    if [ -z "$hash" ]; then
+      log_error "Failed to prefetch darwin asset hash for ${system} from $url"
+      return 1
+    fi
+    result="$(jq -n --argjson acc "$result" --arg k "$system" --arg v "$hash" '$acc + {($k): $v}')"
+  done
+  printf '%s' "$result"
 }
 
 # sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
@@ -328,6 +357,13 @@ main() {
   fi
   log_info "tarball hash: $tarball_hash"
 
+  local darwin_hashes_json
+  if ! darwin_hashes_json="$(prefetch_darwin_hashes "$latest_version")"; then
+    log_error "Failed to prefetch darwin release hashes for ${latest_version}"
+    exit 2
+  fi
+  log_info "darwin hashes: $darwin_hashes_json"
+
   if ! generate_deps_lock "$latest_version" "$tarball_url"; then
     log_error "Failed to generate dependency lock for ${latest_version}"
     exit 1
@@ -338,7 +374,8 @@ main() {
     --arg v "$latest_version" \
     --arg rev "$latest_version" \
     --arg tarballHash "$tarball_hash" \
-    '{version: $v, rev: $rev, tarballHash: $tarballHash}')"
+    --argjson darwinHashes "$darwin_hashes_json" \
+    '{version: $v, rev: $rev, tarballHash: $tarballHash, darwinHashes: $darwinHashes}')"
 
   local backup
   backup="$(mktemp -t releases.json.backup.XXXXXX)"

@@ -35,11 +35,60 @@
         lib = pkgs.lib;
         nodejs = pkgs.nodejs_24;
         pname = "lightdash";
+        isDarwin = lib.hasSuffix "-darwin" system;
 
-        # Builder: derive a lightdash package from one releases.json entry.
-        # PRESERVES the offline npm install logic; only version/tarball-hash
-        # now come from `entry`.
-        mk =
+        # darwin: upstream publishes a genuine self-contained native binary
+        # per GitHub release (lightdash-cli-X.Y.Z-macos-{arm64,x64}.tar.gz,
+        # a single Mach-O executable, no node/npm/lockfile involved at all).
+        # Prefer that over the npm/importNpmLock path used for linux: it's
+        # simpler, has no scoped-tarball-URL footgun, and needs no vendored
+        # lockfile. Only macOS assets exist upstream (no linux binaries), so
+        # linux keeps the npm-based build below.
+        darwinArchBySystem = {
+          aarch64-darwin = "arm64";
+          x86_64-darwin = "x64";
+        };
+
+        mkDarwin =
+          key: entry:
+          let
+            version = entry.version;
+            arch = darwinArchBySystem.${system};
+            hash = entry.darwinHashes.${system};
+
+            tarball = pkgs.fetchurl {
+              url = "https://github.com/lightdash/lightdash/releases/download/${version}/lightdash-cli-${version}-macos-${arch}.tar.gz";
+              inherit hash;
+            };
+          in
+          pkgs.stdenv.mkDerivation {
+            inherit pname version;
+            src = tarball;
+
+            meta = with lib; {
+              description = "Lightdash CLI - BI tool CLI for dbt projects";
+              homepage = "https://github.com/lightdash/lightdash";
+              license = licenses.mit;
+              mainProgram = "lightdash";
+              platforms = [ system ];
+              maintainers = [ ];
+            };
+
+            sourceRoot = ".";
+            dontBuild = true;
+            dontConfigure = true;
+            dontStrip = true;
+
+            installPhase = ''
+              runHook preInstall
+              install -D -m755 lightdash-macos-${arch} $out/bin/lightdash
+              runHook postInstall
+            '';
+          };
+
+        # linux: PRESERVES the offline npm install logic; only
+        # version/tarball-hash now come from `entry`.
+        mkLinux =
           key: entry:
           let
             version = entry.version;
@@ -76,7 +125,7 @@
               homepage = "https://github.com/lightdash/lightdash";
               license = licenses.mit;
               mainProgram = "lightdash";
-              platforms = systems;
+              platforms = [ system ];
               maintainers = [ ];
             };
 
@@ -104,6 +153,16 @@
             '';
           };
 
+        mk = if isDarwin then mkDarwin else mkLinux;
+
+        hasBuildData =
+          key: entry:
+          if isDarwin then
+            (entry ? darwinHashes) && (entry.darwinHashes ? ${system})
+          else
+            # Only expose linux versions that have a committed lockfile.
+            builtins.pathExists (./deps + "/${key}/package-lock.json");
+
         latestPkg = mk releases.latest releases.versions.${releases.latest};
 
         # One `lightdash_<sanitized-key>` package per entry in the table.
@@ -113,13 +172,7 @@
               name = "${pname}_${sanitizeKey key}";
               value = mk key releases.versions.${key};
             })
-            (
-              builtins.filter (
-                key:
-                # Only expose versions that have a committed lockfile.
-                builtins.pathExists (./deps + "/${key}/package-lock.json")
-              ) (builtins.attrNames releases.versions)
-            )
+            (builtins.filter (key: hasBuildData key releases.versions.${key}) (builtins.attrNames releases.versions))
         );
       in
       {
