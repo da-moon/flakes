@@ -46,7 +46,11 @@
             lockDir = ./deps + "/${version}";
 
             tarball = pkgs.fetchurl {
-              url = "https://registry.npmjs.org/@lightdash/cli/-/@lightdash/cli-${version}.tgz";
+              # npm strips the scope from the tarball filename for scoped
+              # packages: @lightdash/cli/-/cli-X.Y.Z.tgz, not
+              # @lightdash/cli-X.Y.Z.tgz. Verified against the registry's own
+              # dist.tarball field for this version.
+              url = "https://registry.npmjs.org/@lightdash/cli/-/cli-${version}.tgz";
               hash = entry.tarballHash;
             };
 
