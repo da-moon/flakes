@@ -39,7 +39,11 @@
     "1.252.1": {
       "version": "1.252.1",
       "rev": "1.252.1",
-      "tarballHash": "sha256-MhatdNOmh9swD+0QsDchLY2nkQ13CP7G8UCOiy/QWcg="
+      "tarballHash": "sha256-MhatdNOmh9swD+0QsDchLY2nkQ13CP7G8UCOiy/QWcg=",
+      "darwinHashes": {
+        "x86_64-darwin": "sha256-qAiqr4TQNAjzkawGALE5c3KRbe4mo0zGqhN3uZyEy8I=",
+        "aarch64-darwin": "sha256-cND+APzZox5s1QmHJQoAmEMhcU7ZuXytx1JMq60JwU8="
+      }
     }
   }
 }
