@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.0.4"
+    "version": "18.0.6"
   },
   "schemaVersion": 1,
   "structural": {
@@ -226,28 +226,28 @@
         "default": true,
         "type": "boolean"
       },
+      "commit.cacheEnabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "commit.cacheTtlDays": {
+        "default": 14,
+        "type": "number"
+      },
       "commit.changelogMaxDiffChars": {
         "default": 120000,
+        "type": "number"
+      },
+      "commit.mapBatchTokenBudget": {
+        "default": 16000,
         "type": "number"
       },
       "commit.mapReduceEnabled": {
         "default": true,
         "type": "boolean"
       },
-      "commit.mapReduceMaxConcurrency": {
-        "default": 5,
-        "type": "number"
-      },
-      "commit.mapReduceMaxFileTokens": {
-        "default": 50000,
-        "type": "number"
-      },
-      "commit.mapReduceMinFiles": {
-        "default": 4,
-        "type": "number"
-      },
-      "commit.mapReduceTimeoutMs": {
-        "default": 120000,
+      "commit.mapReduceThreshold": {
+        "default": 5000,
         "type": "number"
       },
       "compaction.asyncEnabled": {
@@ -1365,7 +1365,8 @@
         "values": [
           "auto",
           "local",
-          "xai"
+          "xai",
+          "deepinfra"
         ]
       },
       "providers.unexpectedStopModel": {
