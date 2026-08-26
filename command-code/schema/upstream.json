@@ -400,6 +400,23 @@
         "label": "Muse Spark 1.2 Contributor"
       },
       {
+        "contextWindow": 197000,
+        "id": "minimax/minimax-m2.7-free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "MiniMax M2.7"
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "minimax/minimax-m3-free",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiniMax M3"
+      },
+      {
         "contextWindow": 200000,
         "id": "MiniMaxAI/MiniMax-M2.5",
         "inputModalities": [
@@ -576,20 +593,6 @@
         ]
       },
       {
-        "contextWindow": 1048576,
-        "id": "stealth/ox-alpha",
-        "inputModalities": [
-          "image",
-          "text"
-        ],
-        "label": "Ox Alpha",
-        "reasoningEfforts": [
-          "low",
-          "high",
-          "max"
-        ]
-      },
-      {
         "contextWindow": 1000000,
         "id": "stepfun/Step-3.5-Flash",
         "inputModalities": [
@@ -686,6 +689,20 @@
         "label": "MiMo V2.5 Pro"
       },
       {
+        "contextWindow": 1048576,
+        "id": "z-ai/glm-5.3-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GLM-5.3 Flash",
+        "reasoningEfforts": [
+          "low",
+          "high",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 200000,
         "id": "zai-org/GLM-5",
         "inputModalities": [
@@ -766,8 +783,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2491963,
-    "modelCount": 61,
+    "bundleBytes": 2493638,
+    "modelCount": 63,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -787,14 +804,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 682238
+    "tokenCount": 682564
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-WROf2jPeAWHvFuAdxCucFQVE2D6Fn9lXuODFdhzbRas=",
+    "entrypointHash": "sha256-qm5EG57MgJ/llbRxU+lpx9FyW3++hlpQGYHdfWvkcLM=",
     "name": "command-code",
-    "packageJsonHash": "sha256-XaCehp4niz0eBgzsuif52/1EP9wKd+L9UEnlWAgkIZE=",
-    "version": "1.32.2"
+    "packageJsonHash": "sha256-iTBkQqvrUIahGyKm6/xpkjWrsdpEM1YCKzz99ejtwGI=",
+    "version": "1.35.1"
   },
   "schemaVersion": 1,
   "structural": {
