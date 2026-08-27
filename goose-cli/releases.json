@@ -1,5 +1,5 @@
 {
-  "latest": "1.47.0",
+  "latest": "1.48.0",
   "versions": {
     "1.39.0": {
       "version": "1.39.0",
@@ -104,6 +104,20 @@
         "aarch64-darwin": "sha256-89Y5OriLlvA3IUoSxkLOvwRsxWwJEH/9rLN8+JeXZyI="
       },
       "srcHash": "sha256-+sowkBtUbpBPAgi1Tn1WSgIac2yzCWsXcsh96Pp5VSY=",
+      "cargoOutputHashes": {
+        "agent-client-protocol-2.0.0": "sha256-62Bc5XLIx38npCkmijutjJOxjfESg3+m/Ih409ELXNQ=",
+        "cudaforge-0.1.6": "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY="
+      }
+    },
+    "1.48.0": {
+      "version": "1.48.0",
+      "rev": "v1.48.0",
+      "prebuiltHashes": {
+        "x86_64-linux": "sha256-PDjHkHI/3kUyNX81NGtxkL1w0ZjmvlWfn/6sTPfJgVI=",
+        "x86_64-darwin": "sha256-F0BclL8HzLjC9UFOuwRdxAmi1U+huRJ8gTeirdYXITs=",
+        "aarch64-darwin": "sha256-1QKUX8p42OWMj1aTKXP0VK1X0HVLJy9dRPaWpHItpJo="
+      },
+      "srcHash": "sha256-8tKAAQdP9Rx7X0hEuCmSQ9sQQSYiXVMhJc2EQqIjaOY=",
       "cargoOutputHashes": {
         "agent-client-protocol-2.0.0": "sha256-62Bc5XLIx38npCkmijutjJOxjfESg3+m/Ih409ELXNQ=",
         "cudaforge-0.1.6": "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY="
