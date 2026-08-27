@@ -4,11 +4,14 @@
     "0.6.9": {
       "version": "0.6.9",
       "rev": "v0.6.9",
+      "rustNightlyDate": "2022-11-20",
+      "rustManifestHash": "sha256-jOnmx5IcpdVWjTKjClaf963K9whS5JA0PBCvw6TD3OA=",
       "hashes": {
         "x86_64-linux": "sha256-4HzrKXSM6n/nHd36jZj785aux1+dZ+1PeSe0iCjbMGo=",
         "aarch64-linux": "sha256-KEe15xj9lXaiOAjPrk6GxCtHtNET6+nd5KDiUs7XPTA=",
         "x86_64-darwin": "sha256-9iY3aocdln0FxNT1LyO4smQTBeJgv4dPg1QdmTXJaGQ="
-      }
+      },
+      "srcHash": "sha256-/z2VEfeCCuffxlMh4WOpYkMSAgmh+sbx3ajcD5d4DdE="
     }
   }
 }
