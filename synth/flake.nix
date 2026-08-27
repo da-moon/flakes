@@ -118,11 +118,16 @@
               sha256 = "sha256-WXGFkdoYqOX9mjJaSfN5+rAH7eFe/1F6LmYb/Rs360g=";
             };
             naersk-src = builtins.fetchTarball {
-              url = "https://github.com/nmattia/naersk/archive/6944160c19cb591eb85bbf9b2f2768a935623ed3.tar.gz";
-              sha256 = "sha256-9o2OGQqu4xyLZP9K6kNe1pTHnyPz0Wr3raGYnr9AIgY=";
+              url = "https://github.com/nix-community/naersk/archive/9aa07bb0256d300219b30622d2454e85f7f3667e.tar.gz";
+              sha256 = "sha256-thLTFbp9D5Qknmh8q/v4FRpLGphUSijT3E86cbLYTXo=";
             };
 
-            pkgs' = pkgs.extend (import nixpkgs-mozilla);
+            pkgs' = (pkgs.extend (self: super: {
+              # nixpkgs-mozilla's rust overlay still expects pkgs.makeOverridable,
+              # which was removed in nixpkgs 24.11. Re-expose it from lib so the
+              # overlay evaluates without warnings on newer nixpkgs.
+              makeOverridable = super.lib.makeOverridable;
+            })).extend (import nixpkgs-mozilla);
 
             rust-bin = (pkgs'.rustChannelOf {
               channel = "nightly";
@@ -153,14 +158,11 @@
                 ncurses6.dev
                 libiconv
               ]
-              ++ lib.optionals pkgs'.stdenv.hostPlatform.isDarwin (
-                with pkgs'.darwin.apple_sdk.frameworks;
-                [
-                  IOKit
-                  Security
-                  AppKit
-                ]
-              );
+              # In nixpkgs 26.05 the legacy per-framework stubs are gone; the
+              # unified apple-sdk package provides IOKit/Security/AppKit.
+              ++ lib.optionals pkgs'.stdenv.hostPlatform.isDarwin [
+                apple-sdk
+              ];
 
             doCheck = false;
           };
