@@ -58,6 +58,11 @@
       "version": "2.32.0",
       "rev": "2.32.0",
       "tarballHash": "sha256-c0lItY3vAM3m+cRenuDMTbXt3Sz2cJWwzYmxTu7d8FU="
+    },
+    "1.155.0": {
+      "version": "1.155.0",
+      "rev": "1.155.0",
+      "tarballHash": "sha256-oHA7lKjhnWB7dL5ARNRmWSPpgja/7mLmtT2XmwzOpO4="
     }
   }
 }
