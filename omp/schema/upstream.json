@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.0.7"
+    "version": "18.0.8"
   },
   "schemaVersion": 1,
   "structural": {
@@ -418,6 +418,10 @@
         ]
       },
       "display.showTokenUsage": {
+        "default": false,
+        "type": "boolean"
+      },
+      "display.showTurnTime": {
         "default": false,
         "type": "boolean"
       },
