@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "0.38.0"
+    "version": "0.39.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -144,6 +144,12 @@
         ]
       },
       "subagent": {
+        "deprecations": [],
+        "fields": [
+          "timeoutMs"
+        ]
+      },
+      "swarm": {
         "deprecations": [],
         "fields": [
           "timeoutMs"
