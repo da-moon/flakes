@@ -5,9 +5,10 @@
 #   key     = the upstream version (e.g. "0.6.9")
 #   version = the same version string
 # Per-target fixed-output hashes are prefetched from the release tarballs and
-# written via jq — the version data in flake.nix is never touched.
-# Upstream publishes no aarch64-darwin asset, so only the three remaining
-# targets are tracked (matches the systems list in flake.nix).
+# the source tarball, then written via jq — the version data in flake.nix is
+# never touched. Upstream publishes no aarch64-darwin prebuilt asset, so that
+# system falls back to a source build using the upstream Nix setup pinned in
+# the release tag.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -30,6 +31,11 @@ declare -Ar SYSTEM_TO_ASSET=(
 )
 # Stable iteration order for deterministic output.
 readonly SYSTEM_KEYS=(x86_64-linux aarch64-linux x86_64-darwin)
+# Default nightly date for the source build fallback. This must be old enough
+# to compile synth 0.6.x (the code uses nightly features removed in newer
+# Rust). The release date of v0.6.9 is a safe default; override with the
+# --rust-nightly-date option if a future release needs a different toolchain.
+readonly DEFAULT_RUST_NIGHTLY_DATE="2022-11-20"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
@@ -74,6 +80,22 @@ prefetch_sha256_sri() {
   local url="$1"
   nix store prefetch-file --json --hash-type sha256 "$url" \
     | jq -r '.hash // empty'
+}
+
+prefetch_src_hash() {
+  local tag="$1"
+  local url="https://github.com/$REPO_OWNER/$REPO_NAME/archive/refs/tags/$tag.tar.gz"
+  local hash32
+  hash32="$(nix-prefetch-url --unpack "$url" 2>/dev/null | tail -n1)"
+  nix hash to-sri --type sha256 "$hash32"
+}
+
+prefetch_rust_manifest_hash() {
+  local date="$1"
+  local url="https://static.rust-lang.org/dist/${date}/channel-rust-nightly.toml"
+  local hash32
+  hash32="$(nix-prefetch-url "$url" 2>/dev/null | tail -n1)"
+  nix hash to-sri --type sha256 "$hash32"
 }
 
 # sanitize a JSON key into a valid nix attribute-name suffix (mirrors flake.nix)
@@ -163,14 +185,17 @@ Usage: ./scripts/update-version.sh [OPTIONS]
 Appends the newest (or an explicit) synth release to releases.json as a new
 version-table entry (keyed by version) and sets .latest to it. Existing entries
 are preserved so consumers can still select past versions. Per-target tarball
-hashes are prefetched and written via jq — flake.nix is never touched.
+hashes and the source tarball hash are prefetched and written via jq —
+flake.nix is never touched.
 
 Options:
-  --version VERSION   Append a specific version (default: latest)
-  --check             Only check for updates (exit 1 if update available)
-  --rehash            Recompute hashes even if the version is unchanged
-  --no-build          Skip build verification
-  --help              Show this help message
+  --version VERSION        Append a specific version (default: latest)
+  --rust-nightly-date DATE Nightly toolchain date for the source build
+                           (default: ${DEFAULT_RUST_NIGHTLY_DATE})
+  --check                  Only check for updates (exit 1 if update available)
+  --rehash                 Recompute hashes even if the version is unchanged
+  --no-build               Skip build verification
+  --help                   Show this help message
 
 Examples:
   ./scripts/update-version.sh
@@ -185,6 +210,7 @@ main() {
   log_info "Updating package: ${PACKAGE_DIR_NAME}"
 
   local target_version=""
+  local rust_nightly_date="$DEFAULT_RUST_NIGHTLY_DATE"
   local check_only=false
   local rehash=false
   local no_build=false
@@ -194,6 +220,11 @@ main() {
       --version)
         [ $# -ge 2 ] || { log_error "--version requires an argument"; exit 2; }
         target_version="$2"
+        shift 2
+        ;;
+      --rust-nightly-date)
+        [ $# -ge 2 ] || { log_error "--rust-nightly-date requires an argument"; exit 2; }
+        rust_nightly_date="$2"
         shift 2
         ;;
       --check)
@@ -278,12 +309,35 @@ main() {
       '$h + {($s): $v}')"
   done
 
+  # Prefetch the source tarball hash for the aarch64-darwin source fallback.
+  log_info "Prefetching source tarball hash..."
+  local src_hash
+  src_hash="$(prefetch_src_hash "$latest_tag")"
+  if [ -z "$src_hash" ]; then
+    log_error "Failed to prefetch source hash for $latest_tag"
+    exit 2
+  fi
+  log_info "src hash: $src_hash"
+
+  log_info "Prefetching Rust nightly manifest hash ($rust_nightly_date)..."
+  local rust_manifest_hash
+  rust_manifest_hash="$(prefetch_rust_manifest_hash "$rust_nightly_date")"
+  if [ -z "$rust_manifest_hash" ]; then
+    log_error "Failed to prefetch Rust nightly manifest hash for $rust_nightly_date"
+    exit 2
+  fi
+  log_info "rust manifest hash: $rust_manifest_hash"
+  log_info "rust nightly date: $rust_nightly_date"
+
   local entry_json
   entry_json="$(jq -n \
     --arg v "$latest_version" \
     --arg rev "$latest_tag" \
+    --arg rustNightlyDate "$rust_nightly_date" \
+    --arg rustManifestHash "$rust_manifest_hash" \
     --argjson hashes "$hashes_json" \
-    '{version: $v, rev: $rev, hashes: $hashes}')"
+    --arg srcHash "$src_hash" \
+    '{version: $v, rev: $rev, rustNightlyDate: $rustNightlyDate, rustManifestHash: $rustManifestHash, hashes: $hashes, srcHash: $srcHash}')"
 
   local backup
   backup="$(mktemp -t releases.json.backup.XXXXXX)"
@@ -316,7 +370,7 @@ main() {
   fi
   maybe_git_commit "$msg" "releases.json"
 
-  log_info "Successfully appended synth $latest_version (latest was $current_version)"
+  log_info "Successfully appended synth $latest_version (latest was $current_version, source nightly: $rust_nightly_date)"
 }
 
 main "$@"
