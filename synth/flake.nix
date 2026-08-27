@@ -93,8 +93,10 @@
         # Builder: derive a source-built synth package from one releases.json entry.
         # Upstream ships no aarch64-darwin prebuilt asset, so this is used as the
         # fallback on that system. The project requires a nightly Rust toolchain
-        # from around its release date, so we build it in a separate Nixpkgs 22.05
-        # environment with the nixpkgs-mozilla overlay and naersk.
+        # from around its release date, so we add the nixpkgs-mozilla overlay and
+        # build with naersk. We reuse the flake's nixpkgs input (rather than a
+        # second, older pin) so Darwin consumers hit the binary cache instead of
+        # building things like curl from source.
         mkSource =
           entry:
           let
@@ -111,10 +113,6 @@
             # Fixed infrastructure for the source build. These are kept as
             # constants rather than flake inputs so that consumers of the
             # prebuilt packages do not pay the cost of fetching them.
-            nixpkgs-src = builtins.fetchTarball {
-              url = "https://github.com/NixOS/nixpkgs/archive/nixos-22.05.tar.gz";
-              sha256 = "sha256-Zffu01pONhs/pqH07cjlF10NnMDLok8ix5Uk4rhOnZQ=";
-            };
             nixpkgs-mozilla = builtins.fetchTarball {
               url = "https://github.com/mozilla/nixpkgs-mozilla/archive/16ab32eeb8390de633eb336eb4910efbbe0091e6.tar.gz";
               sha256 = "sha256-WXGFkdoYqOX9mjJaSfN5+rAH7eFe/1F6LmYb/Rs360g=";
@@ -124,14 +122,11 @@
               sha256 = "sha256-9o2OGQqu4xyLZP9K6kNe1pTHnyPz0Wr3raGYnr9AIgY=";
             };
 
-            pkgs' = import nixpkgs-src {
-              inherit system;
-              overlays = [ (import nixpkgs-mozilla) ];
-            };
+            pkgs' = pkgs.extend (import nixpkgs-mozilla);
 
             rust-bin = (pkgs'.rustChannelOf {
               channel = "nightly";
-              inherit rustNightlyDate;
+              date = rustNightlyDate;
               sha256 = rustManifestHash;
             }).rust;
 
@@ -208,7 +203,7 @@
         // lib.optionalAttrs (latestParts.synth-bin != null) {
           synth-bin = latestParts.synth-bin;
         }
-        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
+        // {
           synth-source = latestParts.synth-source;
         }
         // versionedPackages;
