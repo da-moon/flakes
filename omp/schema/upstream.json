@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.0.8"
+    "version": "18.0.10"
   },
   "schemaVersion": 1,
   "structural": {
@@ -331,7 +331,7 @@
         ]
       },
       "composer.shape": {
-        "default": "box",
+        "default": "band",
         "type": "string"
       },
       "computer.display": {
@@ -519,7 +519,7 @@
         "type": "number"
       },
       "extendedContext": {
-        "default": true,
+        "default": false,
         "type": "boolean"
       },
       "extensionHandlers.toolCallTimeoutMs": {
@@ -1016,7 +1016,8 @@
           "off",
           "local",
           "hindsight",
-          "mnemopi"
+          "mnemopi",
+          "sharpshooter"
         ]
       },
       "minP": {
@@ -1573,6 +1574,18 @@
           "blob",
           "gist"
         ]
+      },
+      "sharpshooter.injectionTokenLimit": {
+        "default": 15000,
+        "type": "number"
+      },
+      "sharpshooter.intervalMinutes": {
+        "default": 5,
+        "type": "number"
+      },
+      "sharpshooter.model": {
+        "default": null,
+        "type": "string"
       },
       "shellMinimizer.enabled": {
         "default": true,
