@@ -640,6 +640,19 @@
         "label": "Tencent Hy3"
       },
       {
+        "contextWindow": 1048576,
+        "id": "tencent/hy4-preview",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Tencent Hy4 Preview",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
         "contextWindow": 256000,
         "id": "thinkingmachines/inkling",
         "inputModalities": [
@@ -797,8 +810,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2494222,
-    "modelCount": 64,
+    "bundleBytes": 2500613,
+    "modelCount": 65,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -818,14 +831,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 682687
+    "tokenCount": 684299
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-hIhDPlQJO4CBaAcjIN+Lk+bIUL2DJ7AQutbzQxq9qSg=",
+    "entrypointHash": "sha256-GFJVAFWyqcgqKxMaRcpX6Gy619nzWXeD5tRUKlWjy3k=",
     "name": "command-code",
-    "packageJsonHash": "sha256-j1nVuhKOMAyS07RzsiuLn18mX5wd7Yc7TLo9r9vZVgU=",
-    "version": "1.36.0"
+    "packageJsonHash": "sha256-1/6aKyGd9rPuBUfQ+hCbuUa8r8QrL1uZkPZs/VuPkAQ=",
+    "version": "1.38.2"
   },
   "schemaVersion": 1,
   "structural": {
