@@ -100,6 +100,13 @@
                   throw new Error("Non-exact dependency specs remain: " + unresolved.join(", "));
                 }
 
+                if (pkg.optionalDependencies && pkg.optionalDependencies["onnxruntime-node"]) {
+                  const onnxSpec = pkg.optionalDependencies["onnxruntime-node"];
+                  delete pkg.optionalDependencies["onnxruntime-node"];
+                  pkg.dependencies = pkg.dependencies || {};
+                  pkg.dependencies["onnxruntime-node"] = onnxSpec === "1.24.0" ? "1.26.0" : onnxSpec;
+                }
+
                 if (pkg.dependencies && pkg.dependencies["onnxruntime-node"] === "1.24.0") {
                   pkg.dependencies["onnxruntime-node"] = "1.26.0";
                 }
