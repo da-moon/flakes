@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.0.10"
+    "version": "18.0.11"
   },
   "schemaVersion": 1,
   "structural": {
@@ -1758,7 +1758,7 @@
         "type": "boolean"
       },
       "statusLine.compactThinkingLevel": {
-        "default": false,
+        "default": true,
         "type": "boolean"
       },
       "statusLine.contextLine": {
