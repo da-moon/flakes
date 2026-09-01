@@ -62,6 +62,22 @@
         ]
       },
       {
+        "contextWindow": 1000000,
+        "id": "claude-fable-5-1",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Fable 5.1",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 200000,
         "id": "claude-haiku-4-5-20251001",
         "inputModalities": [
@@ -158,6 +174,19 @@
         ],
         "label": "DeepSeek V4 Flash (latest)",
         "reasoningEfforts": [
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "deepseek/deepseek-v4-flash-fast",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "DeepSeek V4 Flash Fast",
+        "reasoningEfforts": [
+          "low",
           "high",
           "max"
         ]
@@ -492,7 +521,12 @@
           "image",
           "text"
         ],
-        "label": "Kimi K3"
+        "label": "Kimi K3",
+        "reasoningEfforts": [
+          "low",
+          "high",
+          "max"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -810,8 +844,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2500613,
-    "modelCount": 65,
+    "bundleBytes": 2504884,
+    "modelCount": 67,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -831,14 +865,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 684299
+    "tokenCount": 685520
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-GFJVAFWyqcgqKxMaRcpX6Gy619nzWXeD5tRUKlWjy3k=",
+    "entrypointHash": "sha256-OMbJOmzvjWB8sezT5MSkW6Pwm4M3onJD+fuvL6wifSk=",
     "name": "command-code",
-    "packageJsonHash": "sha256-1/6aKyGd9rPuBUfQ+hCbuUa8r8QrL1uZkPZs/VuPkAQ=",
-    "version": "1.38.2"
+    "packageJsonHash": "sha256-/qQOroLxLxM4PdjBxFMQZ+3+xGcg/SwXRHbODf5XQl8=",
+    "version": "1.40.1"
   },
   "schemaVersion": 1,
   "structural": {
