@@ -12,7 +12,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.0.11";
+  schemaVersion = "18.1.2";
 
   defaultSettings = {
     setupVersion = 0;
@@ -211,7 +211,8 @@
     loop = {
       mode = "prompt";
     };
-    doubleEscapeAction = "tree";
+    # 18.1.2 removed "tree"/"branch"; valid values are now "rewind"/"none".
+    doubleEscapeAction = "rewind";
     treeFilterMode = "default";
     autocompleteMaxVisible = 5;
     emojiAutocomplete = true;
@@ -399,6 +400,8 @@
       blackbox = {
         enabled = false;
       };
+      # 18.1.2 added edit.recoverInlineEdits (upstream default true).
+      recoverInlineEdits = true;
       # edit.modelVariants (per-model edit-mode override map) is read from
       # config.yml but is NOT in the settings registry, so it cannot be
       # declared here (the schema check only passes registered keys). Set it
