@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.0.11"
+    "version": "18.1.2"
   },
   "schemaVersion": 1,
   "structural": {
@@ -430,11 +430,10 @@
         "type": "boolean"
       },
       "doubleEscapeAction": {
-        "default": "tree",
+        "default": "rewind",
         "type": "enum",
         "values": [
-          "branch",
-          "tree",
+          "rewind",
           "none"
         ]
       },
@@ -465,6 +464,10 @@
       "edit.mode": {
         "default": "hashline",
         "type": "enum"
+      },
+      "edit.recoverInlineEdits": {
+        "default": true,
+        "type": "boolean"
       },
       "edit.streamingAbort": {
         "default": false,
