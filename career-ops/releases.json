@@ -1,5 +1,5 @@
 {
-  "latest": "1.31.0",
+  "latest": "1.32.0",
   "versions": {
     "1.21.0": {
       "version": "1.21.0",
@@ -55,6 +55,11 @@
       "version": "1.31.0",
       "rev": "career-ops-v1.31.0",
       "hash": "sha256-ChdcH7v63hJ+OnxJQxYqIcBKwmm+Qo1sN/Oz/JD/z3c="
+    },
+    "1.32.0": {
+      "version": "1.32.0",
+      "rev": "career-ops-v1.32.0",
+      "hash": "sha256-XhPCfWJwdqCWfMPUB5BsB+soaiDU7ARVzsAZsFFjw3g="
     }
   }
 }
