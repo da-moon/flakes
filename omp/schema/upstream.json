@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.1.2"
+    "version": "18.1.6"
   },
   "schemaVersion": 1,
   "structural": {
@@ -215,7 +215,7 @@
         "type": "boolean"
       },
       "commands.enableClaudeUser": {
-        "default": true,
+        "default": false,
         "type": "boolean"
       },
       "commands.enableOpencodeProject": {
@@ -223,7 +223,7 @@
         "type": "boolean"
       },
       "commands.enableOpencodeUser": {
-        "default": true,
+        "default": false,
         "type": "boolean"
       },
       "commit.cacheEnabled": {
@@ -434,6 +434,7 @@
         "type": "enum",
         "values": [
           "rewind",
+          "tree",
           "none"
         ]
       },
@@ -478,6 +479,10 @@
         "type": "boolean"
       },
       "enabledModels": {
+        "default": null,
+        "type": "array"
+      },
+      "enabledProviders": {
         "default": null,
         "type": "array"
       },
@@ -857,6 +862,21 @@
       "irc.timeoutMs": {
         "default": 120000,
         "type": "number"
+      },
+      "isolation.backend": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "apfs",
+          "btrfs",
+          "zfs",
+          "reflink",
+          "overlayfs",
+          "projfs",
+          "block-clone",
+          "rcopy"
+        ]
       },
       "julia.interpreter": {
         "default": "",
@@ -1278,6 +1298,7 @@
           "trafilatura",
           "lynx",
           "parallel",
+          "firecrawl",
           "jina"
         ]
       },
@@ -1630,6 +1651,10 @@
         "default": true,
         "type": "boolean"
       },
+      "skillful": {
+        "default": true,
+        "type": "boolean"
+      },
       "skills.customDirectories": {
         "default": null,
         "type": "array"
@@ -1647,11 +1672,11 @@
         "type": "boolean"
       },
       "skills.enableClaudeUser": {
-        "default": true,
+        "default": false,
         "type": "boolean"
       },
       "skills.enableCodexUser": {
-        "default": true,
+        "default": false,
         "type": "boolean"
       },
       "skills.enablePiProject": {
@@ -1904,28 +1929,16 @@
           "ai"
         ]
       },
+      "task.isolation.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
       "task.isolation.merge": {
         "default": "patch",
         "type": "enum",
         "values": [
           "patch",
           "branch"
-        ]
-      },
-      "task.isolation.mode": {
-        "default": "none",
-        "type": "enum",
-        "values": [
-          "none",
-          "auto",
-          "apfs",
-          "btrfs",
-          "zfs",
-          "reflink",
-          "overlayfs",
-          "projfs",
-          "block-clone",
-          "rcopy"
         ]
       },
       "task.maxConcurrency": {
@@ -2241,6 +2254,10 @@
         "default": 8,
         "type": "number"
       },
+      "tui.reactions": {
+        "default": true,
+        "type": "boolean"
+      },
       "tui.renderMermaid": {
         "default": true,
         "type": "boolean"
@@ -2289,6 +2306,10 @@
       "worktree.base": {
         "default": null,
         "type": "string"
+      },
+      "worktree.clone": {
+        "default": true,
+        "type": "boolean"
       }
     }
   }
