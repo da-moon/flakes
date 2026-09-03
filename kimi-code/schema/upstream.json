@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "0.39.1"
+    "version": "0.40.1"
   },
   "schemaVersion": 1,
   "structural": {
@@ -110,6 +110,7 @@
       "permission": {
         "deprecations": [],
         "fields": [
+          "dangerousCommandGuard",
           "rules"
         ]
       },
