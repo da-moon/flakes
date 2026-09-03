@@ -287,6 +287,20 @@
         ]
       },
       {
+        "contextWindow": 1000000,
+        "id": "google/gemini-3.8-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 3.8 Flash",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
         "contextWindow": 400000,
         "id": "gpt-5.3-codex",
         "inputModalities": [
@@ -403,6 +417,14 @@
       },
       {
         "contextWindow": 1048576,
+        "id": "meituan/LongCat-2.0:free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "LongCat 2.0"
+      },
+      {
+        "contextWindow": 1048576,
         "id": "meta/muse-spark-1.1",
         "inputModalities": [
           "image",
@@ -427,6 +449,24 @@
           "text"
         ],
         "label": "Muse Spark 1.2 Contributor"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "meta/muse-spark-1.3",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Muse Spark 1.3"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "meta/muse-spark-1.3-contributor",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Muse Spark 1.3 Contributor"
       },
       {
         "contextWindow": 197000,
@@ -621,6 +661,20 @@
           "text"
         ],
         "label": "Qwen 3.8 Max",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "xhigh"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "Qwen/Qwen3.8-Max-0902",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Qwen 3.8 Max 0902",
         "reasoningEfforts": [
           "low",
           "medium",
@@ -844,8 +898,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2504884,
-    "modelCount": 67,
+    "bundleBytes": 2508943,
+    "modelCount": 72,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -865,14 +919,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 685520
+    "tokenCount": 686361
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-OMbJOmzvjWB8sezT5MSkW6Pwm4M3onJD+fuvL6wifSk=",
+    "entrypointHash": "sha256-E1quZoWH4ePwcMQQ8hUP6aqnFi2tinUGSZC2G3+KHZU=",
     "name": "command-code",
-    "packageJsonHash": "sha256-/qQOroLxLxM4PdjBxFMQZ+3+xGcg/SwXRHbODf5XQl8=",
-    "version": "1.40.1"
+    "packageJsonHash": "sha256-e4ajLsgJgDVV8Z9gWFf7iRAECDKG98W9P5d1Cunr8aU=",
+    "version": "1.44.0"
   },
   "schemaVersion": 1,
   "structural": {
