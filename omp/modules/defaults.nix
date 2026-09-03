@@ -12,7 +12,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.1.2";
+  schemaVersion = "18.1.6";
 
   defaultSettings = {
     setupVersion = 0;
@@ -31,6 +31,13 @@
     git = {
       enabled = true;
     };
+    # 18.1.6 added top-level isolation.backend (worktree/task clone backend;
+    # upstream default "auto").
+    isolation = {
+      backend = "auto";
+    };
+    # 18.1.6 added skillful (upstream default true).
+    skillful = true;
     extensions = [ ];
     enabledModels = [ ];
     disabledProviders = [ ];
@@ -142,6 +149,8 @@
       codexResetFireworks = false;
       imeSafeCursor = false;
       titleState = true;
+      # 18.1.6 added tui.reactions (upstream default true).
+      reactions = true;
     };
     display = {
       shimmer = "classic";
@@ -211,7 +220,8 @@
     loop = {
       mode = "prompt";
     };
-    # 18.1.2 removed "tree"/"branch"; valid values are now "rewind"/"none".
+    # 18.1.2 removed "tree"/"branch"; 18.1.6 re-added "tree".
+    # Valid values are now "rewind"/"tree"/"none".
     doubleEscapeAction = "rewind";
     treeFilterMode = "default";
     autocompleteMaxVisible = 5;
@@ -620,7 +630,9 @@
     };
     task = {
       isolation = {
-        mode = "none";
+        # 18.1.6 removed the "mode" enum in favor of the boolean "enabled";
+        # the backend selection moved to top-level isolation.backend.
+        enabled = false;
         merge = "patch";
         commits = "generic";
         apply = true;
@@ -653,8 +665,10 @@
     skills = {
       enabled = true;
       enableSkillCommands = true;
-      enableCodexUser = true;
-      enableClaudeUser = true;
+      # 18.1.6 flipped the upstream defaults of enableCodexUser and
+      # enableClaudeUser from true to false.
+      enableCodexUser = false;
+      enableClaudeUser = false;
       enableClaudeProject = true;
       enablePiUser = true;
       enablePiProject = true;
@@ -665,9 +679,11 @@
       includeSkills = [ ];
     };
     commands = {
-      enableClaudeUser = true;
+      # 18.1.6 flipped the upstream defaults of enableClaudeUser and
+      # enableOpencodeUser from true to false.
+      enableClaudeUser = false;
       enableClaudeProject = true;
-      enableOpencodeUser = true;
+      enableOpencodeUser = false;
       enableOpencodeProject = true;
     };
     secrets = {
@@ -755,11 +771,15 @@
     workspace = {
       additionalDirectories = [ ];
     };
+    # 18.1.6 added worktree.clone (upstream default true).
+    worktree = {
+      clone = true;
+    };
     # Ledger of registry keys intentionally NOT declared above.
     # Null-default (unset preserves upstream behavior): shellPath,
-    #   auth.broker.url, worktree.base (falls back to OMP_WORKTREE_DIR or
-    #   ~/.omp/wt), searxng.endpoint/basicUsername/categories/engines/
-    #   language (safesearch noted at providers above).
+    #   enabledProviders, auth.broker.url, worktree.base (falls back to
+    #   OMP_WORKTREE_DIR or ~/.omp/wt), searxng.endpoint/basicUsername/
+    #   categories/engines/language (safesearch noted at providers above).
     # Credentials (never declarable in the store): auth.broker.token,
     #   searxng.token, searxng.basicPassword.
     thinkingBudgets = {
