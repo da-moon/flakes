@@ -12,7 +12,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.1.6";
+  schemaVersion = "18.1.8";
 
   defaultSettings = {
     setupVersion = 0;
@@ -519,21 +519,19 @@
     eval = {
       py = true;
       js = true;
-      rb = false;
-      jl = false;
       autoBackground = {
         enabled = false;
         thresholdMs = 60000;
       };
+      tools = {
+        enabled = true;
+      };
+      workpool = {
+        freshAgents = false;
+      };
     };
     python = {
       kernelMode = "session";
-      interpreter = "";
-    };
-    ruby = {
-      interpreter = "";
-    };
-    julia = {
       interpreter = "";
     };
     todo = {
