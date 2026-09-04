@@ -1,0 +1,4 @@
+# Repo-local sanity-hook exceptions. This repo packages tools whose upstream
+# names match global forbidden tokens (claude-code, kimi-code, gsd-2, ...);
+# bump commits and generated lock/schema files legitimately contain them.
+flakes/
