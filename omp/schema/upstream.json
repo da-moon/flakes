@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.1.6"
+    "version": "18.1.8"
   },
   "schemaVersion": 1,
   "structural": {
@@ -502,10 +502,6 @@
         "default": 60000,
         "type": "number"
       },
-      "eval.jl": {
-        "default": false,
-        "type": "boolean"
-      },
       "eval.js": {
         "default": true,
         "type": "boolean"
@@ -514,7 +510,11 @@
         "default": true,
         "type": "boolean"
       },
-      "eval.rb": {
+      "eval.tools.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "eval.workpool.freshAgents": {
         "default": false,
         "type": "boolean"
       },
@@ -877,10 +877,6 @@
           "block-clone",
           "rcopy"
         ]
-      },
-      "julia.interpreter": {
-        "default": "",
-        "type": "string"
       },
       "launch.enabled": {
         "default": true,
@@ -1534,10 +1530,6 @@
           "auto",
           "fail-closed"
         ]
-      },
-      "ruby.interpreter": {
-        "default": "",
-        "type": "string"
       },
       "searxng.basicPassword": {
         "default": null,
