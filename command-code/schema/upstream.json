@@ -430,7 +430,13 @@
           "image",
           "text"
         ],
-        "label": "Muse Spark 1.1"
+        "label": "Muse Spark 1.1",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 1048576,
@@ -439,7 +445,13 @@
           "image",
           "text"
         ],
-        "label": "Muse Spark 1.2"
+        "label": "Muse Spark 1.2",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 1048576,
@@ -448,7 +460,13 @@
           "image",
           "text"
         ],
-        "label": "Muse Spark 1.2 Contributor"
+        "label": "Muse Spark 1.2 Contributor",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 1048576,
@@ -457,7 +475,13 @@
           "image",
           "text"
         ],
-        "label": "Muse Spark 1.3"
+        "label": "Muse Spark 1.3",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 1048576,
@@ -466,7 +490,13 @@
           "image",
           "text"
         ],
-        "label": "Muse Spark 1.3 Contributor"
+        "label": "Muse Spark 1.3 Contributor",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
       },
       {
         "contextWindow": 197000,
@@ -776,6 +806,7 @@
         "contextWindow": 500000,
         "id": "xai/grok-4.6",
         "inputModalities": [
+          "image",
           "text"
         ],
         "label": "Grok 4.6",
@@ -898,13 +929,13 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2508943,
+    "bundleBytes": 2548565,
     "modelCount": 72,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
       "mcp.json": 21,
-      "settings.json": 20,
+      "settings.json": 21,
       "settings.local.json": 14,
       "trusted-hooks.json": 1
     },
@@ -919,14 +950,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 686361
+    "tokenCount": 693116
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-E1quZoWH4ePwcMQQ8hUP6aqnFi2tinUGSZC2G3+KHZU=",
+    "entrypointHash": "sha256-UqcJYOh+ucdniPbI7Q6ML7x6HRNDZmbcW3EFzPMwRZA=",
     "name": "command-code",
-    "packageJsonHash": "sha256-e4ajLsgJgDVV8Z9gWFf7iRAECDKG98W9P5d1Cunr8aU=",
-    "version": "1.44.0"
+    "packageJsonHash": "sha256-ciNc196/W67Da5MQdzb7HhhiWjp0/Uo2Zh6nVddx98A=",
+    "version": "1.47.0"
   },
   "schemaVersion": 1,
   "structural": {
