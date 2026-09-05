@@ -12,7 +12,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.1.8";
+  schemaVersion = "18.1.10";
 
   defaultSettings = {
     setupVersion = 0;
@@ -133,6 +133,8 @@
       autoResize = true;
       blockImages = false;
       describeForTextModels = true;
+      # 18.1.10 added images.questionTimeoutMs.
+      questionTimeoutMs = 300000;
     };
     tui = {
       maxInlineImageColumns = 100;
@@ -564,11 +566,7 @@
     speechgen = {
       enabled = false;
     };
-    inspect_image = {
-      enabled = false;
-      mode = "auto";
-      timeoutMs = 300000;
-    };
+    # 18.1.10 removed inspect_image.*.
     checkpoint = {
       enabled = false;
     };
@@ -770,8 +768,10 @@
       additionalDirectories = [ ];
     };
     # 18.1.6 added worktree.clone (upstream default true).
+    # 18.1.10 added worktree.cleanSource (upstream default false).
     worktree = {
       clone = true;
+      cleanSource = false;
     };
     # Ledger of registry keys intentionally NOT declared above.
     # Null-default (unset preserves upstream behavior): shellPath,

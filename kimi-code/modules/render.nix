@@ -177,6 +177,7 @@ let
       // {
         inherit (t) theme;
         disable_paste_burst = t.disablePasteBurst;
+        disable_feedback_survey = t.disableFeedbackSurvey;
         editor = {
           inherit (t.editor) command;
         };

@@ -417,6 +417,11 @@ let
         default = false;
         description = "Disable the non-bracketed paste-burst fallback.";
       };
+      disableFeedbackSurvey = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Disable the feedback survey prompt.";
+      };
       editor.command = mkOption {
         type = types.str;
         default = "";
@@ -510,7 +515,7 @@ in
   # against. flake.nix throws when it does not match the latest release, so
   # every version bump forces a human review of the schema (command-code
   # convention). scripts/update-version.sh refreshes it on drift-accept.
-  schemaVersion = "0.40.1";
+  schemaVersion = "0.41.0";
 
   # Merge manifest for config.toml consumed by the jq merge engine
   # (modules/lib.nix). Meaning:
@@ -589,6 +594,7 @@ in
     scalars = [
       "theme"
       "disable_paste_burst"
+      "disable_feedback_survey"
     ];
     sections = {
       editor = [ "command" ];
