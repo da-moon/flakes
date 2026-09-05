@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.1.8"
+    "version": "18.1.10"
   },
   "schemaVersion": 1,
   "structural": {
@@ -777,6 +777,10 @@
         "default": true,
         "type": "boolean"
       },
+      "images.questionTimeoutMs": {
+        "default": 300000,
+        "type": "number"
+      },
       "images.urls.backends": {
         "default": null,
         "type": "array"
@@ -833,23 +837,6 @@
           "on",
           "off"
         ]
-      },
-      "inspect_image.enabled": {
-        "default": false,
-        "type": "boolean"
-      },
-      "inspect_image.mode": {
-        "default": "auto",
-        "type": "enum",
-        "values": [
-          "auto",
-          "on",
-          "off"
-        ]
-      },
-      "inspect_image.timeoutMs": {
-        "default": 300000,
-        "type": "number"
       },
       "interruptMode": {
         "default": "immediate",
@@ -2298,6 +2285,10 @@
       "worktree.base": {
         "default": null,
         "type": "string"
+      },
+      "worktree.cleanSource": {
+        "default": false,
+        "type": "boolean"
       },
       "worktree.clone": {
         "default": true,
