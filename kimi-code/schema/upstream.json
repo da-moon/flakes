@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "0.40.1"
+    "version": "0.41.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -234,6 +234,7 @@
       },
       "topLevel": [
         "cache_expiry_hint",
+        "disable_feedback_survey",
         "disable_paste_burst",
         "render_latex",
         "status_line",
