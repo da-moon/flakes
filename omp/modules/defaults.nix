@@ -4,7 +4,8 @@
 # schemaVersion marks the omp release these defaults were last reviewed
 # against. flake.nix throws when it does not match the latest release, so
 # every version bump forces a human review of the defaults (command-code
-# convention). scripts/update-version.sh refreshes it on drift-accept.
+# convention). scripts/update-version.sh does NOT rewrite this file: it aborts
+# until the review below has set schemaVersion to the new release.
 #
 # Coverage: every registry key with a concrete default is declared below.
 # Keys whose upstream default is null (unset) or that are credentials are
@@ -12,7 +13,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.1.12";
+  schemaVersion = "18.1.13";
 
   defaultSettings = {
     setupVersion = 0;
