@@ -12,7 +12,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.1.10";
+  schemaVersion = "18.1.12";
 
   defaultSettings = {
     setupVersion = 0;
@@ -215,6 +215,8 @@
       usageAwareFallback = false;
       usageReservePct = 10;
       usageReservePolicy = "confirm";
+      # 18.1.12 added retry.waitForUsageReset (upstream default false).
+      waitForUsageReset = false;
     };
     steeringMode = "one-at-a-time";
     followUpMode = "one-at-a-time";
@@ -447,6 +449,8 @@
       enabled = true;
       direnv = "auto";
       direnvLoadTimeoutMs = 30000;
+      # 18.1.12 added bash.allowCompoundCommands (upstream default false).
+      allowCompoundCommands = false;
       # Ordered approval rules: [{ match = <glob>; approval = "allow"|"prompt"|"deny"; }]
       patterns = [ ];
       autoBackground = {
