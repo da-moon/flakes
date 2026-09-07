@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.1.10"
+    "version": "18.1.12"
   },
   "schemaVersion": 1,
   "structural": {
@@ -96,6 +96,10 @@
       "autolearn.minToolCalls": {
         "default": 5,
         "type": "number"
+      },
+      "bash.allowCompoundCommands": {
+        "default": false,
+        "type": "boolean"
       },
       "bash.autoBackground.enabled": {
         "default": true,
@@ -1517,6 +1521,10 @@
           "auto",
           "fail-closed"
         ]
+      },
+      "retry.waitForUsageReset": {
+        "default": false,
+        "type": "boolean"
       },
       "searxng.basicPassword": {
         "default": null,
