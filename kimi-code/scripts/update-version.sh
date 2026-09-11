@@ -8,8 +8,9 @@
 # Schema evidence is extracted from the host-platform release binary WITHOUT
 # executing it; structural drift (removed keys or deprecation-table changes)
 # aborts the update with exit 3 unless --accept-schema-drift is passed after
-# review. A clean update still fails at the end if modules/config-schema.nix
-# was not reviewed for the new version (its schemaVersion marker must match).
+# review. A clean update fails fast (before any download or build) if
+# modules/config-schema.nix was not reviewed for the new version (its
+# schemaVersion marker must match).
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -39,6 +40,8 @@ schema_hash_file="${schema_dir}/upstream.sha256"
 schema_extractor="${script_dir}/extract-config-schema.mjs"
 schema_comparator="${script_dir}/compare-config-schema.mjs"
 schema_verifier="${script_dir}/verify-config-schema.mjs"
+schema_marker_file="${pkg_dir}/modules/config-schema.nix"
+readonly SCHEMA_MARKER_REL="modules/config-schema.nix"
 readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
 
 DOWNLOADER=""
@@ -208,17 +211,43 @@ verify_build() {
   log_info "Build successful!"
 }
 
+schema_review_banner() {
+  local version="$1"
+  {
+    printf '================================================================================\n'
+    printf 'SCHEMA_REVIEW_REQUIRED: %s %s\n' "$PACKAGE_DIR_NAME" "$version"
+    printf '  Set schemaVersion in %s to %s, then re-run this script.\n' "$SCHEMA_MARKER_REL" "$version"
+    printf '================================================================================\n'
+  } >&2
+}
+
+# Fail-fast gate: the schemaVersion marker must already name the target
+# version before any downloads, hash prefetching, or builds happen.
+preflight_schema_marker() {
+  local target="$1" marker_version=""
+  if [ -f "$schema_marker_file" ]; then
+    marker_version="$(grep -oE 'schemaVersion[[:space:]]*=[[:space:]]*"[^"]+"' "$schema_marker_file" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')"
+  fi
+  if [ "$marker_version" != "$target" ]; then
+    schema_review_banner "$target"
+    log_error "schemaVersion marker in ${SCHEMA_MARKER_REL} is '${marker_version:-missing}', expected '$target'"
+    exit 3
+  fi
+}
+
 verify_flake_schema_contract() {
   local expected_version="$1" evaluated_version
   if ! evaluated_version="$(
     nix eval --raw --impure --no-write-lock-file \
       "path:${pkg_dir}#lib.upstreamConfigSchema.package.version"
   )"; then
+    schema_review_banner "$expected_version"
     log_error "The Nix module schema has not been reviewed for $expected_version"
     log_error "Review modules/config-schema.nix against schema/upstream.json and set its schemaVersion marker to $expected_version."
     return 1
   fi
   if [ "$evaluated_version" != "$expected_version" ]; then
+    schema_review_banner "$expected_version"
     log_error "Flake schema version mismatch: expected $expected_version, got $evaluated_version"
     return 1
   fi
@@ -374,6 +403,8 @@ main() {
     exit 0
   fi
 
+  preflight_schema_marker "$latest_version"
+
   log_info "Fetching release manifest..."
   local manifest_json
   manifest_json="$(get_manifest_json "$latest_version" || true)"
@@ -493,7 +524,7 @@ main() {
   if ! verify_flake_schema_contract "$latest_version"; then
     log_error "Schema contract failed; restoring previous releases.json and schema evidence"
     restore_on_failure
-    exit 1
+    exit 3
   fi
 
   if [ "$no_build" != true ]; then
@@ -519,7 +550,7 @@ main() {
   show_changes
 
   maybe_git_commit "chore(${PACKAGE_DIR_NAME}): bump to ${latest_version}" \
-    "releases.json" "schema/upstream.json" "schema/upstream.sha256"
+    "releases.json" "schema/upstream.json" "schema/upstream.sha256" "$SCHEMA_MARKER_REL"
 
   log_info "Successfully appended kimi-code $latest_version (latest was $current_version)"
 }

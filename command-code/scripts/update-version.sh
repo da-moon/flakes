@@ -58,8 +58,10 @@ schema_hash_file="${schema_dir}/upstream.sha256"
 schema_extractor="${script_dir}/extract-config-schema.mjs"
 schema_comparator="${script_dir}/compare-config-schema.mjs"
 schema_verifier="${script_dir}/verify-config-schema.mjs"
+schema_marker_file="${pkg_dir}/modules/schema.nix"
+SCHEMA_MARKER_REL="modules/schema.nix"
 PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
-readonly PACKAGE_DIR_NAME
+readonly PACKAGE_DIR_NAME SCHEMA_MARKER_REL
 
 # Rollback transaction state. These MUST stay script-global: when `set -e`
 # aborts main(), the EXIT trap fires after main's local scope is gone, so a
@@ -217,16 +219,42 @@ verify_build() {
   log_info "Build successful!"
 }
 
+schema_review_banner() {
+  local version="$1"
+  {
+    printf '================================================================================\n'
+    printf 'SCHEMA_REVIEW_REQUIRED: %s %s\n' "$PACKAGE_DIR_NAME" "$version"
+    printf '  Set schemaVersion in %s to %s, then re-run this script.\n' "$SCHEMA_MARKER_REL" "$version"
+    printf '================================================================================\n'
+  } >&2
+}
+
+# Fail-fast gate: the schemaVersion marker must already name the target
+# version before any downloads, hash prefetching, or builds happen.
+preflight_schema_marker() {
+  local target="$1" marker_version=""
+  if [ -f "$schema_marker_file" ]; then
+    marker_version="$(grep -oE 'schemaVersion[[:space:]]*=[[:space:]]*"[^"]+"' "$schema_marker_file" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')"
+  fi
+  if [ "$marker_version" != "$target" ]; then
+    schema_review_banner "$target"
+    log_error "schemaVersion marker in ${SCHEMA_MARKER_REL} is '${marker_version:-missing}', expected '$target'"
+    exit 3
+  fi
+}
+
 verify_flake_schema_contract() {
   local expected_version="$1" evaluated_version
   if ! evaluated_version="$(
     nix eval --raw --impure --no-write-lock-file \
       "path:${pkg_dir}#lib.configSchema.package.version"
   )"; then
+    schema_review_banner "$expected_version"
     log_error "The Nix module schema has not been reviewed for $expected_version"
     return 1
   fi
   if [ "$evaluated_version" != "$expected_version" ]; then
+    schema_review_banner "$expected_version"
     log_error "Flake schema version mismatch: expected $expected_version, got $evaluated_version"
     return 1
   fi
@@ -335,6 +363,8 @@ main() {
     log_info "Update available: $current_version -> $latest_version"
     exit 1
   fi
+
+  preflight_schema_marker "$latest_version"
 
   local tarball_url
   tarball_url="$NPM_REGISTRY_URL/$NPM_PACKAGE/-/$TARBALL_NAME-$latest_version.tgz"
@@ -488,7 +518,7 @@ main() {
     --expected-version "$latest_version" \
     --expected-sha256 "$installed_schema_sha" \
     >/dev/null
-  verify_flake_schema_contract "$latest_version"
+  verify_flake_schema_contract "$latest_version" || exit 3
 
   transaction_active=false
   rm -rf "$backup_dir" "$staging"
@@ -505,7 +535,7 @@ main() {
     else
       msg="chore(${scope}): bump to ${latest_version}"
     fi
-    maybe_git_commit "$msg" "releases.json" "schema/upstream.json" "schema/upstream.sha256" "deps/${latest_version}"
+    maybe_git_commit "$msg" "releases.json" "schema/upstream.json" "schema/upstream.sha256" "deps/${latest_version}" "$SCHEMA_MARKER_REL"
   fi
 
   log_info "Successfully appended command-code $latest_version (latest was $current_version)"
