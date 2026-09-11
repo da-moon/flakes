@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.1.13"
+    "version": "18.1.17"
   },
   "schemaVersion": 1,
   "structural": {
@@ -13,6 +13,10 @@
       },
       "advisor.immuneTurns": {
         "default": 3,
+        "type": "number"
+      },
+      "advisor.maxNotesPerUpdate": {
+        "default": null,
         "type": "number"
       },
       "advisor.syncBacklog": {
@@ -157,9 +161,17 @@
         "default": true,
         "type": "boolean"
       },
+      "browser.freezeOnTurnEnd": {
+        "default": true,
+        "type": "boolean"
+      },
       "browser.headless": {
         "default": true,
         "type": "boolean"
+      },
+      "browser.idleCloseSec": {
+        "default": 1800,
+        "type": "number"
       },
       "browser.relay": {
         "default": false,
@@ -270,6 +282,10 @@
         "default": true,
         "type": "boolean"
       },
+      "compaction.experimentalContextManagement": {
+        "default": false,
+        "type": "boolean"
+      },
       "compaction.handoffSaveToDisk": {
         "default": false,
         "type": "boolean"
@@ -333,6 +349,10 @@
           "on",
           "off"
         ]
+      },
+      "composer.recallClearedDrafts": {
+        "default": true,
+        "type": "boolean"
       },
       "composer.shape": {
         "default": "band",
@@ -877,6 +897,10 @@
         "default": null,
         "type": "enum"
       },
+      "loop.conditionTimeoutMs": {
+        "default": 30000,
+        "type": "number"
+      },
       "loop.mode": {
         "default": "prompt",
         "type": "enum",
@@ -1201,6 +1225,14 @@
           "pragmatic",
           "none"
         ]
+      },
+      "plan.autosave": {
+        "default": false,
+        "type": "boolean"
+      },
+      "plan.autosaveDir": {
+        "default": null,
+        "type": "string"
       },
       "plan.defaultOnStartup": {
         "default": false,
@@ -2269,6 +2301,19 @@
       "tui.titleState": {
         "default": true,
         "type": "boolean"
+      },
+      "tui.vimMode": {
+        "default": false,
+        "type": "boolean"
+      },
+      "tui.vimModeDisplay": {
+        "default": "text",
+        "type": "enum",
+        "values": [
+          "text",
+          "icon",
+          "none"
+        ]
       },
       "update.channel": {
         "default": "stable",
