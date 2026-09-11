@@ -94,7 +94,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.50.0";
+  schemaVersion = "1.53.0";
 
   globalConfigType = types.submodule {
     options = {

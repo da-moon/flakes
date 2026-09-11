@@ -218,6 +218,20 @@
       },
       {
         "contextWindow": 1000000,
+        "id": "deepseek/deepseek-v4.1-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "DeepSeek V4.1 Flash",
+        "reasoningEfforts": [
+          "low",
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
         "id": "google/gemini-3.1-flash-lite",
         "inputModalities": [
           "image",
@@ -432,6 +446,14 @@
         "label": "Ling 3.0 Flash"
       },
       {
+        "contextWindow": 262144,
+        "id": "inclusionai/ling-3.0-flash-sante:free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Ling 3.0 Flash Sante"
+      },
+      {
         "contextWindow": 1048576,
         "id": "meituan/LongCat-2.0:free",
         "inputModalities": [
@@ -530,7 +552,12 @@
           "image",
           "text"
         ],
-        "label": "MiniMax M3"
+        "label": "MiniMax M3",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
       },
       {
         "contextWindow": 200000,
@@ -554,7 +581,12 @@
           "image",
           "text"
         ],
-        "label": "MiniMax M3"
+        "label": "MiniMax M3",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
       },
       {
         "contextWindow": 1000000,
@@ -563,7 +595,12 @@
           "image",
           "text"
         ],
-        "label": "MiniMax M3"
+        "label": "MiniMax M3",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
       },
       {
         "contextWindow": 256000,
@@ -946,8 +983,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2555640,
-    "modelCount": 73,
+    "bundleBytes": 2569187,
+    "modelCount": 75,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -967,14 +1004,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 695083
+    "tokenCount": 698269
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-Qp6U6cmiVIUmo1KsVRz3ynT1jTBoAJyKAbltjdGnwR8=",
+    "entrypointHash": "sha256-tPU5gZDykS2Qzss8VYAX+eDCyX1VzPa2aEju2RBkKFk=",
     "name": "command-code",
-    "packageJsonHash": "sha256-lX3Jo7vWLfDPIBiYF5d3Eo09Hg6w8l03ZAWECObOE1o=",
-    "version": "1.50.0"
+    "packageJsonHash": "sha256-KJO6p04aXcUYe91W0YsK/L9qLOxj6VSOfoBDR7h25RM=",
+    "version": "1.53.0"
   },
   "schemaVersion": 1,
   "structural": {
