@@ -514,8 +514,8 @@ in
   # Version of the kimi-code release this typed Nix schema was last reviewed
   # against. flake.nix throws when it does not match the latest release, so
   # every version bump forces a human review of the schema (command-code
-  # convention). scripts/update-version.sh refreshes it on drift-accept.
-  schemaVersion = "0.41.0";
+  # convention). scripts/update-version.sh refuses to bump until it matches.
+  schemaVersion = "0.42.0";
 
   # Merge manifest for config.toml consumed by the jq merge engine
   # (modules/lib.nix). Meaning:
