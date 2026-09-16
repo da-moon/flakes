@@ -515,7 +515,7 @@ in
   # against. flake.nix throws when it does not match the latest release, so
   # every version bump forces a human review of the schema (command-code
   # convention). scripts/update-version.sh refuses to bump until it matches.
-  schemaVersion = "0.42.0";
+  schemaVersion = "0.43.1";
 
   # Merge manifest for config.toml consumed by the jq merge engine
   # (modules/lib.nix). Meaning:
