@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.1.17"
+    "version": "18.2.1"
   },
   "schemaVersion": 1,
   "structural": {
@@ -60,18 +60,6 @@
       "async.maxJobs": {
         "default": 100,
         "type": "number"
-      },
-      "async.pollWaitDuration": {
-        "default": "smart",
-        "type": "enum",
-        "values": [
-          "5s",
-          "10s",
-          "30s",
-          "1m",
-          "5m",
-          "smart"
-        ]
       },
       "auth.broker.token": {
         "default": null,
@@ -209,6 +197,15 @@
       "codexResets.salvageHorizonHours": {
         "default": 12,
         "type": "number"
+      },
+      "collab.autoStart": {
+        "default": "off",
+        "type": "enum",
+        "values": [
+          "off",
+          "view",
+          "control"
+        ]
       },
       "collab.displayName": {
         "default": "",
@@ -431,6 +428,15 @@
       "display.hideToolActivity": {
         "default": false,
         "type": "boolean"
+      },
+      "display.pinnedAgents": {
+        "default": "collapsed",
+        "type": "enum",
+        "values": [
+          "off",
+          "collapsed",
+          "full"
+        ]
       },
       "display.shimmer": {
         "default": "classic",
@@ -705,10 +711,6 @@
       },
       "hindsight.mentalModelMaxRenderChars": {
         "default": 16000,
-        "type": "number"
-      },
-      "hindsight.mentalModelRefreshIntervalMs": {
-        "default": null,
         "type": "number"
       },
       "hindsight.mentalModelsEnabled": {
@@ -1911,6 +1913,10 @@
         "default": null,
         "type": "record"
       },
+      "task.agentServiceTierOverrides": {
+        "default": null,
+        "type": "record"
+      },
       "task.batch": {
         "default": true,
         "type": "boolean"
@@ -2158,6 +2164,14 @@
         "default": 768,
         "type": "number"
       },
+      "tools.speculativeExecution.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "tools.speculativeExecution.maxInFlight": {
+        "default": 2,
+        "type": "number"
+      },
       "tools.xdev": {
         "default": true,
         "type": "boolean"
@@ -2273,6 +2287,10 @@
         "default": 8,
         "type": "number"
       },
+      "tui.mouse": {
+        "default": false,
+        "type": "boolean"
+      },
       "tui.reactions": {
         "default": true,
         "type": "boolean"
@@ -2297,6 +2315,15 @@
       "tui.tight": {
         "default": false,
         "type": "boolean"
+      },
+      "tui.titleSpinner": {
+        "default": "braille",
+        "type": "enum",
+        "values": [
+          "braille",
+          "dots",
+          "line"
+        ]
       },
       "tui.titleState": {
         "default": true,

@@ -13,7 +13,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.1.17";
+  schemaVersion = "18.2.1";
 
   defaultSettings = {
     setupVersion = 0;
@@ -125,6 +125,11 @@
       xdev = true;
       xdevDocs = "builtins";
       xdevInlineDevices = [ ];
+      # 18.2.1 added tools.speculativeExecution.
+      speculativeExecution = {
+        enabled = false;
+        maxInFlight = 2;
+      };
     };
     terminal = {
       showImages = true;
@@ -154,6 +159,9 @@
       titleState = true;
       # 18.1.6 added tui.reactions (upstream default true).
       reactions = true;
+      # 18.2.1 added tui.mouse and tui.titleSpinner.
+      mouse = false;
+      titleSpinner = "braille";
     };
     display = {
       shimmer = "classic";
@@ -162,6 +170,8 @@
       cacheMissMarker = false;
       collapseCompacted = true;
       hideToolActivity = false;
+      # 18.2.1 added display.pinnedAgents.
+      pinnedAgents = "collapsed";
     };
     showHardwareCursor = true;
     defaultThinkingLevel = "high";
@@ -271,6 +281,8 @@
       relayUrl = "wss://my.omp.sh";
       webUrl = "";
       displayName = "";
+      # 18.2.1 added collab.autoStart.
+      autoStart = "off";
     };
     share = {
       serverUrl = "https://my.omp.sh/s";
@@ -386,7 +398,7 @@
       reflectTimeoutMs = 120000;
       mentalModelsEnabled = true;
       mentalModelAutoSeed = true;
-      mentalModelRefreshIntervalMs = 300000;
+      # 18.2.1: upstream removed hindsight.mentalModelRefreshIntervalMs.
       mentalModelMaxRenderChars = 16000;
       # Null-default, intentionally undeclared: bankId, bankIdPrefix,
       # bankMission, retainMission. Credential (never declared): apiToken.
@@ -603,7 +615,7 @@
     async = {
       enabled = true;
       maxJobs = 100;
-      pollWaitDuration = "smart";
+      # 18.2.1: upstream removed async.pollWaitDuration.
     };
     irc = {
       timeoutMs = 120000;
@@ -659,6 +671,8 @@
       # ({ <agent> = "on"|"off"|<model-pattern>; }; legacy advisor.subagents
       # migrates to agentAdvisor.task).
       agentAdvisor = { };
+      # Null-default, intentionally undeclared (18.2.1):
+      # agentServiceTierOverrides.
     };
     tasks = {
       todoClearDelay = 60;
