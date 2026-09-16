@@ -222,6 +222,7 @@ let
       maxStepsPerTurn = intOpt "Max agent steps per turn (unset/0 = unlimited).";
       maxAttemptsPerStep = intOpt "Attempts per step (default 10 upstream; renamed from max_retries_per_step).";
       reservedContextSize = intOpt "Auto-compaction triggers when remaining context falls below this.";
+      compactionMaxAttempts = intOpt "Max auto-compaction attempts (added upstream in 0.43.x).";
       extraSettings = extraSettingsOption;
     };
   };
