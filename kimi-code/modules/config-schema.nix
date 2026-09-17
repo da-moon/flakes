@@ -450,6 +450,17 @@ let
           updates come from bumping this flake.
         '';
       };
+      markdown.mermaid = mkOption {
+        type = types.enum [
+          "final"
+          "off"
+        ];
+        default = "final";
+        description = ''
+          Render mermaid code blocks as diagrams in the terminal ("final")
+          or keep them as highlighted source ("off"). Added upstream in 2.0.0.
+        '';
+      };
       extraSettings = extraSettingsOption;
     };
   };
@@ -516,7 +527,7 @@ in
   # against. flake.nix throws when it does not match the latest release, so
   # every version bump forces a human review of the schema (command-code
   # convention). scripts/update-version.sh refuses to bump until it matches.
-  schemaVersion = "0.43.1";
+  schemaVersion = "2.0.0";
 
   # Merge manifest for config.toml consumed by the jq merge engine
   # (modules/lib.nix). Meaning:
@@ -604,6 +615,7 @@ in
         "notification_condition"
       ];
       upgrade = [ "auto_install" ];
+      markdown = [ "mermaid" ];
     };
     replaceTables = [ ];
     graftTables = [ ];
