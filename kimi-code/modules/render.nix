@@ -188,6 +188,9 @@ let
         upgrade = {
           auto_install = t.upgrade.autoInstall;
         };
+        markdown = {
+          inherit (t.markdown) mermaid;
+        };
       }
     );
 
