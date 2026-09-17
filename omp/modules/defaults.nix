@@ -13,7 +13,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.2.3";
+  schemaVersion = "18.2.4";
 
   defaultSettings = {
     setupVersion = 0;
@@ -71,6 +71,9 @@
       openrouterVariant = "default";
       fetch = "auto";
       autoThinkingMaxEffort = "xhigh";
+      # 18.2.4 added providers.judgmentProvider (enum: auto/typesafe/llm;
+      # upstream default "auto").
+      judgmentProvider = "auto";
       # Registry records null: the upstream default is the named constant 60
       # (packages/coding-agent/src/web/search/types.ts).
       webSearchTimeoutSeconds = 60;
@@ -108,6 +111,8 @@
     };
     composer = {
       shape = "box";
+      # 18.2.4 added composer.tokenRate (upstream default false).
+      tokenRate = false;
     };
     tools = {
       artifactSpillThreshold = 50;

@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.2.3"
+    "version": "18.2.4"
   },
   "schemaVersion": 1,
   "structural": {
@@ -354,6 +354,10 @@
       "composer.shape": {
         "default": "band",
         "type": "string"
+      },
+      "composer.tokenRate": {
+        "default": false,
+        "type": "boolean"
       },
       "computer.display": {
         "default": "all",
@@ -1334,6 +1338,15 @@
       "providers.imageOrder": {
         "default": null,
         "type": "array"
+      },
+      "providers.judgmentProvider": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "typesafe",
+          "llm"
+        ]
       },
       "providers.kimiApiFormat": {
         "default": "auto",
