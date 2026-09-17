@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.2.1"
+    "version": "18.2.3"
   },
   "schemaVersion": 1,
   "structural": {
@@ -2321,6 +2321,7 @@
         "type": "enum",
         "values": [
           "braille",
+          "pulse",
           "dots",
           "line"
         ]

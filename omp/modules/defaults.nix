@@ -13,7 +13,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.2.1";
+  schemaVersion = "18.2.3";
 
   defaultSettings = {
     setupVersion = 0;
