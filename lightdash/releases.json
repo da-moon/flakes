@@ -1,5 +1,5 @@
 {
-  "latest": "2.243.5",
+  "latest": "2.249.0",
   "versions": {
     "1.188.0": {
       "version": "1.188.0",
@@ -128,6 +128,11 @@
       "version": "2.243.5",
       "rev": "2.243.5",
       "tarballHash": "sha256-gR7izQN+VZglxMC0NXf1eZLepcRAjIF85jmIPLmYLs8="
+    },
+    "2.249.0": {
+      "version": "2.249.0",
+      "rev": "2.249.0",
+      "tarballHash": "sha256-TEV46R0I8GCudS7FJDiO8Y4D6hBo+hOgX2htD4wWti0="
     }
   }
 }
