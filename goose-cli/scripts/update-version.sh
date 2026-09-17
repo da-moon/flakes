@@ -33,8 +33,8 @@ readonly PACKAGE_ATTR="goose-cli"
 # Systems with upstream CLI archives (matches prebuiltBySystem in flake.nix).
 declare -Ar PREBUILT_ASSET_BY_SYSTEM=(
   [x86_64-linux]="goose-x86_64-unknown-linux-gnu.tar.gz"
-  [x86_64-darwin]="goose-x86_64-apple-darwin.tar.gz"
-  [aarch64-darwin]="goose-aarch64-apple-darwin.tar.gz"
+  [x86_64-darwin]="goose-x86_64-apple-darwin.tar.bz2"
+  [aarch64-darwin]="goose-aarch64-apple-darwin.tar.bz2"
 )
 # lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
 readonly PLACEHOLDER_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -108,7 +108,7 @@ releases_jq() {
 # hashes, then set it as .latest. An existing entry's cargoOutputHashes are
 # preserved so already-resolved git-dep hashes are not needlessly recomputed.
 seed_release_entry() {
-  local key="$1" version="$2" rev="$3" prebuilt_hashes="$4"
+  local key="$1" version="$2" rev="$3" prebuilt_hashes="$4" prebuilt_assets="$5"
   local existing_cargo
   existing_cargo="$(jq -c --arg k "$key" '.versions[$k].cargoOutputHashes // {}' "$releases_file")"
   releases_jq '
@@ -116,6 +116,7 @@ seed_release_entry() {
         version: $ver,
         rev: $rev,
         prebuiltHashes: $pb,
+        prebuiltAssets: $assets,
         srcHash: $fake,
         cargoOutputHashes: $cargo
       }
@@ -125,6 +126,7 @@ seed_release_entry() {
     --arg ver "$version" \
     --arg rev "$rev" \
     --argjson pb "$prebuilt_hashes" \
+    --argjson assets "$prebuilt_assets" \
     --arg fake "$PLACEHOLDER_HASH" \
     --argjson cargo "$existing_cargo"
 }
@@ -518,6 +520,7 @@ main() {
   # Prefetch all prebuilt release binary hashes (deterministic, no build).
   local system asset prebuilt_url prebuilt_hash
   local prebuilt_hashes='{}'
+  local prebuilt_assets='{}'
   for system in "${!PREBUILT_ASSET_BY_SYSTEM[@]}"; do
     asset="${PREBUILT_ASSET_BY_SYSTEM[$system]}"
     prebuilt_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${latest_tag}/${asset}"
@@ -529,12 +532,14 @@ main() {
     fi
     prebuilt_hashes="$(jq -n --argjson hashes "$prebuilt_hashes" --arg system "$system" --arg hash "$prebuilt_hash" \
       '$hashes + {($system): $hash}')"
+    prebuilt_assets="$(jq -n --argjson assets "$prebuilt_assets" --arg system "$system" --arg asset "$asset" \
+      '$assets + {($system): $asset}')"
   done
 
   backup_repo_state
 
   # Seed the new entry (prebuilt hash + placeholder source hashes) and set latest.
-  seed_release_entry "$latest_version" "$latest_version" "$latest_tag" "$prebuilt_hashes"
+  seed_release_entry "$latest_version" "$latest_version" "$latest_tag" "$prebuilt_hashes" "$prebuilt_assets"
 
   # Refresh the vendored Cargo.lock for the source (aarch64) build path.
   if ! fetch_cargo_lock "$latest_tag"; then

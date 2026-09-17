@@ -38,19 +38,24 @@
 
             # Prefer upstream release binaries wherever they exist. aarch64-linux
             # remains a source build because upstream's glibc binary is not used here.
+            assetBySystem = {
+              "x86_64-linux" = "goose-x86_64-unknown-linux-gnu.tar.gz";
+              "x86_64-darwin" = "goose-x86_64-apple-darwin.tar.gz";
+              "aarch64-darwin" = "goose-aarch64-apple-darwin.tar.gz";
+            };
             prebuiltBySystem = {
-              "x86_64-linux" = {
-                url = "https://github.com/block/goose/releases/download/${rev}/goose-x86_64-unknown-linux-gnu.tar.gz";
-                sha256 = entry.prebuiltHashes."x86_64-linux";
-              };
-              "x86_64-darwin" = {
-                url = "https://github.com/block/goose/releases/download/${rev}/goose-x86_64-apple-darwin.tar.gz";
-                sha256 = entry.prebuiltHashes."x86_64-darwin";
-              };
-              "aarch64-darwin" = {
-                url = "https://github.com/block/goose/releases/download/${rev}/goose-aarch64-apple-darwin.tar.gz";
-                sha256 = entry.prebuiltHashes."aarch64-darwin";
-              };
+              "x86_64-linux".url = "https://github.com/block/goose/releases/download/${rev}/${
+                entry.prebuiltAssets."x86_64-linux" or assetBySystem."x86_64-linux"
+              }";
+              "x86_64-linux".sha256 = entry.prebuiltHashes."x86_64-linux";
+              "x86_64-darwin".url = "https://github.com/block/goose/releases/download/${rev}/${
+                entry.prebuiltAssets."x86_64-darwin" or assetBySystem."x86_64-darwin"
+              }";
+              "x86_64-darwin".sha256 = entry.prebuiltHashes."x86_64-darwin";
+              "aarch64-darwin".url = "https://github.com/block/goose/releases/download/${rev}/${
+                entry.prebuiltAssets."aarch64-darwin" or assetBySystem."aarch64-darwin"
+              }";
+              "aarch64-darwin".sha256 = entry.prebuiltHashes."aarch64-darwin";
             };
 
             mkPrebuilt =
