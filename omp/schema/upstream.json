@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.2.4"
+    "version": "18.2.6"
   },
   "schemaVersion": 1,
   "structural": {
@@ -485,7 +485,7 @@
         "type": "boolean"
       },
       "edit.enforceSeenLines": {
-        "default": false,
+        "default": true,
         "type": "boolean"
       },
       "edit.fuzzyMatch": {
@@ -1833,16 +1833,7 @@
       },
       "statusLine.preset": {
         "default": "default",
-        "type": "enum",
-        "values": [
-          "default",
-          "minimal",
-          "compact",
-          "full",
-          "nerd",
-          "ascii",
-          "custom"
-        ]
+        "type": "enum"
       },
       "statusLine.rightSegments": {
         "default": null,
@@ -1854,16 +1845,7 @@
       },
       "statusLine.separator": {
         "default": "powerline-thin",
-        "type": "enum",
-        "values": [
-          "powerline",
-          "powerline-thin",
-          "slash",
-          "pipe",
-          "block",
-          "none",
-          "ascii"
-        ]
+        "type": "enum"
       },
       "statusLine.sessionAccent": {
         "default": true,
@@ -1884,6 +1866,14 @@
           "all",
           "one-at-a-time"
         ]
+      },
+      "stream.redactPatterns": {
+        "default": null,
+        "type": "array"
+      },
+      "stream.serverUrl": {
+        "default": null,
+        "type": "string"
       },
       "stt.enabled": {
         "default": false,
@@ -2212,14 +2202,7 @@
       },
       "treeFilterMode": {
         "default": "default",
-        "type": "enum",
-        "values": [
-          "default",
-          "no-tools",
-          "user-only",
-          "labeled-only",
-          "all"
-        ]
+        "type": "enum"
       },
       "tts.localModel": {
         "default": null,
