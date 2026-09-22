@@ -136,6 +136,22 @@
       },
       {
         "contextWindow": 1000000,
+        "id": "claude-opus-5-5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Opus 5.5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
         "id": "claude-sonnet-4-6",
         "inputModalities": [
           "image",
@@ -438,6 +454,38 @@
         ]
       },
       {
+        "contextWindow": 1050000,
+        "id": "gpt-6-luna",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-6 Luna",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1050000,
+        "id": "gpt-6-sol",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-6 Sol",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 256000,
         "id": "inclusionai/ling-3.0-flash-free",
         "inputModalities": [
@@ -452,6 +500,14 @@
           "text"
         ],
         "label": "Ling 3.0 Flash Sante"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "meituan/LongCat-2.0",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "LongCat 2.0"
       },
       {
         "contextWindow": 1048576,
@@ -810,6 +866,20 @@
         "label": "Step 3.7 Flash"
       },
       {
+        "contextWindow": 1000000,
+        "id": "stepfun/Step-5-Preview",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Step 5 Preview",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
         "contextWindow": 262144,
         "id": "tencent/Hy3",
         "inputModalities": [
@@ -886,6 +956,21 @@
         ]
       },
       {
+        "contextWindow": 500000,
+        "id": "xai/grok-4.7",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Grok 4.7",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
         "contextWindow": 1000000,
         "id": "xiaomi/mimo-v2.5",
         "inputModalities": [
@@ -901,6 +986,33 @@
           "text"
         ],
         "label": "MiMo V2.5 Pro"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "xiaomi/mimo-v2.6-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiMo V2.6 Flash"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "xiaomi/mimo-v2.6-pro",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiMo V2.6 Pro"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "xiaomi/mimo-v2.6-pro-ultraspeed",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiMo V2.6 Pro UltraSpeed"
       },
       {
         "contextWindow": 1048576,
@@ -1011,8 +1123,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2613601,
-    "modelCount": 77,
+    "bundleBytes": 2650127,
+    "modelCount": 86,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1032,14 +1144,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 710232
+    "tokenCount": 719333
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-Q8OSFAaiccfBMfjeSpxwI+afH7+TjTmt7uDje/3G3kE=",
+    "entrypointHash": "sha256-YOfIs/DbYe6Byd/MewFBSc0d1ZTeqdcA1VPq7BsPvak=",
     "name": "command-code",
-    "packageJsonHash": "sha256-CSXlRcSnrIgnKv6LOw++zBlFV2Pezre1gzskZvVHIQc=",
-    "version": "1.56.2"
+    "packageJsonHash": "sha256-5Wz4FbHyOXaJP9E5jsoCFQqepiyz8S6m/ooEvHl/Bjg=",
+    "version": "1.64.0"
   },
   "schemaVersion": 1,
   "structural": {
