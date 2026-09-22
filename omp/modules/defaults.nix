@@ -13,7 +13,7 @@
 # siblings are declared, plus the ledger near the end of defaultSettings.
 { }:
 {
-  schemaVersion = "18.2.6";
+  schemaVersion = "18.2.8";
 
   defaultSettings = {
     setupVersion = 0;
@@ -49,21 +49,13 @@
       };
       # Upstream replaced the single-preference `webSearch`/`image` options
       # ("auto" sentinel) with priority-list orders (empty list = auto).
-      webSearchOrder = [ ];
-      webSearchExclude = [ ];
       # 17.2.14 added dotted key "searxng.safesearch" (number); its default is
       # null, so nothing is declared here.
       antigravityEndpoint = "auto";
       cacheRetention = "auto";
-      imageOrder = [ ];
       fireworksTier = "standard";
-      tts = "auto";
-      tinyModel = "online";
       tinyModelDevice = "default";
       tinyModelDtype = "default";
-      memoryModel = "online";
-      autoThinkingModel = "online";
-      unexpectedStopModel = "online";
       kimiApiFormat = "anthropic";
       openaiWebsockets = "auto";
       streamFirstEventTimeoutSeconds = -1;
@@ -71,16 +63,12 @@
       openrouterVariant = "default";
       fetch = "auto";
       autoThinkingMaxEffort = "xhigh";
-      # 18.2.4 added providers.judgmentProvider (enum: auto/typesafe/llm;
-      # upstream default "auto").
-      judgmentProvider = "auto";
       # Registry records null: the upstream default is the named constant 60
       # (packages/coding-agent/src/web/search/types.ts).
       webSearchTimeoutSeconds = 60;
       ollama-cloud = {
         maxConcurrency = 3;
       };
-      # Null-default, intentionally undeclared: webSearchGeminiModel.
     };
     disabledExtensions = [ ];
     modelRoles = { };
@@ -266,10 +254,11 @@
     };
     magicKeywords = {
       enabled = true;
-      ultrathink = true;
-      orchestrate = true;
-      workflow = true;
     };
+    find = {
+      enabled = false;
+    };
+
     completion = {
       notify = "on";
     };
@@ -297,7 +286,6 @@
     stt = {
       enabled = false;
       language = "en";
-      modelName = "parakeet";
       submitTrigger = "never";
     };
     contextPromotion = {
@@ -711,7 +699,6 @@
       enabled = false;
     };
     tts = {
-      localModel = "kokoro";
       localVoice = "af_heart";
     };
     speech = {

@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.2.6"
+    "version": "18.2.8"
   },
   "schemaVersion": 1,
   "structural": {
@@ -589,6 +589,10 @@
         "default": true,
         "type": "boolean"
       },
+      "find.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
       "followUpMode": {
         "default": "one-at-a-time",
         "type": "enum",
@@ -948,18 +952,6 @@
         "default": true,
         "type": "boolean"
       },
-      "magicKeywords.orchestrate": {
-        "default": true,
-        "type": "boolean"
-      },
-      "magicKeywords.ultrathink": {
-        "default": true,
-        "type": "boolean"
-      },
-      "magicKeywords.workflow": {
-        "default": true,
-        "type": "boolean"
-      },
       "marketplace.autoUpdate": {
         "default": "notify",
         "type": "enum",
@@ -1300,10 +1292,6 @@
           "max"
         ]
       },
-      "providers.autoThinkingModel": {
-        "default": null,
-        "type": "enum"
-      },
       "providers.cacheRetention": {
         "default": "auto",
         "type": "enum",
@@ -1335,19 +1323,6 @@
           "priority"
         ]
       },
-      "providers.imageOrder": {
-        "default": null,
-        "type": "array"
-      },
-      "providers.judgmentProvider": {
-        "default": "auto",
-        "type": "enum",
-        "values": [
-          "auto",
-          "typesafe",
-          "llm"
-        ]
-      },
       "providers.kimiApiFormat": {
         "default": "auto",
         "type": "enum",
@@ -1360,10 +1335,6 @@
       "providers.maxInFlightRequests": {
         "default": null,
         "type": "record"
-      },
-      "providers.memoryModel": {
-        "default": null,
-        "type": "enum"
       },
       "providers.ollama-cloud.maxConcurrency": {
         "default": 3,
@@ -1410,10 +1381,6 @@
         "default": -1,
         "type": "number"
       },
-      "providers.tinyModel": {
-        "default": null,
-        "type": "enum"
-      },
       "providers.tinyModelDevice": {
         "default": null,
         "type": "enum"
@@ -1421,32 +1388,6 @@
       "providers.tinyModelDtype": {
         "default": null,
         "type": "enum"
-      },
-      "providers.tts": {
-        "default": "auto",
-        "type": "enum",
-        "values": [
-          "auto",
-          "local",
-          "xai",
-          "deepinfra"
-        ]
-      },
-      "providers.unexpectedStopModel": {
-        "default": null,
-        "type": "enum"
-      },
-      "providers.webSearchExclude": {
-        "default": null,
-        "type": "array"
-      },
-      "providers.webSearchGeminiModel": {
-        "default": null,
-        "type": "string"
-      },
-      "providers.webSearchOrder": {
-        "default": null,
-        "type": "array"
       },
       "providers.webSearchTimeoutSeconds": {
         "default": null,
@@ -1883,10 +1824,6 @@
         "default": "en",
         "type": "string"
       },
-      "stt.modelName": {
-        "default": null,
-        "type": "enum"
-      },
       "stt.submitTrigger": {
         "default": "never",
         "type": "enum"
@@ -2202,10 +2139,6 @@
       },
       "treeFilterMode": {
         "default": "default",
-        "type": "enum"
-      },
-      "tts.localModel": {
-        "default": null,
         "type": "enum"
       },
       "tts.localVoice": {
