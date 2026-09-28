@@ -76,9 +76,10 @@
             ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
               pkgs.autoPatchelfHook
             ];
-            buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-              (lib.getLib pkgs.stdenv.cc.cc)
-            ];
+           buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+             (lib.getLib pkgs.stdenv.cc.cc)
+             pkgs.libxcb
+           ];
             autoPatchelfIgnoreMissingDeps = [ "libc.musl-x86_64.so.1" ];
 
             installPhase = ''
