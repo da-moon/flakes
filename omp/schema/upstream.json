@@ -2,17 +2,13 @@
   "catalogs": {},
   "package": {
     "name": "omp",
-    "version": "18.4.2"
+    "version": "18.2.8"
   },
   "schemaVersion": 1,
   "structural": {
     "settings": {
       "advisor.enabled": {
         "default": false,
-        "type": "boolean"
-      },
-      "advisor.evictStaleResults": {
-        "default": true,
         "type": "boolean"
       },
       "advisor.immuneTurns": {
@@ -25,15 +21,53 @@
       },
       "advisor.syncBacklog": {
         "default": "off",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "off",
+          "1",
+          "3",
+          "5"
+        ]
+      },
+      "ask.enabled": {
+        "default": true,
+        "type": "boolean"
       },
       "ask.notify": {
         "default": "on",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "on",
+          "off"
+        ]
       },
       "ask.timeout": {
         "default": 0,
         "type": "number"
+      },
+      "astEdit.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "astGrep.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "async.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "async.maxJobs": {
+        "default": 100,
+        "type": "number"
+      },
+      "auth.broker.token": {
+        "default": null,
+        "type": "string"
+      },
+      "auth.broker.url": {
+        "default": null,
+        "type": "string"
       },
       "autoResume": {
         "default": false,
@@ -41,6 +75,66 @@
       },
       "autocompleteMaxVisible": {
         "default": 10,
+        "type": "number"
+      },
+      "autolearn.autoContinue": {
+        "default": false,
+        "type": "boolean"
+      },
+      "autolearn.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "autolearn.minToolCalls": {
+        "default": 5,
+        "type": "number"
+      },
+      "bash.allowCompoundCommands": {
+        "default": false,
+        "type": "boolean"
+      },
+      "bash.autoBackground.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "bash.autoBackground.thresholdMs": {
+        "default": 60000,
+        "type": "number"
+      },
+      "bash.direnv": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "off"
+        ]
+      },
+      "bash.direnvLoadTimeoutMs": {
+        "default": 30000,
+        "type": "number"
+      },
+      "bash.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "bash.patterns": {
+        "default": null,
+        "type": "array"
+      },
+      "bashInterceptor.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "bashInterceptor.patterns": {
+        "default": null,
+        "type": "array"
+      },
+      "branchSummary.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "branchSummary.reserveTokens": {
+        "default": 16384,
         "type": "number"
       },
       "browser.cdpUrl": {
@@ -79,9 +173,39 @@
         "default": null,
         "type": "string"
       },
+      "checkpoint.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "codexResets.autoRedeem": {
+        "default": "unset",
+        "type": "enum",
+        "values": [
+          "unset",
+          "yes",
+          "no"
+        ]
+      },
+      "codexResets.keepCredits": {
+        "default": 0,
+        "type": "number"
+      },
+      "codexResets.minBlockedMinutes": {
+        "default": 60,
+        "type": "number"
+      },
+      "codexResets.salvageHorizonHours": {
+        "default": 12,
+        "type": "number"
+      },
       "collab.autoStart": {
         "default": "off",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "off",
+          "view",
+          "control"
+        ]
       },
       "collab.displayName": {
         "default": "",
@@ -96,6 +220,22 @@
         "type": "string"
       },
       "colorBlindMode": {
+        "default": false,
+        "type": "boolean"
+      },
+      "commands.enableClaudeProject": {
+        "default": true,
+        "type": "boolean"
+      },
+      "commands.enableClaudeUser": {
+        "default": false,
+        "type": "boolean"
+      },
+      "commands.enableOpencodeProject": {
+        "default": true,
+        "type": "boolean"
+      },
+      "commands.enableOpencodeUser": {
         "default": false,
         "type": "boolean"
       },
@@ -123,9 +263,89 @@
         "default": 5000,
         "type": "number"
       },
+      "compaction.asyncEnabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "compaction.autoContinue": {
+        "default": true,
+        "type": "boolean"
+      },
+      "compaction.dropUseless": {
+        "default": true,
+        "type": "boolean"
+      },
+      "compaction.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "compaction.experimentalContextManagement": {
+        "default": false,
+        "type": "boolean"
+      },
+      "compaction.handoffSaveToDisk": {
+        "default": false,
+        "type": "boolean"
+      },
+      "compaction.idleEnabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "compaction.idleThresholdTokens": {
+        "default": 200000,
+        "type": "number"
+      },
+      "compaction.idleTimeoutSeconds": {
+        "default": 300,
+        "type": "number"
+      },
+      "compaction.keepRecentTokens": {
+        "default": 20000,
+        "type": "number"
+      },
+      "compaction.methodOrder": {
+        "default": null,
+        "type": "array"
+      },
+      "compaction.midTurnEnabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "compaction.remoteEndpoint": {
+        "default": null,
+        "type": "string"
+      },
+      "compaction.remoteStreamingV2Enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "compaction.reserveTokens": {
+        "default": null,
+        "type": "number"
+      },
+      "compaction.supersedeReads": {
+        "default": true,
+        "type": "boolean"
+      },
+      "compaction.thresholdPercent": {
+        "default": -1,
+        "type": "number"
+      },
+      "compaction.thresholdTokens": {
+        "default": -1,
+        "type": "number"
+      },
+      "compaction.v2RetainedMessageBudget": {
+        "default": 64000,
+        "type": "number"
+      },
       "completion.notify": {
         "default": "on",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "on",
+          "off"
+        ]
       },
       "composer.recallClearedDrafts": {
         "default": true,
@@ -138,6 +358,68 @@
       "composer.tokenRate": {
         "default": false,
         "type": "boolean"
+      },
+      "computer.display": {
+        "default": "all",
+        "type": "string"
+      },
+      "computer.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "computer.maxHeight": {
+        "default": 2400,
+        "type": "number"
+      },
+      "computer.maxWidth": {
+        "default": 3840,
+        "type": "number"
+      },
+      "contextPromotion.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "cycleOrder": {
+        "default": null,
+        "type": "array"
+      },
+      "debug.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "defaultThinkingLevel": {
+        "default": "high",
+        "type": "enum",
+        "values": []
+      },
+      "dev.autoqa": {
+        "default": true,
+        "type": "boolean"
+      },
+      "dev.autoqaConsent": {
+        "default": "unset",
+        "type": "enum",
+        "values": [
+          "unset",
+          "granted",
+          "denied"
+        ]
+      },
+      "dev.autoqaPush.endpoint": {
+        "default": "https://qa.omp.sh/v1/grievances",
+        "type": "string"
+      },
+      "dev.autoqaPush.token": {
+        "default": null,
+        "type": "string"
+      },
+      "disabledExtensions": {
+        "default": null,
+        "type": "array"
+      },
+      "disabledProviders": {
+        "default": null,
+        "type": "array"
       },
       "display.cacheMissMarker": {
         "default": false,
@@ -153,11 +435,21 @@
       },
       "display.pinnedAgents": {
         "default": "collapsed",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "off",
+          "collapsed",
+          "full"
+        ]
       },
       "display.shimmer": {
         "default": "classic",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "classic",
+          "kitt",
+          "disabled"
+        ]
       },
       "display.showTokenUsage": {
         "default": false,
@@ -173,15 +465,92 @@
       },
       "doubleEscapeAction": {
         "default": "rewind",
+        "type": "enum",
+        "values": [
+          "rewind",
+          "tree",
+          "none"
+        ]
+      },
+      "edit.autoRepair.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "edit.blackbox.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "edit.blockAutoGenerated": {
+        "default": true,
+        "type": "boolean"
+      },
+      "edit.enforceSeenLines": {
+        "default": true,
+        "type": "boolean"
+      },
+      "edit.fuzzyMatch": {
+        "default": true,
+        "type": "boolean"
+      },
+      "edit.fuzzyThreshold": {
+        "default": 0.95,
+        "type": "number"
+      },
+      "edit.mode": {
+        "default": "hashline",
         "type": "enum"
+      },
+      "edit.recoverInlineEdits": {
+        "default": true,
+        "type": "boolean"
+      },
+      "edit.streamingAbort": {
+        "default": false,
+        "type": "boolean"
       },
       "emojiAutocomplete": {
         "default": true,
         "type": "boolean"
       },
+      "enabledModels": {
+        "default": null,
+        "type": "array"
+      },
+      "enabledProviders": {
+        "default": null,
+        "type": "array"
+      },
       "error.notify": {
         "default": "off",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "on",
+          "off"
+        ]
+      },
+      "eval.autoBackground.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "eval.autoBackground.thresholdMs": {
+        "default": 60000,
+        "type": "number"
+      },
+      "eval.js": {
+        "default": true,
+        "type": "boolean"
+      },
+      "eval.py": {
+        "default": true,
+        "type": "boolean"
+      },
+      "eval.tools.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "eval.workpool.freshAgents": {
+        "default": false,
+        "type": "boolean"
       },
       "exa.enabled": {
         "default": true,
@@ -191,9 +560,46 @@
         "default": 1000,
         "type": "number"
       },
+      "extendedContext": {
+        "default": false,
+        "type": "boolean"
+      },
+      "extensionHandlers.toolCallTimeoutMs": {
+        "default": 30000,
+        "type": "number"
+      },
+      "extensions": {
+        "default": null,
+        "type": "array"
+      },
+      "externalThinking": {
+        "default": false,
+        "type": "boolean"
+      },
+      "features.unexpectedStopDetection": {
+        "default": "mechanical",
+        "type": "enum",
+        "values": [
+          "none",
+          "mechanical",
+          "smart"
+        ]
+      },
+      "fetch.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "find.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
       "followUpMode": {
         "default": "one-at-a-time",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "all",
+          "one-at-a-time"
+        ]
       },
       "gc.archive": {
         "default": true,
@@ -219,14 +625,36 @@
         "default": true,
         "type": "boolean"
       },
+      "generate_image.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
       "git.enabled": {
         "default": true,
         "type": "boolean"
       },
+      "github.cache.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "github.cache.hardTtlSec": {
+        "default": 604800,
+        "type": "number"
+      },
+      "github.cache.softTtlSec": {
+        "default": 300,
+        "type": "number"
+      },
+      "github.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "glob.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
       "goal.continuationModes": {
-        "default": [
-          "interactive"
-        ],
+        "default": null,
         "type": "array"
       },
       "goal.enabled": {
@@ -235,6 +663,22 @@
       },
       "goal.statusInFooter": {
         "default": true,
+        "type": "boolean"
+      },
+      "grep.contextAfter": {
+        "default": 3,
+        "type": "number"
+      },
+      "grep.contextBefore": {
+        "default": 1,
+        "type": "number"
+      },
+      "grep.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "hideThinkingBlock": {
+        "default": false,
         "type": "boolean"
       },
       "hindsight.apiToken": {
@@ -283,7 +727,12 @@
       },
       "hindsight.recallBudget": {
         "default": "mid",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "low",
+          "mid",
+          "high"
+        ]
       },
       "hindsight.recallContextTurns": {
         "default": 1,
@@ -327,7 +776,11 @@
       },
       "hindsight.retainMode": {
         "default": "full-session",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "full-session",
+          "last-turn"
+        ]
       },
       "hindsight.retainOverlapTurns": {
         "default": 2,
@@ -339,7 +792,12 @@
       },
       "hindsight.scoping": {
         "default": "per-project-tagged",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "global",
+          "per-project",
+          "per-project-tagged"
+        ]
       },
       "images.autoResize": {
         "default": true,
@@ -348,6 +806,14 @@
       "images.blockImages": {
         "default": false,
         "type": "boolean"
+      },
+      "images.describeForTextModels": {
+        "default": true,
+        "type": "boolean"
+      },
+      "images.questionTimeoutMs": {
+        "default": 300000,
+        "type": "number"
       },
       "images.urls.backends": {
         "default": null,
@@ -389,9 +855,53 @@
         "default": 72,
         "type": "number"
       },
+      "includeModelInPrompt": {
+        "default": true,
+        "type": "boolean"
+      },
+      "includeWorkspaceTree": {
+        "default": false,
+        "type": "boolean"
+      },
+      "inlineToolDescriptors": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "on",
+          "off"
+        ]
+      },
       "interruptMode": {
         "default": "immediate",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "immediate",
+          "wait"
+        ]
+      },
+      "irc.timeoutMs": {
+        "default": 120000,
+        "type": "number"
+      },
+      "isolation.backend": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "apfs",
+          "btrfs",
+          "zfs",
+          "reflink",
+          "overlayfs",
+          "projfs",
+          "block-clone",
+          "rcopy"
+        ]
+      },
+      "launch.enabled": {
+        "default": true,
+        "type": "boolean"
       },
       "live.voice": {
         "default": null,
@@ -403,7 +913,40 @@
       },
       "loop.mode": {
         "default": "prompt",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "prompt",
+          "compact",
+          "reset"
+        ]
+      },
+      "lsp.diagnosticsDeduplicate": {
+        "default": true,
+        "type": "boolean"
+      },
+      "lsp.diagnosticsOnEdit": {
+        "default": false,
+        "type": "boolean"
+      },
+      "lsp.diagnosticsOnWrite": {
+        "default": true,
+        "type": "boolean"
+      },
+      "lsp.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "lsp.formatOnWrite": {
+        "default": false,
+        "type": "boolean"
+      },
+      "lsp.lazy": {
+        "default": true,
+        "type": "boolean"
+      },
+      "lsp.shared": {
+        "default": true,
+        "type": "boolean"
       },
       "magicKeywords.enabled": {
         "default": true,
@@ -411,7 +954,12 @@
       },
       "marketplace.autoUpdate": {
         "default": "notify",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "off",
+          "notify",
+          "auto"
+        ]
       },
       "mcp.enableProjectConfig": {
         "default": true,
@@ -428,10 +976,6 @@
       "mcp.renderMarkdownResults": {
         "default": true,
         "type": "boolean"
-      },
-      "mcp.startupTimeoutMs": {
-        "default": 250,
-        "type": "number"
       },
       "memories.enabled": {
         "default": false,
@@ -499,7 +1043,18 @@
       },
       "memory.backend": {
         "default": "off",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "off",
+          "local",
+          "hindsight",
+          "mnemopi",
+          "sharpshooter"
+        ]
+      },
+      "minP": {
+        "default": -1,
+        "type": "number"
       },
       "mnemopi.autoRecall": {
         "default": true,
@@ -535,7 +1090,11 @@
       },
       "mnemopi.embeddingVariant": {
         "default": "en",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "en",
+          "multilingual"
+        ]
       },
       "mnemopi.enhancedRecall": {
         "default": false,
@@ -555,7 +1114,12 @@
       },
       "mnemopi.llmMode": {
         "default": "smol",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "none",
+          "smol",
+          "remote"
+        ]
       },
       "mnemopi.llmModel": {
         "default": null,
@@ -591,11 +1155,74 @@
       },
       "mnemopi.scoping": {
         "default": "per-project",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "global",
+          "per-project",
+          "per-project-tagged"
+        ]
+      },
+      "model.loopGuard.checkAssistantContent": {
+        "default": true,
+        "type": "boolean"
+      },
+      "model.loopGuard.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "model.loopGuard.toolCallReminder": {
+        "default": true,
+        "type": "boolean"
+      },
+      "model.toolCallLoopGuard.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "model.toolCallLoopGuard.exemptTools": {
+        "default": null,
+        "type": "array"
+      },
+      "model.toolCallLoopGuard.threshold": {
+        "default": 5,
+        "type": "number"
+      },
+      "modelProviderOrder": {
+        "default": null,
+        "type": "array"
+      },
+      "modelRoleStorage": {
+        "default": "global",
+        "type": "enum",
+        "values": [
+          "global",
+          "project"
+        ]
+      },
+      "modelRoles": {
+        "default": null,
+        "type": "record"
+      },
+      "modelTags": {
+        "default": null,
+        "type": "record"
+      },
+      "omitThinking": {
+        "default": false,
+        "type": "boolean"
       },
       "paste.largeMenuThreshold": {
         "default": 100,
         "type": "number"
+      },
+      "personality": {
+        "default": "default",
+        "type": "enum",
+        "values": [
+          "default",
+          "friendly",
+          "pragmatic",
+          "none"
+        ]
       },
       "plan.autosave": {
         "default": false,
@@ -613,6 +1240,215 @@
         "default": true,
         "type": "boolean"
       },
+      "power.sleepPrevention": {
+        "default": "idle",
+        "type": "enum",
+        "values": [
+          "off",
+          "idle",
+          "display",
+          "system"
+        ]
+      },
+      "presencePenalty": {
+        "default": -1,
+        "type": "number"
+      },
+      "prewalk.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "proseOnlyThinking": {
+        "default": true,
+        "type": "boolean"
+      },
+      "provider.appendOnlyContext": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "on",
+          "off"
+        ]
+      },
+      "providers.anthropic.serverSideFallback": {
+        "default": false,
+        "type": "boolean"
+      },
+      "providers.antigravityEndpoint": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "production",
+          "sandbox"
+        ]
+      },
+      "providers.autoThinkingMaxEffort": {
+        "default": "xhigh",
+        "type": "enum",
+        "values": [
+          "xhigh",
+          "max"
+        ]
+      },
+      "providers.cacheRetention": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "short",
+          "long",
+          "none"
+        ]
+      },
+      "providers.fetch": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "native",
+          "trafilatura",
+          "lynx",
+          "parallel",
+          "firecrawl",
+          "jina"
+        ]
+      },
+      "providers.fireworksTier": {
+        "default": "standard",
+        "type": "enum",
+        "values": [
+          "standard",
+          "priority"
+        ]
+      },
+      "providers.kimiApiFormat": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "openai",
+          "anthropic"
+        ]
+      },
+      "providers.maxInFlightRequests": {
+        "default": null,
+        "type": "record"
+      },
+      "providers.ollama-cloud.maxConcurrency": {
+        "default": 3,
+        "type": "number"
+      },
+      "providers.openai-codex.codeMode": {
+        "default": "off",
+        "type": "enum",
+        "values": [
+          "off",
+          "on",
+          "auto"
+        ]
+      },
+      "providers.openai-codex.codeModeDirectTools": {
+        "default": null,
+        "type": "array"
+      },
+      "providers.openaiWebsockets": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "off",
+          "on"
+        ]
+      },
+      "providers.openrouterVariant": {
+        "default": "default",
+        "type": "enum",
+        "values": [
+          "default",
+          "nitro",
+          "floor",
+          "online",
+          "exacto"
+        ]
+      },
+      "providers.streamFirstEventTimeoutSeconds": {
+        "default": -1,
+        "type": "number"
+      },
+      "providers.streamIdleTimeoutSeconds": {
+        "default": -1,
+        "type": "number"
+      },
+      "providers.tinyModelDevice": {
+        "default": null,
+        "type": "enum"
+      },
+      "providers.tinyModelDtype": {
+        "default": null,
+        "type": "enum"
+      },
+      "providers.webSearchTimeoutSeconds": {
+        "default": null,
+        "type": "number"
+      },
+      "python.interpreter": {
+        "default": "",
+        "type": "string"
+      },
+      "python.kernelMode": {
+        "default": "session",
+        "type": "enum",
+        "values": [
+          "session",
+          "per-call"
+        ]
+      },
+      "read.defaultLimit": {
+        "default": 300,
+        "type": "number"
+      },
+      "read.renderMarkdown": {
+        "default": false,
+        "type": "boolean"
+      },
+      "read.summarize.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "read.summarize.minBodyLines": {
+        "default": 4,
+        "type": "number"
+      },
+      "read.summarize.minCommentLines": {
+        "default": 6,
+        "type": "number"
+      },
+      "read.summarize.minTotalLines": {
+        "default": 100,
+        "type": "number"
+      },
+      "read.summarize.prose": {
+        "default": false,
+        "type": "boolean"
+      },
+      "read.summarize.unfoldLimit": {
+        "default": 100,
+        "type": "number"
+      },
+      "read.summarize.unfoldUntil": {
+        "default": 50,
+        "type": "number"
+      },
+      "read.toolResultPreview": {
+        "default": false,
+        "type": "boolean"
+      },
+      "readLineNumbers": {
+        "default": false,
+        "type": "boolean"
+      },
       "recap.enabled": {
         "default": true,
         "type": "boolean"
@@ -620,6 +1456,63 @@
       "recap.idleSeconds": {
         "default": 240,
         "type": "number"
+      },
+      "repetitionPenalty": {
+        "default": -1,
+        "type": "number"
+      },
+      "retry.baseDelayMs": {
+        "default": 500,
+        "type": "number"
+      },
+      "retry.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "retry.fallbackChains": {
+        "default": null,
+        "type": "record"
+      },
+      "retry.fallbackRevertPolicy": {
+        "default": "cooldown-expiry",
+        "type": "enum",
+        "values": [
+          "cooldown-expiry",
+          "never"
+        ]
+      },
+      "retry.maxDelayMs": {
+        "default": null,
+        "type": "number"
+      },
+      "retry.maxRetries": {
+        "default": 10,
+        "type": "number"
+      },
+      "retry.modelFallback": {
+        "default": true,
+        "type": "boolean"
+      },
+      "retry.usageAwareFallback": {
+        "default": false,
+        "type": "boolean"
+      },
+      "retry.usageReservePct": {
+        "default": 10,
+        "type": "number"
+      },
+      "retry.usageReservePolicy": {
+        "default": "confirm",
+        "type": "enum",
+        "values": [
+          "confirm",
+          "auto",
+          "fail-closed"
+        ]
+      },
+      "retry.waitForUsageReset": {
+        "default": false,
+        "type": "boolean"
       },
       "searxng.basicPassword": {
         "default": null,
@@ -657,6 +1550,10 @@
         "default": false,
         "type": "boolean"
       },
+      "security.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
       "setupVersion": {
         "default": 0,
         "type": "number"
@@ -671,7 +1568,11 @@
       },
       "share.store": {
         "default": "blob",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "blob",
+          "gist"
+        ]
       },
       "sharpshooter.injectionTokenLimit": {
         "default": 15000,
@@ -685,8 +1586,116 @@
         "default": null,
         "type": "string"
       },
+      "shellMinimizer.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "shellMinimizer.except": {
+        "default": null,
+        "type": "array"
+      },
+      "shellMinimizer.legacyFilters": {
+        "default": null,
+        "type": "boolean"
+      },
+      "shellMinimizer.maxCaptureBytes": {
+        "default": null,
+        "type": "number"
+      },
+      "shellMinimizer.only": {
+        "default": null,
+        "type": "array"
+      },
+      "shellMinimizer.settingsPath": {
+        "default": null,
+        "type": "string"
+      },
+      "shellMinimizer.sourceOutlineLevel": {
+        "default": "default",
+        "type": "enum",
+        "values": [
+          "default",
+          "aggressive"
+        ]
+      },
+      "shellPath": {
+        "default": null,
+        "type": "string"
+      },
       "showHardwareCursor": {
         "default": true,
+        "type": "boolean"
+      },
+      "skillful": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.customDirectories": {
+        "default": null,
+        "type": "array"
+      },
+      "skills.enableAgentsProject": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.enableAgentsUser": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.enableClaudeProject": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.enableClaudeUser": {
+        "default": false,
+        "type": "boolean"
+      },
+      "skills.enableCodexUser": {
+        "default": false,
+        "type": "boolean"
+      },
+      "skills.enablePiProject": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.enablePiUser": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.enableSkillCommands": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "skills.ignoredSkills": {
+        "default": null,
+        "type": "array"
+      },
+      "skills.includeSkills": {
+        "default": null,
+        "type": "array"
+      },
+      "snapcompact.shape": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto"
+        ]
+      },
+      "snapcompact.systemPrompt": {
+        "default": "none",
+        "type": "enum",
+        "values": [
+          "none",
+          "agents-md",
+          "all"
+        ]
+      },
+      "snapcompact.toolResults": {
+        "default": false,
         "type": "boolean"
       },
       "speech.enabled": {
@@ -699,15 +1708,24 @@
       },
       "speech.mode": {
         "default": "assistant",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "all",
+          "assistant",
+          "yield"
+        ]
       },
       "speech.voice": {
         "default": null,
         "type": "enum"
       },
+      "speechgen.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
       "spelling.autocomplete": {
-        "default": "auto",
-        "type": "enum"
+        "default": true,
+        "type": "boolean"
       },
       "spelling.autocorrect": {
         "default": false,
@@ -719,7 +1737,12 @@
       },
       "startup.changelogMode": {
         "default": "summary",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "summary",
+          "expanded",
+          "hidden"
+        ]
       },
       "startup.checkUpdate": {
         "default": true,
@@ -779,7 +1802,11 @@
       },
       "steeringMode": {
         "default": "one-at-a-time",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "all",
+          "one-at-a-time"
+        ]
       },
       "stream.redactPatterns": {
         "default": null,
@@ -803,11 +1830,121 @@
       },
       "symbolPreset": {
         "default": "unicode",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "unicode",
+          "nerd",
+          "ascii"
+        ]
       },
-      "telemetry.otlpExportEnabled": {
+      "task.agentAdvisor": {
+        "default": null,
+        "type": "record"
+      },
+      "task.agentIdleTtlMs": {
+        "default": 420000,
+        "type": "number"
+      },
+      "task.agentModelOverrides": {
+        "default": null,
+        "type": "record"
+      },
+      "task.agentPrewalk": {
+        "default": null,
+        "type": "record"
+      },
+      "task.agentServiceTierOverrides": {
+        "default": null,
+        "type": "record"
+      },
+      "task.batch": {
         "default": true,
         "type": "boolean"
+      },
+      "task.disabledAgents": {
+        "default": null,
+        "type": "array"
+      },
+      "task.eager": {
+        "default": "default",
+        "type": "enum",
+        "values": [
+          "default",
+          "preferred",
+          "always"
+        ]
+      },
+      "task.enableEffort": {
+        "default": false,
+        "type": "boolean"
+      },
+      "task.enableLsp": {
+        "default": false,
+        "type": "boolean"
+      },
+      "task.isolation.apply": {
+        "default": true,
+        "type": "boolean"
+      },
+      "task.isolation.commits": {
+        "default": "generic",
+        "type": "enum",
+        "values": [
+          "generic",
+          "ai"
+        ]
+      },
+      "task.isolation.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "task.isolation.merge": {
+        "default": "patch",
+        "type": "enum",
+        "values": [
+          "patch",
+          "branch"
+        ]
+      },
+      "task.maxConcurrency": {
+        "default": 32,
+        "type": "number"
+      },
+      "task.maxEffort": {
+        "default": "max",
+        "type": "enum"
+      },
+      "task.maxRecursionDepth": {
+        "default": 2,
+        "type": "number"
+      },
+      "task.maxRuntimeMs": {
+        "default": 0,
+        "type": "number"
+      },
+      "task.prewalk": {
+        "default": false,
+        "type": "boolean"
+      },
+      "task.showResolvedModelBadge": {
+        "default": false,
+        "type": "boolean"
+      },
+      "task.softRequestBudget": {
+        "default": 200,
+        "type": "number"
+      },
+      "task.softRequestBudgetNotice": {
+        "default": true,
+        "type": "boolean"
+      },
+      "tasks.todoClearDelay": {
+        "default": 60,
+        "type": "number"
+      },
+      "temperature": {
+        "default": -1,
+        "type": "number"
       },
       "terminal.showImages": {
         "default": true,
@@ -817,6 +1954,15 @@
         "default": false,
         "type": "boolean"
       },
+      "textVerbosity": {
+        "default": "medium",
+        "type": "enum",
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
       "theme.dark": {
         "default": "titanium",
         "type": "string"
@@ -825,9 +1971,171 @@
         "default": "light",
         "type": "string"
       },
+      "thinkingBudgets.high": {
+        "default": 16384,
+        "type": "number"
+      },
+      "thinkingBudgets.low": {
+        "default": 2048,
+        "type": "number"
+      },
+      "thinkingBudgets.max": {
+        "default": 32768,
+        "type": "number"
+      },
+      "thinkingBudgets.medium": {
+        "default": 8192,
+        "type": "number"
+      },
+      "thinkingBudgets.minimal": {
+        "default": 1024,
+        "type": "number"
+      },
+      "thinkingBudgets.xhigh": {
+        "default": 32768,
+        "type": "number"
+      },
+      "tier.advisor": {
+        "default": "none",
+        "type": "enum"
+      },
+      "tier.anthropic": {
+        "default": "none",
+        "type": "enum"
+      },
+      "tier.google": {
+        "default": "none",
+        "type": "enum"
+      },
+      "tier.openai": {
+        "default": "none",
+        "type": "enum"
+      },
+      "tier.subagent": {
+        "default": "inherit",
+        "type": "enum"
+      },
       "title.refreshOnReplan": {
         "default": true,
         "type": "boolean"
+      },
+      "todo.eager": {
+        "default": "default",
+        "type": "enum",
+        "values": [
+          "default",
+          "preferred",
+          "always"
+        ]
+      },
+      "todo.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "todo.reminders": {
+        "default": true,
+        "type": "boolean"
+      },
+      "todo.remindersMax": {
+        "default": 3,
+        "type": "number"
+      },
+      "tools.abortOnFabricatedResult": {
+        "default": true,
+        "type": "boolean"
+      },
+      "tools.approval": {
+        "default": null,
+        "type": "record"
+      },
+      "tools.approvalMode": {
+        "default": "yolo",
+        "type": "enum",
+        "values": [
+          "always-ask",
+          "write",
+          "yolo"
+        ]
+      },
+      "tools.artifactHeadBytes": {
+        "default": 20,
+        "type": "number"
+      },
+      "tools.artifactSpillThreshold": {
+        "default": 50,
+        "type": "number"
+      },
+      "tools.artifactTailBytes": {
+        "default": 20,
+        "type": "number"
+      },
+      "tools.artifactTailLines": {
+        "default": 500,
+        "type": "number"
+      },
+      "tools.format": {
+        "default": "auto",
+        "type": "enum",
+        "values": [
+          "auto",
+          "native",
+          "glm",
+          "hermes",
+          "kimi",
+          "xml",
+          "anthropic",
+          "deepseek",
+          "harmony",
+          "qwen3",
+          "gemini",
+          "gemma",
+          "minimax"
+        ]
+      },
+      "tools.intentTracing": {
+        "default": true,
+        "type": "boolean"
+      },
+      "tools.maxTimeout": {
+        "default": 0,
+        "type": "number"
+      },
+      "tools.outputMaxColumns": {
+        "default": 768,
+        "type": "number"
+      },
+      "tools.speculativeExecution.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "tools.speculativeExecution.maxInFlight": {
+        "default": 2,
+        "type": "number"
+      },
+      "tools.xdev": {
+        "default": true,
+        "type": "boolean"
+      },
+      "tools.xdevDocs": {
+        "default": "builtins",
+        "type": "enum",
+        "values": [
+          "inline",
+          "builtins",
+          "catalog"
+        ]
+      },
+      "tools.xdevInlineDevices": {
+        "default": null,
+        "type": "array"
+      },
+      "topK": {
+        "default": -1,
+        "type": "number"
+      },
+      "topP": {
+        "default": -1,
+        "type": "number"
       },
       "treeFilterMode": {
         "default": "default",
@@ -843,10 +2151,14 @@
       },
       "ttsr.contextMode": {
         "default": "discard",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "discard",
+          "keep"
+        ]
       },
       "ttsr.disabledRules": {
-        "default": [],
+        "default": null,
         "type": "array"
       },
       "ttsr.enabled": {
@@ -855,11 +2167,13 @@
       },
       "ttsr.interruptMode": {
         "default": "always",
-        "type": "enum"
-      },
-      "ttsr.judge": {
-        "default": "auto",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "never",
+          "prose-only",
+          "tool-only",
+          "always"
+        ]
       },
       "ttsr.repeatGap": {
         "default": 10,
@@ -867,7 +2181,11 @@
       },
       "ttsr.repeatMode": {
         "default": "once",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "once",
+          "after-gap"
+        ]
       },
       "tui.codexResetFireworks": {
         "default": false,
@@ -875,7 +2193,12 @@
       },
       "tui.hyperlinks": {
         "default": "auto",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "off",
+          "auto",
+          "always"
+        ]
       },
       "tui.imeSafeCursor": {
         "default": false,
@@ -907,7 +2230,12 @@
       },
       "tui.resizeScrollback": {
         "default": "rebuild",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "append",
+          "rebuild",
+          "preserve"
+        ]
       },
       "tui.textSizing": {
         "default": false,
@@ -919,7 +2247,13 @@
       },
       "tui.titleSpinner": {
         "default": "braille",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "braille",
+          "pulse",
+          "dots",
+          "line"
+        ]
       },
       "tui.titleState": {
         "default": true,
@@ -931,11 +2265,44 @@
       },
       "tui.vimModeDisplay": {
         "default": "text",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "text",
+          "icon",
+          "none"
+        ]
       },
       "update.channel": {
         "default": "stable",
-        "type": "enum"
+        "type": "enum",
+        "values": [
+          "stable",
+          "canary"
+        ]
+      },
+      "vault.enabled": {
+        "default": false,
+        "type": "boolean"
+      },
+      "web_search.enabled": {
+        "default": true,
+        "type": "boolean"
+      },
+      "workspace.additionalDirectories": {
+        "default": null,
+        "type": "array"
+      },
+      "worktree.base": {
+        "default": null,
+        "type": "string"
+      },
+      "worktree.cleanSource": {
+        "default": false,
+        "type": "boolean"
+      },
+      "worktree.clone": {
+        "default": true,
+        "type": "boolean"
       }
     }
   }
