@@ -5,9 +5,10 @@
  * without importing or executing any code from the package under inspection.
  *
  * The release binary embeds its bundled JavaScript sources as plain text,
- * including the canonical settings registry: a single object literal whose
- * entries are `key: { type: "...", default: ..., values: [...] }` with dotted
- * keys for nested settings (`todo.remindersMax`, `providers.webSearchOrder`).
+ * including the canonical settings registry. In recent releases the registry
+ * is a contiguous block of individual calls like
+ *   `<var> = se({ id: "...", type: "...", default: ... });`
+ * rather than a single object literal.
  *
  * Artifact layout (schemaVersion 1):
  *   package    : { name, version }
@@ -24,7 +25,9 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-const REGISTRY_ANCHOR = 'setupVersion: { type: "number", default: 0 }';
+const REGISTRY_ANCHOR = 'se({ id: "setupVersion", type: "number", default: 0 })';
+const SCAN_WINDOW_BYTES = 15 * 1024 * 1024;
+const MIN_SETTINGS_COUNT = 40;
 
 function sha256SRI(value) {
   return `sha256-${createHash("sha256").update(value).digest("base64")}`;
@@ -60,7 +63,8 @@ function balanced(text, startIdx, open, close) {
 }
 
 function parseScalar(token) {
-  if (token === undefined) return null;
+  if (token === null || token === undefined) return null;
+  token = token.trim();
   if (token === "undefined") return null;
   if (token === "true") return true;
   if (token === "false") return false;
@@ -68,52 +72,72 @@ function parseScalar(token) {
   try { return JSON.parse(token); } catch { return null; }
 }
 
-function extract(binaryPath, version) {
-  const bin = readFileSync(binaryPath, "latin1");
-
-  const anchor = bin.indexOf(REGISTRY_ANCHOR);
-  if (anchor === -1) throw new Error(`registry anchor not found (${JSON.stringify(REGISTRY_ANCHOR)})`);
-  const braceStart = bin.indexOf("{", bin.lastIndexOf("= {", anchor));
-  const block = balanced(bin, braceStart, "{", "}");
-  if (!block) throw new Error("unbalanced settings-registry block");
-
-  const entries = {};
-  let depth = 0, inStr = null, esc = false, keyStart = null, curKey = null;
-  for (let i = 0; i < block.length; i++) {
-    const c = block[i];
+function splitTopLevel(body) {
+  const parts = [];
+  let depth = 0, inStr = null, esc = false, start = 0;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
     if (inStr) {
       if (esc) esc = false;
       else if (c === "\\") esc = true;
       else if (c === inStr) inStr = null;
       continue;
     }
-    if (depth === 1 && /[\w"]/.test(c)) {
-      const km = /^(\w+|"[^"]+")\s*:/.exec(block.slice(i));
-      if (km) {
-        curKey = km[1].startsWith('"') ? km[1].slice(1, -1) : km[1];
-        i += km[0].length - 1;
-        continue;
-      }
-    }
     if (c === '"' || c === "'" || c === "`") { inStr = c; continue; }
-    if (c === "{") {
-      depth++;
-      if (depth === 2 && curKey) keyStart = i;
-    } else if (c === "}") {
-      if (depth === 2 && curKey && keyStart !== null) {
-        const body = block.slice(keyStart, i + 1);
-        const t = /type:\s*"(\w+)"/.exec(body);
-        const vals = /values:\s*\[([^\]]*)\]/.exec(body);
-        const def = /default:\s*("(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|true|false|undefined)(?=\s*[,}])/.exec(body);
-        entries[curKey] = {
-          type: t ? t[1] : null,
-          default: def ? parseScalar(def[1]) : null,
-          ...(vals ? { values: [...vals[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((v) => v[1]) } : {}),
-        };
-        curKey = null; keyStart = null;
-      }
-      depth--;
+    if (c === "{" || c === "[" || c === "(") depth++;
+    else if (c === "}" || c === "]" || c === ")") depth--;
+    if (depth === 0 && c === ",") {
+      parts.push(body.slice(start, i));
+      start = i + 1;
     }
+  }
+  parts.push(body.slice(start));
+  return parts.map((p) => p.trim()).filter((p) => p.length > 0);
+}
+
+function parseTopLevelString(body, prop) {
+  for (const part of splitTopLevel(body)) {
+    const m = new RegExp(`^${prop}\\s*:\\s*"([^"]*)"`).exec(part);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function parseTopLevelDefault(body) {
+  for (const part of splitTopLevel(body)) {
+    if (/^default\s*:/.test(part)) {
+      return parseScalar(part.replace(/^default\s*:\s*/, ""));
+    }
+  }
+  return null;
+}
+
+function extract(binaryPath, version) {
+  const bin = readFileSync(binaryPath, "latin1");
+
+  const anchorIdx = bin.indexOf(REGISTRY_ANCHOR);
+  if (anchorIdx === -1) throw new Error(`registry anchor not found (${JSON.stringify(REGISTRY_ANCHOR)})`);
+
+  // Registry entries appear in a contiguous block starting near the anchor.
+  const scanStart = Math.max(0, anchorIdx - 1024);
+  const scanEnd = Math.min(bin.length, scanStart + SCAN_WINDOW_BYTES);
+  const scan = bin.slice(scanStart, scanEnd);
+
+  const entries = {};
+  let pos = 0;
+  while (true) {
+    const idx = scan.indexOf("se({", pos);
+    if (idx === -1) break;
+    const obj = balanced(scan, idx + 3, "{", "}");
+    if (obj) {
+      const body = obj.slice(1, -1);
+      const id = parseTopLevelString(body, "id");
+      const type = parseTopLevelString(body, "type");
+      if (id && type) {
+        entries[id] = { type, default: parseTopLevelDefault(body) };
+      }
+    }
+    pos = idx + 1;
   }
 
   return {
@@ -143,7 +167,7 @@ try {
 
   const artifact = extract(values.binary, values.version);
   const count = Object.keys(artifact.structural.settings).length;
-  if (count < 200) {
+  if (count < MIN_SETTINGS_COUNT) {
     throw new Error(`extraction looks incomplete (${count} settings); refusing to emit artifact`);
   }
   const canonicalText = canonicalJson(artifact);
