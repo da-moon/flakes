@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
@@ -14,6 +15,7 @@
     {
       self,
       nixpkgs,
+      nixpkgs-unstable,
       flake-utils,
       home-manager,
       ...
@@ -49,6 +51,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        pkgs-unstable = nixpkgs-unstable.legacyPackages.${system};
         pname = "memlawb";
 
         nodejs = pkgs.nodejs_22;
@@ -129,7 +132,7 @@
               cp -r ./* $out/lib/${pname}/
               shopt -u dotglob
 
-              makeWrapper ${pkgs.bun}/bin/bun $out/bin/memlawb \
+              makeWrapper ${pkgs-unstable.bun}/bin/bun $out/bin/memlawb \
                 --add-flags "$out/lib/${pname}/bin/memlawb.ts"
 
               runHook postInstall

@@ -154,7 +154,7 @@ in
         extraPackages = mkOption {
           type = types.listOf types.package;
           default = [ ];
-          example = lib.literalExpression "[ pkgs.bun pkgs.nodejs ]";
+          example = lib.literalExpression "[ pkgs-unstable.bun pkgs.nodejs ]";
           description = "Additional packages exposed in the memlawb development shell.";
         };
 

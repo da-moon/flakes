@@ -3,12 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
     {
       nixpkgs,
+      nixpkgs-unstable,
       flake-utils,
       ...
     }:
@@ -32,6 +34,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        pkgs-unstable = nixpkgs-unstable.legacyPackages.${system};
         pname = "dexter";
 
         nodejs = pkgs.nodejs_22;
@@ -148,12 +151,12 @@
               cp -r ./* $out/lib/${pname}/
               shopt -u dotglob
 
-              makeWrapper ${pkgs.bun}/bin/bun $out/bin/dexter \
+              makeWrapper ${pkgs-unstable.bun}/bin/bun $out/bin/dexter \
                 --add-flags "$out/lib/${pname}/src/index.tsx" \
                 --set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD "1" \
                 --set PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS "true"
 
-              makeWrapper ${pkgs.bun}/bin/bun $out/bin/dexter-gateway \
+              makeWrapper ${pkgs-unstable.bun}/bin/bun $out/bin/dexter-gateway \
                 --add-flags "$out/lib/${pname}/src/gateway/index.ts run" \
                 --set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD "1" \
                 --set PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS "true"

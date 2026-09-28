@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -10,6 +11,7 @@
     {
       self,
       nixpkgs,
+      nixpkgs-unstable,
       flake-utils,
     }:
     let
@@ -23,6 +25,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        pkgs-unstable = nixpkgs-unstable.legacyPackages.${system};
         pname = "qmd";
 
         sqliteWithExtensions = pkgs.sqlite.overrideAttrs (old: {
@@ -49,7 +52,7 @@
 
               src = source;
               nativeBuildInputs = [
-                pkgs.bun
+                pkgs-unstable.bun
                 pkgs.python3
                 pkgs.cacert
               ];
@@ -146,7 +149,7 @@
                 ln -sf /tmp/node-llama-cpp/localBuilds \
                   $out/lib/${pname}/node_modules/node-llama-cpp/llama/localBuilds
 
-                makeWrapper ${pkgs.bun}/bin/bun $out/bin/qmd \
+                makeWrapper ${pkgs-unstable.bun}/bin/bun $out/bin/qmd \
                   --add-flags "$out/lib/${pname}/src/cli/qmd.ts" \
                   --set-default NODE_LLAMA_CPP_BUILD_DIR "/tmp/node-llama-cpp" \
                   --set NODE_LLAMA_CPP_SKIP_DOWNLOAD "true" \

@@ -3,12 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
     {
       nixpkgs,
+      nixpkgs-unstable,
       flake-utils,
       ...
     }:
@@ -24,6 +26,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        pkgs-unstable = nixpkgs-unstable.legacyPackages.${system};
         lib = pkgs.lib;
         pname = "stack";
 
@@ -57,7 +60,7 @@
               runHook preInstall
               mkdir -p $out/lib/${pname} $out/bin
               tar -xzf $src -C $out/lib/${pname} --strip-components=1
-              makeWrapper ${pkgs.bun}/bin/bun $out/bin/stack \
+              makeWrapper ${pkgs-unstable.bun}/bin/bun $out/bin/stack \
                 --add-flags "$out/lib/${pname}/dist/cli.js"
               runHook postInstall
             '';
