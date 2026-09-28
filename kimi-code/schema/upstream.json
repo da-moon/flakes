@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "2.0.2"
+    "version": "2.1.1"
   },
   "schemaVersion": 1,
   "structural": {
@@ -216,6 +216,7 @@
       }
     },
     "topLevel": [
+      "autoSessionTitle",
       "background",
       "defaultModel",
       "defaultPermissionMode",
@@ -264,7 +265,8 @@
         "disable_paste_burst",
         "render_latex",
         "status_line",
-        "theme"
+        "theme",
+        "tui_mode"
       ]
     }
   }
