@@ -849,7 +849,35 @@
         ]
       },
       {
+        "contextWindow": 262144,
+        "id": "stealth/pixel-canary",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Pixel Canary",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "xhigh"
+        ]
+      },
+      {
         "contextWindow": 1000000,
+        "id": "stealth/space-bunny-alpha",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Space Bunny Alpha",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "contextWindow": 262144,
         "id": "stepfun/Step-3.5-Flash",
         "inputModalities": [
           "text"
@@ -1123,8 +1151,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2650127,
-    "modelCount": 86,
+    "bundleBytes": 2673433,
+    "modelCount": 88,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1144,14 +1172,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 719333
+    "tokenCount": 726877
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-YOfIs/DbYe6Byd/MewFBSc0d1ZTeqdcA1VPq7BsPvak=",
+    "entrypointHash": "sha256-rfBdTmQ1jWMeRifnz67iOseQNpDKRP5bDnFfi4FLlco=",
     "name": "command-code",
-    "packageJsonHash": "sha256-5Wz4FbHyOXaJP9E5jsoCFQqepiyz8S6m/ooEvHl/Bjg=",
-    "version": "1.64.0"
+    "packageJsonHash": "sha256-Wf8bBBTkFWEaYxjx84yAqr7rcKpQ/reB0CpQNTGuP4o=",
+    "version": "1.66.0"
   },
   "schemaVersion": 1,
   "structural": {
