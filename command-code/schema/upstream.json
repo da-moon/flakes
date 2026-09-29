@@ -184,6 +184,22 @@
       },
       {
         "contextWindow": 1000000,
+        "id": "claude-sonnet-5-5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Sonnet 5.5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
         "id": "deepseek/deepseek-v4-flash",
         "inputModalities": [
           "text"
@@ -240,6 +256,20 @@
           "text"
         ],
         "label": "DeepSeek V4.1 Flash",
+        "reasoningEfforts": [
+          "low",
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "deepseek/deepseek-v4.1-flash-fast",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "DeepSeek V4.1 Flash Fast",
         "reasoningEfforts": [
           "low",
           "high",
@@ -1151,8 +1181,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2673433,
-    "modelCount": 88,
+    "bundleBytes": 2678026,
+    "modelCount": 90,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1172,14 +1202,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 726877
+    "tokenCount": 727957
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-rfBdTmQ1jWMeRifnz67iOseQNpDKRP5bDnFfi4FLlco=",
+    "entrypointHash": "sha256-aXnqmWGhEUF1ZO5SIlUsC2+xRwJM95ysYE4/cclxGBk=",
     "name": "command-code",
-    "packageJsonHash": "sha256-Wf8bBBTkFWEaYxjx84yAqr7rcKpQ/reB0CpQNTGuP4o=",
-    "version": "1.66.0"
+    "packageJsonHash": "sha256-2iMfwsxIShxxTyiAwXd4YFLxWgp31T4/POrNJjZlCQc=",
+    "version": "1.69.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -1276,6 +1306,10 @@
           "type": "attrsOf(reasoningEffort)"
         },
         "runtime": {
+          "ownership": "declarative",
+          "type": "unknown"
+        },
+        "showTasteLearningInFeed": {
           "ownership": "declarative",
           "type": "unknown"
         },

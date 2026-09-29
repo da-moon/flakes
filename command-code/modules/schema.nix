@@ -94,7 +94,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.66.0";
+  schemaVersion = "1.69.0";
 
   globalConfigType = types.submodule {
     options = {
@@ -120,6 +120,8 @@ rec {
       ]) "Conversation compaction mode.";
       telemetry = nullable types.bool "Whether Command Code telemetry is enabled.";
       tasteLearning = nullable types.bool "Whether ongoing global taste learning is enabled.";
+      showTasteLearningInFeed =
+        nullable types.bool "Whether Taste learning notices appear in the conversation feed.";
       featureModels = mkOption {
         type = featureModelsType;
         default = { };
