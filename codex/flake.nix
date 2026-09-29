@@ -114,9 +114,9 @@
             dontBuild = true;
             dontConfigure = true;
 
-            # codex resolves `codex-code-mode-host` and `codex-resources/bwrap`
-            # relative to the realpath of its own executable, so both must sit
-            # next to $out/bin/codex.
+            # The package-layout archive describes its root with
+            # codex-package.json. Keep resources and path helpers at that root;
+            # daemon startup rejects the package when they are missing.
             installPhase = ''
               runHook preInstall
               ${
@@ -124,7 +124,9 @@
                   ''
                     install -m755 -D bin/codex $out/bin/codex
                     install -m755 -D bin/codex-code-mode-host $out/bin/codex-code-mode-host
-                    cp -R codex-resources $out/bin/codex-resources
+                    install -m644 -D codex-package.json $out/codex-package.json
+                    cp -R codex-path $out/codex-path
+                    cp -R codex-resources $out/codex-resources
                   ''
                 else
                   ''
