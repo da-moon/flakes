@@ -14,6 +14,18 @@
         "label": "Compaction"
       },
       {
+        "description": "Model that takes over when you approve a plan — writing the code. Only applies after a planning round.",
+        "hasFixedDefault": false,
+        "key": "implementation",
+        "label": "Implementation"
+      },
+      {
+        "description": "Model that runs while you are in plan mode (shift+tab, /plan, or enter_plan_mode) — exploring the codebase and writing the plan.",
+        "hasFixedDefault": false,
+        "key": "planning",
+        "label": "Planning"
+      },
+      {
         "description": "Learns your coding style from your sessions.",
         "hasFixedDefault": false,
         "key": "tasteLearning",
@@ -516,6 +528,22 @@
         ]
       },
       {
+        "contextWindow": 1050000,
+        "id": "gpt-6.1-sol",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-6.1 Sol",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 256000,
         "id": "inclusionai/ling-3.0-flash-free",
         "inputModalities": [
@@ -530,6 +558,19 @@
           "text"
         ],
         "label": "Ling 3.0 Flash Sante"
+      },
+      {
+        "contextWindow": 262144,
+        "id": "inclusionai/ling-3.1-flash:free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Ling 3.1 Flash",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
       },
       {
         "contextWindow": 1048576,
@@ -1181,8 +1222,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2678026,
-    "modelCount": 90,
+    "bundleBytes": 2798833,
+    "modelCount": 92,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1202,14 +1243,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 727957
+    "tokenCount": 765439
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-aXnqmWGhEUF1ZO5SIlUsC2+xRwJM95ysYE4/cclxGBk=",
+    "entrypointHash": "sha256-1vibKjGPaBir3vKspbwNsJLgra+WtioEurAfZg5zCIA=",
     "name": "command-code",
-    "packageJsonHash": "sha256-2iMfwsxIShxxTyiAwXd4YFLxWgp31T4/POrNJjZlCQc=",
-    "version": "1.69.0"
+    "packageJsonHash": "sha256-7FAY4ou38yhiIE0XWfXpv68T4aZSPAdnbje0Lmhn5Hk=",
+    "version": "1.73.0"
   },
   "schemaVersion": 1,
   "structural": {
