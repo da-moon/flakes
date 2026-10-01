@@ -106,7 +106,16 @@
               inherit sha256;
             };
 
-            nativeBuildInputs = [ pkgs.zstd ];
+            nativeBuildInputs = [
+              pkgs.zstd
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.autoPatchelfHook
+            ];
+            buildInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              (pkgs.lib.getLib pkgs.stdenv.cc.cc)
+              pkgs.ncurses
+            ];
 
             sourceRoot = ".";
 
@@ -138,9 +147,8 @@
               runHook postInstall
             '';
 
-            # Don't try to patch static musl binary
+            # Preserve the binaries while patching bundled dynamic Linux helpers.
             dontStrip = true;
-            dontPatchELF = true;
 
           };
 

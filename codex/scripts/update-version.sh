@@ -37,7 +37,8 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pkg_dir="$(cd -- "${script_dir}/.." && pwd)"
 flake_file="${pkg_dir}/flake.nix"
 releases_file="${pkg_dir}/releases.json"
-readonly PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+PACKAGE_DIR_NAME="$(basename "${pkg_dir}")"
+readonly PACKAGE_DIR_NAME
 
 ensure_required_tools_installed() {
   for t in nix curl jq; do
@@ -134,7 +135,10 @@ verify_build() {
     log_error "nix build failed for default"
     return 1
   fi
-  timeout 30 "$out_path/bin/codex" --version >/dev/null 2>&1 || true
+  if ! bash "$script_dir/test-daemon.sh" "$out_path"; then
+    log_error "Codex package or isolated daemon smoke test failed"
+    return 1
+  fi
   log_info "Build successful!"
 }
 
