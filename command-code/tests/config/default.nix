@@ -3,6 +3,7 @@
   lib ? pkgs.lib,
 }:
 let
+  releases = builtins.fromJSON (builtins.readFile ../../releases.json);
   schema = import ../../modules/schema.nix { inherit lib; };
   render = import ../../modules/render.nix { inherit lib; };
   helpers = import ../../modules/lib.nix { inherit pkgs; };
@@ -81,6 +82,7 @@ let
     provider = "command-code";
     model = "dynamic/model";
     reasoningEffort."dynamic/model" = "high";
+    reasoningEffort."deepseek/deepseek-v4-pro" = "off";
     theme = "dark";
     compactMode = "fast";
     telemetry = false;
@@ -97,10 +99,19 @@ let
   };
 
   schemaAssertions =
-    assert schema.schemaVersion == "1.20.0";
+    assert schema.schemaVersion == releases.latest;
     assert rendered.provider == "command-code";
     assert rendered.model == "dynamic/model";
     assert rendered.reasoningEffort."dynamic/model" == "high";
+    assert rendered.reasoningEffort."deepseek/deepseek-v4-pro" == "off";
+    assert
+      (evalValue schema.globalConfigType {
+        reasoningEffort."deepseek/deepseek-v4-pro" = "off";
+      }).success;
+    assert
+      !(evalValue schema.globalConfigType {
+        reasoningEffort."deepseek/deepseek-v4-pro" = "unsupported";
+      }).success;
     assert rendered.featureModels == { titleGeneration = "title/model"; };
     assert !(rendered ? installed);
     assert (evalValue schema.globalConfigType { provider = "command-code"; }).success;

@@ -2,16 +2,19 @@
 
 This flake derives its configuration contract from the packaged Command Code
 bundle and cross-checks it against the public documentation. Command Code does
-not publish an aggregate JSON Schema, and several settings are only discoverable
-in the application source. The selected schema is therefore coupled to the
-selected package release and checked during version updates.
+not publish an aggregate JSON Schema, and several settings are only
+discoverable in the application source. The selected schema is therefore
+coupled to the selected package release and checked during version updates.
 
-The 1.1.1 review cross-referenced the public [documentation index](https://commandcode.ai/docs),
-[hook guide](https://commandcode.ai/docs/hooks), [MCP guide](https://commandcode.ai/docs/mcp),
+The 1.1.1 review cross-referenced the public
+[documentation index](https://commandcode.ai/docs),
+[hook guide](https://commandcode.ai/docs/hooks),
+[MCP guide](https://commandcode.ai/docs/mcp),
 [model reference](https://commandcode.ai/docs/reference/cli/models), and
-[Taste guide](https://commandcode.ai/docs/taste) against the statically extracted
-[`schema/upstream.json`](../schema/upstream.json) evidence. The source artifact
-records the exact npm package and entrypoint hashes used for that comparison.
+[Taste guide](https://commandcode.ai/docs/taste) against the statically
+extracted [`schema/upstream.json`](../schema/upstream.json) evidence. The
+source artifact records the exact npm package and entrypoint hashes used for
+that comparison.
 
 The 1.3.1 review found catalog-only drift (new entries in the bundled model
 catalog); the structural schema is unchanged from 1.1.1, so the typed surface
@@ -19,13 +22,13 @@ below still applies.
 
 ## Configuration scopes
 
-| Scope | File | Nix ownership |
-| --- | --- | --- |
-| Global preferences | `~/.commandcode/config.json` | Declared preference leaves only |
-| Global settings | `~/.commandcode/settings.json` | Declared settings and exact managed hooks |
-| Global MCP | `~/.commandcode/mcp.json` | Non-secret declared server leaves only |
-| Project-local settings | `.commandcode/settings.local.json` | Declared local leaves only |
-| Project-local MCP | `~/.commandcode/projects/<slug>/mcp.json` | Non-secret declared server leaves only |
+| Scope                  | File                                      | Nix ownership                             |
+| ---------------------- | ----------------------------------------- | ----------------------------------------- |
+| Global preferences     | `~/.commandcode/config.json`              | Declared preference leaves only           |
+| Global settings        | `~/.commandcode/settings.json`            | Declared settings and exact managed hooks |
+| Global MCP             | `~/.commandcode/mcp.json`                 | Non-secret declared server leaves only    |
+| Project-local settings | `.commandcode/settings.local.json`        | Declared local leaves only                |
+| Project-local MCP      | `~/.commandcode/projects/<slug>/mcp.json` | Non-secret declared server leaves only    |
 
 The project module never writes the shared `.commandcode/settings.json` or
 `.mcp.json` files. Unknown fields and application-owned state in mutable files
@@ -38,8 +41,8 @@ The global `config.json` surface includes:
 
 - `provider`: `command-code`, `anthropic`, `github-copilot`, or `codex`
 - `model`: model identifier string
-- `reasoningEffort`: model identifier to `low`, `medium`, `high`, `xhigh`, or
-  `max`
+- `reasoningEffort`: model identifier to `off`, `low`, `medium`, `high`,
+  `xhigh`, or `max`
 - `theme`: `dark` or `light`
 - `compactMode`: `default` or `fast`
 - `telemetry`, `tasteLearning`, and `autoInstallExtension`: booleans
@@ -55,10 +58,10 @@ Global and project-local settings support `disabledSkills`,
 `input.collapsePastedText`, and hooks. Project-local settings additionally
 support `tasteLearning` and the functional portion of `permissions`.
 
-Hook events are `PreToolUse`, `PostToolUse`, `Stop`, and `SessionStart`. Command
-entries support a non-empty command, a positive timeout up to 600 seconds, and
-the `async` and `failClosed` flags. An asynchronous hook cannot fail closed and
-is rejected by the Nix schema.
+Hook events are `PreToolUse`, `PostToolUse`, `Stop`, and `SessionStart`.
+Command entries support a non-empty command, a positive timeout up to 600
+seconds, and the `async` and `failClosed` flags. An asynchronous hook cannot
+fail closed and is rejected by the Nix schema.
 
 Only `permissions.defaultMode = "acceptEdits"`, the create/update/delete
 auto-approval flags, and `Bash(...)` allow entries affect Command Code 1.1.1.
