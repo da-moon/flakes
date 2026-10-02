@@ -16,6 +16,7 @@ let
   );
   hookTimeout = types.addCheck types.int (value: value > 0 && value <= 600);
   reasoningEffortType = types.enum [
+    "off"
     "low"
     "medium"
     "high"
@@ -94,7 +95,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.73.2";
+  schemaVersion = "1.74.0";
 
   globalConfigType = types.submodule {
     options = {

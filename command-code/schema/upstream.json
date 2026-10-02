@@ -218,6 +218,7 @@
         ],
         "label": "DeepSeek V4 Flash (latest)",
         "reasoningEfforts": [
+          "off",
           "high",
           "max"
         ]
@@ -244,6 +245,7 @@
         ],
         "label": "DeepSeek V4 Flash Vision (exp)",
         "reasoningEfforts": [
+          "off",
           "high",
           "max"
         ]
@@ -256,6 +258,7 @@
         ],
         "label": "DeepSeek V4 Pro (latest)",
         "reasoningEfforts": [
+          "off",
           "high",
           "max"
         ]
@@ -269,6 +272,7 @@
         ],
         "label": "DeepSeek V4.1 Flash",
         "reasoningEfforts": [
+          "off",
           "low",
           "high",
           "max"
@@ -283,6 +287,7 @@
         ],
         "label": "DeepSeek V4.1 Flash Fast",
         "reasoningEfforts": [
+          "off",
           "low",
           "high",
           "max"
@@ -944,7 +949,8 @@
         "reasoningEfforts": [
           "low",
           "medium",
-          "high"
+          "high",
+          "max"
         ]
       },
       {
@@ -1217,12 +1223,13 @@
       "low",
       "max",
       "medium",
+      "off",
       "xhigh"
     ]
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2770877,
+    "bundleBytes": 2821246,
     "modelCount": 92,
     "pathLiteralCounts": {
       "config.json": 6,
@@ -1243,14 +1250,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 759390
+    "tokenCount": 773888
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-+qGn/VUMC4O8apzLBY+dpteLnYWWXRNgHxZEhbzLNco=",
+    "entrypointHash": "sha256-n87Kog2I0P4KR+lFQcueypk1HCdPnbAfz5+si/l/CsA=",
     "name": "command-code",
-    "packageJsonHash": "sha256-HsjrQjI4Vt8tvNaaWnWmXbjP0mg7oQhyD1txLsUHS84=",
-    "version": "1.73.2"
+    "packageJsonHash": "sha256-KeOun6oFt+SS9vD6AIkHnFzQmxJZSbh7XBOZNOFBSek=",
+    "version": "1.74.0"
   },
   "schemaVersion": 1,
   "structural": {
