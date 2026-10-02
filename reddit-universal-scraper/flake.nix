@@ -79,6 +79,15 @@
             dontConfigure = true;
 
             postPatch = ''
+              substituteInPlace config.py \
+                --replace-fail 'DATA_DIR = BASE_DIR / "data"' \
+                  'DATA_DIR = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "reddit-universal-scraper"' \
+                --replace-fail 'DATA_DIR.mkdir(exist_ok=True)' \
+                  'DATA_DIR.mkdir(parents=True, exist_ok=True)'
+              substituteInPlace dashboard/app.py \
+                --replace-fail "Path(__file__).parent.parent / 'data'" "Path.cwd() / 'data'" \
+                --replace-fail 'cwd=str(Path(__file__).parent.parent)' 'cwd=os.getcwd()' \
+                --replace-fail '"main.py"' 'str(Path(__file__).parent.parent / "main.py")'
               substituteInPlace main.py \
                 --replace 'os.system("streamlit run dashboard/app.py")' \
                           'subprocess.call(["streamlit", "run", str(Path(__file__).resolve().parent / "dashboard" / "app.py")])'
@@ -103,6 +112,23 @@
               ln -s $out/bin/reddit-universal-scraper $out/bin/reddit-scraper
 
               runHook postInstall
+            '';
+
+            doInstallCheck = true;
+            installCheckPhase = ''
+              runHook preInstallCheck
+              export HOME="$TMPDIR/scraper-home"
+              export XDG_DATA_HOME="$TMPDIR/scraper-state/nested"
+              mkdir -p "$HOME"
+              $out/bin/reddit-universal-scraper --help > /dev/null
+              test -d "$XDG_DATA_HOME/reddit-universal-scraper"
+              test ! -e "$out/lib/reddit-universal-scraper/data"
+              unset XDG_DATA_HOME
+              $out/bin/reddit-universal-scraper --help > /dev/null
+              test -d "$HOME/.local/share/reddit-universal-scraper"
+              PYTHONPYCACHEPREFIX="$TMPDIR/pycache" ${pythonEnv}/bin/python \
+                -m py_compile "$out/lib/reddit-universal-scraper/dashboard/app.py"
+              runHook postInstallCheck
             '';
 
           };
