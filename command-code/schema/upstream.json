@@ -931,12 +931,7 @@
           "image",
           "text"
         ],
-        "label": "Pixel Canary",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "xhigh"
-        ]
+        "label": "Pixel Canary"
       },
       {
         "contextWindow": 1000000,
@@ -945,13 +940,7 @@
           "image",
           "text"
         ],
-        "label": "Space Bunny Alpha",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "max"
-        ]
+        "label": "Space Bunny Alpha"
       },
       {
         "contextWindow": 262144,
@@ -1229,7 +1218,7 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2821246,
+    "bundleBytes": 2822323,
     "modelCount": 92,
     "pathLiteralCounts": {
       "config.json": 6,
@@ -1250,14 +1239,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 773888
+    "tokenCount": 774268
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-n87Kog2I0P4KR+lFQcueypk1HCdPnbAfz5+si/l/CsA=",
+    "entrypointHash": "sha256-/C4sdYqbiCENoy59aZd4O00AGgHPU7CJD1iqQhLGqyc=",
     "name": "command-code",
-    "packageJsonHash": "sha256-KeOun6oFt+SS9vD6AIkHnFzQmxJZSbh7XBOZNOFBSek=",
-    "version": "1.74.0"
+    "packageJsonHash": "sha256-fWzey87o5IK5kx8cnE7biRo5Tf1RBK5mTGLfpwWsub0=",
+    "version": "1.74.3"
   },
   "schemaVersion": 1,
   "structural": {
