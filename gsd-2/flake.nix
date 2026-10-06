@@ -37,13 +37,21 @@
         npmPackage = "@opengsd/gsd-pi";
         npmTarballName = "gsd-pi";
         nodejs = pkgs.nodejs_22;
-        # Pin pnpm major to match the committed pnpm-lock.yaml (lockfileVersion 9.0).
-        pnpm = pkgs.pnpm_10;
+        # Backport the fixed pnpm 10 release only when Nixpkgs still needs it.
+        pnpm =
+          if pkgs.lib.versionAtLeast pkgs.pnpm_10.version "10.34.5" then
+            pkgs.pnpm_10
+          else
+            pkgs.pnpm_10.override {
+              version = "10.34.5";
+              hash = "sha256-zLXEecqxsAYhMlv+fUyaioAx56Ul1ySeJ17L7IGwjbI=";
+              knownVulnerabilities = [ ];
+            };
 
         # Builder: derive a gsd-2 package from one releases.json entry.
         #
         # Dependencies are pinned by a committed pnpm-lock.yaml (deps/<version>/)
-        # and fetched with pnpm.fetchDeps — a content-addressed derivation keyed
+        # and fetched with fetchPnpmDeps as a content-addressed derivation keyed
         # to that lockfile. This is reproducible over time: the hash changes only
         # when the committed lockfile changes, never because the npm registry
         # drifted. fetchDeps downloads every platform's tarballs (--force), so
@@ -67,8 +75,8 @@
               cp ${lockfile} $out/pnpm-lock.yaml
             '';
 
-            pnpmDeps = pnpm.fetchDeps {
-              inherit pname version src;
+            pnpmDeps = pkgs.fetchPnpmDeps {
+              inherit pname version src pnpm;
               fetcherVersion = 2;
               hash = entry.pnpmDepsHash;
             };
@@ -92,7 +100,8 @@
 
             nativeBuildInputs = [
               nodejs
-              pnpm.configHook
+              pnpm
+              pkgs.pnpmConfigHook
               pkgs.makeWrapper
             ];
 
