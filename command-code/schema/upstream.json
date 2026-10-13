@@ -100,6 +100,22 @@
       },
       {
         "contextWindow": 1000000,
+        "id": "claude-haiku-5-5",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Haiku 5.5",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
         "id": "claude-opus-4-7",
         "inputModalities": [
           "image",
@@ -670,6 +686,22 @@
         ]
       },
       {
+        "contextWindow": 1048576,
+        "id": "meta/muse-wonder-1.0",
+        "inputModalities": [
+          "file",
+          "image",
+          "text"
+        ],
+        "label": "Muse Wonder",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ]
+      },
+      {
         "contextWindow": 197000,
         "id": "minimax/minimax-m2.7-free",
         "inputModalities": [
@@ -728,6 +760,20 @@
           "text"
         ],
         "label": "MiniMax M3",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
+        "contextWindow": 524288,
+        "id": "mistral/mistral-large-4",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Mistral Large 4",
         "reasoningEfforts": [
           "low",
           "medium",
@@ -920,6 +966,20 @@
         ],
         "label": "Fugu Ultra",
         "reasoningEfforts": [
+          "high",
+          "xhigh"
+        ]
+      },
+      {
+        "contextWindow": 256000,
+        "id": "stealth/glyph-cluster:free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Glyph Cluster",
+        "reasoningEfforts": [
+          "low",
+          "medium",
           "high",
           "xhigh"
         ]
@@ -1218,14 +1278,14 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 2822323,
-    "modelCount": 92,
+    "bundleBytes": 3140508,
+    "modelCount": 96,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
       "mcp.json": 21,
       "settings.json": 21,
-      "settings.local.json": 14,
+      "settings.local.json": 12,
       "trusted-hooks.json": 1
     },
     "permissionAutoApproveKeys": [
@@ -1239,14 +1299,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 774268
+    "tokenCount": 821852
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-/C4sdYqbiCENoy59aZd4O00AGgHPU7CJD1iqQhLGqyc=",
+    "entrypointHash": "sha256-kJkcFAangVgstcjXMg2S/A8e3y7Wcakvo2UZ+YrfbgY=",
     "name": "command-code",
-    "packageJsonHash": "sha256-fWzey87o5IK5kx8cnE7biRo5Tf1RBK5mTGLfpwWsub0=",
-    "version": "1.74.3"
+    "packageJsonHash": "sha256-Ni6WX1vHU7dpfPWn0vJ4tAodTvZja+Dq1ypMNlI33Cg=",
+    "version": "1.81.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -1322,6 +1382,10 @@
           "ownership": "runtime-preserved",
           "type": "boolean"
         },
+        "language": {
+          "ownership": "declarative",
+          "type": "unknown"
+        },
         "model": {
           "ownership": "declarative",
           "type": "string"
@@ -1331,6 +1395,14 @@
           "type": "unknown"
         },
         "path": {
+          "ownership": "declarative",
+          "type": "unknown"
+        },
+        "peekRecapDelayMinutes": {
+          "ownership": "declarative",
+          "type": "unknown"
+        },
+        "peekRecapDiagram": {
           "ownership": "declarative",
           "type": "unknown"
         },

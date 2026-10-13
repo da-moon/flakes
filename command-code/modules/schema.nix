@@ -95,7 +95,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.74.3";
+  schemaVersion = "1.81.0";
 
   globalConfigType = types.submodule {
     options = {
@@ -115,14 +115,19 @@ rec {
         "dark"
         "light"
       ]) "Terminal theme.";
+      language = nullable (types.enum [
+        "en"
+        "zh"
+      ]) "Interface language.";
       compactMode = nullable (types.enum [
         "default"
         "fast"
       ]) "Conversation compaction mode.";
       telemetry = nullable types.bool "Whether Command Code telemetry is enabled.";
       tasteLearning = nullable types.bool "Whether ongoing global taste learning is enabled.";
-      showTasteLearningInFeed =
-        nullable types.bool "Whether Taste learning notices appear in the conversation feed.";
+      showTasteLearningInFeed = nullable types.bool "Whether Taste learning notices appear in the conversation feed.";
+      peekRecapDiagram = nullable types.bool "Whether completed tasks include a recap diagram.";
+      peekRecapDelayMinutes = nullable types.ints.unsigned "Minutes before a completed task receives a recap.";
       featureModels = mkOption {
         type = featureModelsType;
         default = { };
