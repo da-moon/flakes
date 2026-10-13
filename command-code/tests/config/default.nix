@@ -84,9 +84,12 @@ let
     reasoningEffort."dynamic/model" = "high";
     reasoningEffort."deepseek/deepseek-v4-pro" = "off";
     theme = "dark";
+    language = "zh";
     compactMode = "fast";
     telemetry = false;
     tasteLearning = true;
+    peekRecapDiagram = true;
+    peekRecapDelayMinutes = 5;
     featureModels = {
       titleGeneration = "title/model";
       compaction = null;
@@ -104,6 +107,9 @@ let
     assert rendered.model == "dynamic/model";
     assert rendered.reasoningEffort."dynamic/model" == "high";
     assert rendered.reasoningEffort."deepseek/deepseek-v4-pro" == "off";
+    assert rendered.language == "zh";
+    assert rendered.peekRecapDiagram;
+    assert rendered.peekRecapDelayMinutes == 5;
     assert
       (evalValue schema.globalConfigType {
         reasoningEffort."deepseek/deepseek-v4-pro" = "off";
@@ -112,6 +118,12 @@ let
       !(evalValue schema.globalConfigType {
         reasoningEffort."deepseek/deepseek-v4-pro" = "unsupported";
       }).success;
+    assert (evalValue schema.globalConfigType { language = "en"; }).success;
+    assert !(evalValue schema.globalConfigType { language = "unsupported"; }).success;
+    assert (evalValue schema.globalConfigType { peekRecapDiagram = false; }).success;
+    assert !(evalValue schema.globalConfigType { peekRecapDiagram = "false"; }).success;
+    assert (evalValue schema.globalConfigType { peekRecapDelayMinutes = 0; }).success;
+    assert !(evalValue schema.globalConfigType { peekRecapDelayMinutes = -1; }).success;
     assert rendered.featureModels == { titleGeneration = "title/model"; };
     assert !(rendered ? installed);
     assert (evalValue schema.globalConfigType { provider = "command-code"; }).success;

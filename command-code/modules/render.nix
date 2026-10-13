@@ -54,9 +54,12 @@ rec {
       model = value.model;
       reasoningEffort = if value.reasoningEffort == { } then null else value.reasoningEffort;
       theme = value.theme;
+      language = value.language;
       compactMode = value.compactMode;
       telemetry = value.telemetry;
       tasteLearning = value.tasteLearning;
+      peekRecapDiagram = value.peekRecapDiagram;
+      peekRecapDelayMinutes = value.peekRecapDelayMinutes;
       featureModels = renderFeatureModels value.featureModels;
       autoInstallExtension = value.autoInstallExtension;
     };

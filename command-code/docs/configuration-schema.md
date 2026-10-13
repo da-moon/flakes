@@ -44,8 +44,11 @@ The global `config.json` surface includes:
 - `reasoningEffort`: model identifier to `off`, `low`, `medium`, `high`,
   `xhigh`, or `max`
 - `theme`: `dark` or `light`
+- `language`: `en` or `zh`
 - `compactMode`: `default` or `fast`
-- `telemetry`, `tasteLearning`, and `autoInstallExtension`: booleans
+- `telemetry`, `tasteLearning`, `autoInstallExtension`, and `peekRecapDiagram`:
+  booleans
+- `peekRecapDelayMinutes`: non-negative integer delay before task recaps
 - `featureModels`: fixed feature keys whose values are model identifier strings
 
 Model identifiers remain strings because the bundled catalog changes between
