@@ -10,7 +10,7 @@
     };
 
     # BEGIN GENERATED SERENA UPSTREAM INPUT
-    serena-upstream.url = "github:oraios/serena/949a27ef1e5fda1a6e7b561e777bcece345c6ffd";
+    serena-upstream.url = "github:oraios/serena/4c4268f9c0adf8743a75e6dda2ef1fa635f34cc3";
     # END GENERATED SERENA UPSTREAM INPUT
   };
 
@@ -275,7 +275,13 @@
                 </dev/null >stdout.log 2>stderr.log
 
               grep -q "Starting MCP server" stderr.log
-              cmp ${smokeGlobalFile} "$SERENA_HOME/serena_config.yml"
+              ${pkgs.yq-go}/bin/yq -e '.auth_secret | tag == "!!str" and . != ""' \
+                "$SERENA_HOME/serena_config.yml" >/dev/null
+              ${pkgs.yq-go}/bin/yq -o=json 'del(.auth_secret)' \
+                "$SERENA_HOME/serena_config.yml" | ${pkgs.jq}/bin/jq -S . >actual.json
+              ${pkgs.yq-go}/bin/yq -o=json '.' ${smokeGlobalFile} \
+                | ${pkgs.jq}/bin/jq -S . >expected.json
+              cmp expected.json actual.json
               touch "$out"
             '';
 

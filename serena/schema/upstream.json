@@ -1,8 +1,10 @@
 {
   "context": {
     "description": "Description of the context (meta-information only)",
+    "excluded_apis": [],
     "excluded_tools": [],
     "fixed_tools": [],
+    "included_apis": [],
     "included_optional_tools": [],
     "prompt": "This prompt will form part of the system prompt/initial instructions for agents started in this context.\nAdd as much content as needed.\nLeave it undefined if no prompt is needed, i.e.\n   prompt: null\n",
     "single_project": false,
@@ -11,8 +13,10 @@
   },
   "contextSupportedFields": [
     "description",
+    "excluded_apis",
     "excluded_tools",
     "fixed_tools",
+    "included_apis",
     "included_optional_tools",
     "name",
     "prompt",
@@ -32,17 +36,21 @@
     }
   },
   "global": {
+    "agent_interface": "REPL",
+    "auth_secret": null,
     "base_modes": [
       "interactive",
       "editing"
     ],
     "default_max_tool_answer_chars": 150000,
     "default_modes": null,
+    "excluded_apis": [],
     "excluded_tools": [],
     "fixed_tools": [],
     "gui_log_window": false,
     "ignored_memory_patterns": [],
     "ignored_paths": [],
+    "included_apis": [],
     "included_optional_tools": [],
     "jetbrains_launch_command": null,
     "jetbrains_plugin_server_address": "127.0.0.1",
@@ -81,6 +89,7 @@
     "cpp",
     "cpp_ccls",
     "php",
+    "php_devsense",
     "r",
     "perl",
     "clojure",
@@ -93,6 +102,7 @@
     "cue",
     "zig",
     "lua",
+    "lua_emmylua",
     "luau",
     "nix",
     "erlang",
@@ -109,6 +119,7 @@
     "groovy",
     "vue",
     "svelte",
+    "astro",
     "powershell",
     "pascal",
     "matlab",
@@ -129,6 +140,7 @@
     "ruby_solargraph",
     "php_phpactor",
     "php_phpantom",
+    "julia_fatou",
     "markdown",
     "latex",
     "yaml",
@@ -151,7 +163,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/ada_language_server.py:116"
+          "src/solidlsp/language_servers/ada_language_server.py:117"
         ],
         "fallbackExpressions": []
       }
@@ -164,9 +176,9 @@
         "documentedDefault": "`18.0.2242655`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:330",
-          "src/solidlsp/language_servers/al_language_server.py:244",
-          "src/solidlsp/language_servers/al_language_server.py:269"
+          "docs/02-usage/050_configuration.md:389",
+          "src/solidlsp/language_servers/al_language_server.py:247",
+          "src/solidlsp/language_servers/al_language_server.py:272"
         ],
         "fallbackExpressions": []
       }
@@ -179,8 +191,8 @@
         "documentedDefault": "`21.2.10`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:352",
-          "src/solidlsp/language_servers/angular_language_server.py:298"
+          "docs/02-usage/050_configuration.md:411",
+          "src/solidlsp/language_servers/angular_language_server.py:318"
         ],
         "fallbackExpressions": []
       },
@@ -191,8 +203,8 @@
         "documentedDefault": "`21.2.10`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:353",
-          "src/solidlsp/language_servers/angular_language_server.py:299"
+          "docs/02-usage/050_configuration.md:412",
+          "src/solidlsp/language_servers/angular_language_server.py:319"
         ],
         "fallbackExpressions": []
       },
@@ -201,8 +213,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:356",
-          "src/solidlsp/language_servers/angular_language_server.py:305"
+          "docs/02-usage/050_configuration.md:415",
+          "src/solidlsp/language_servers/angular_language_server.py:325"
         ],
         "fallbackExpressions": [
           "ts_settings.get('npm_registry')"
@@ -213,8 +225,8 @@
         "documentedDefault": "`5.1.3`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:355",
-          "src/solidlsp/language_servers/angular_language_server.py:301"
+          "docs/02-usage/050_configuration.md:414",
+          "src/solidlsp/language_servers/angular_language_server.py:321"
         ],
         "fallbackExpressions": [
           "ts_settings.get('typescript_language_server_version', DEFAULT_TYPESCRIPT_LANGUAGE_SERVER_VERSION)"
@@ -225,8 +237,8 @@
         "documentedDefault": "`5.9.3`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:354",
-          "src/solidlsp/language_servers/angular_language_server.py:300"
+          "docs/02-usage/050_configuration.md:413",
+          "src/solidlsp/language_servers/angular_language_server.py:320"
         ],
         "fallbackExpressions": [
           "ts_settings.get('typescript_version', DEFAULT_TYPESCRIPT_VERSION)"
@@ -241,8 +253,8 @@
         "documentedDefault": "`1.2.3`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:371",
-          "src/solidlsp/language_servers/ansible_language_server.py:179"
+          "docs/02-usage/050_configuration.md:430",
+          "src/solidlsp/language_servers/ansible_language_server.py:180"
         ],
         "fallbackExpressions": []
       },
@@ -253,8 +265,8 @@
         "documentedDefault": "`\"ansible\"`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:373",
-          "src/solidlsp/language_servers/ansible_language_server.py:237"
+          "docs/02-usage/050_configuration.md:432",
+          "src/solidlsp/language_servers/ansible_language_server.py:238"
         ],
         "fallbackExpressions": []
       },
@@ -265,8 +277,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:374",
-          "src/solidlsp/language_servers/ansible_language_server.py:259"
+          "docs/02-usage/050_configuration.md:433",
+          "src/solidlsp/language_servers/ansible_language_server.py:260"
         ],
         "fallbackExpressions": []
       },
@@ -277,8 +289,8 @@
         "documentedDefault": "`false`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:375",
-          "src/solidlsp/language_servers/ansible_language_server.py:247"
+          "docs/02-usage/050_configuration.md:434",
+          "src/solidlsp/language_servers/ansible_language_server.py:248"
         ],
         "fallbackExpressions": []
       },
@@ -289,8 +301,8 @@
         "documentedDefault": "`\"ansible-lint\"`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:376",
-          "src/solidlsp/language_servers/ansible_language_server.py:248"
+          "docs/02-usage/050_configuration.md:435",
+          "src/solidlsp/language_servers/ansible_language_server.py:249"
         ],
         "fallbackExpressions": []
       },
@@ -299,7 +311,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:370"
+          "docs/02-usage/050_configuration.md:429"
         ],
         "fallbackExpressions": []
       },
@@ -310,8 +322,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:372",
-          "src/solidlsp/language_servers/ansible_language_server.py:182"
+          "docs/02-usage/050_configuration.md:431",
+          "src/solidlsp/language_servers/ansible_language_server.py:183"
         ],
         "fallbackExpressions": []
       },
@@ -322,8 +334,8 @@
         "documentedDefault": "`\"\"`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:378",
-          "src/solidlsp/language_servers/ansible_language_server.py:242"
+          "docs/02-usage/050_configuration.md:437",
+          "src/solidlsp/language_servers/ansible_language_server.py:243"
         ],
         "fallbackExpressions": []
       },
@@ -334,10 +346,80 @@
         "documentedDefault": "`\"python3\"`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:377",
-          "src/solidlsp/language_servers/ansible_language_server.py:241"
+          "docs/02-usage/050_configuration.md:436",
+          "src/solidlsp/language_servers/ansible_language_server.py:242"
         ],
         "fallbackExpressions": []
+      }
+    },
+    "astro": {
+      "astro_language_server_version": {
+        "defaults": [
+          "2.17.0"
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/astro_language_server.py:198",
+          "src/solidlsp/language_servers/astro_language_server.py:295"
+        ],
+        "fallbackExpressions": []
+      },
+      "astro_ts_plugin_version": {
+        "defaults": [
+          "1.10.10"
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/astro_language_server.py:204"
+        ],
+        "fallbackExpressions": []
+      },
+      "indexing_timeout": {
+        "defaults": [],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/astro_language_server.py:329"
+        ],
+        "fallbackExpressions": [
+          "ts_settings.get('indexing_timeout', AstroTypeScriptServer.INDEXING_PROGRESS_TIMEOUT)"
+        ]
+      },
+      "npm_registry": {
+        "defaults": [
+          null
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/astro_language_server.py:205"
+        ],
+        "fallbackExpressions": [
+          "self._ts_settings.get('npm_registry')"
+        ]
+      },
+      "typescript_language_server_version": {
+        "defaults": [
+          "5.1.3"
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/astro_language_server.py:200",
+          "src/solidlsp/language_servers/astro_language_server.py:202"
+        ],
+        "fallbackExpressions": [
+          "self._ts_settings.get('typescript_language_server_version', '5.1.3')"
+        ]
+      },
+      "typescript_version": {
+        "defaults": [
+          "5.9.3"
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/astro_language_server.py:199"
+        ],
+        "fallbackExpressions": [
+          "self._ts_settings.get('typescript_version', '5.9.3')"
+        ]
       }
     },
     "bash": {
@@ -348,9 +430,9 @@
         "documentedDefault": "`5.6.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:389",
-          "src/solidlsp/language_servers/bash_language_server.py:119",
-          "src/solidlsp/language_servers/bash_language_server.py:189"
+          "docs/02-usage/050_configuration.md:448",
+          "src/solidlsp/language_servers/bash_language_server.py:118",
+          "src/solidlsp/language_servers/bash_language_server.py:188"
         ],
         "fallbackExpressions": []
       },
@@ -359,7 +441,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:388"
+          "docs/02-usage/050_configuration.md:447"
         ],
         "fallbackExpressions": []
       },
@@ -370,8 +452,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:390",
-          "src/solidlsp/language_servers/bash_language_server.py:120"
+          "docs/02-usage/050_configuration.md:449",
+          "src/solidlsp/language_servers/bash_language_server.py:119"
         ],
         "fallbackExpressions": []
       }
@@ -384,8 +466,8 @@
         "documentedDefault": "`0.29.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:404",
-          "src/solidlsp/language_servers/bsl_language_server.py:128"
+          "docs/02-usage/050_configuration.md:463",
+          "src/solidlsp/language_servers/bsl_language_server.py:129"
         ],
         "fallbackExpressions": []
       },
@@ -394,7 +476,7 @@
         "documentedDefault": "managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:403"
+          "docs/02-usage/050_configuration.md:462"
         ],
         "fallbackExpressions": []
       }
@@ -407,8 +489,8 @@
         "documentedDefault": "`2026.02.20-16.08.58`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:424",
-          "src/solidlsp/language_servers/clojure_lsp.py:258"
+          "docs/02-usage/050_configuration.md:483",
+          "src/solidlsp/language_servers/clojure_lsp.py:259"
         ],
         "fallbackExpressions": []
       },
@@ -419,8 +501,8 @@
         "documentedDefault": "unset",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:426",
-          "src/solidlsp/language_servers/clojure_lsp.py:296"
+          "docs/02-usage/050_configuration.md:485",
+          "src/solidlsp/language_servers/clojure_lsp.py:297"
         ],
         "fallbackExpressions": []
       },
@@ -429,7 +511,7 @@
         "documentedDefault": "managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:423"
+          "docs/02-usage/050_configuration.md:482"
         ],
         "fallbackExpressions": []
       },
@@ -440,8 +522,8 @@
         "documentedDefault": "scanned from project descriptors (or unset if a project-local `.lsp/config.edn` is found)",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:425",
-          "src/solidlsp/language_servers/clojure_lsp.py:290"
+          "docs/02-usage/050_configuration.md:484",
+          "src/solidlsp/language_servers/clojure_lsp.py:291"
         ],
         "fallbackExpressions": []
       }
@@ -455,9 +537,9 @@
         "documentedDefault": "`19.1.2`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:459",
-          "src/solidlsp/language_servers/clangd_language_server.py:229",
-          "src/solidlsp/language_servers/clangd_language_server.py:86"
+          "docs/02-usage/050_configuration.md:518",
+          "src/solidlsp/language_servers/clangd_language_server.py:231",
+          "src/solidlsp/language_servers/clangd_language_server.py:88"
         ],
         "fallbackExpressions": []
       },
@@ -469,9 +551,9 @@
         "documentedDefault": "`.serena`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:458",
-          "src/solidlsp/language_servers/clangd_language_server.py:181",
-          "src/solidlsp/language_servers/clangd_language_server.py:88"
+          "docs/02-usage/050_configuration.md:517",
+          "src/solidlsp/language_servers/clangd_language_server.py:183",
+          "src/solidlsp/language_servers/clangd_language_server.py:90"
         ],
         "fallbackExpressions": []
       },
@@ -482,8 +564,8 @@
         "documentedDefault": "managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:457",
-          "src/solidlsp/language_servers/clangd_language_server.py:87"
+          "docs/02-usage/050_configuration.md:516",
+          "src/solidlsp/language_servers/clangd_language_server.py:89"
         ],
         "fallbackExpressions": []
       }
@@ -494,7 +576,7 @@
         "documentedDefault": "`ccls` from PATH",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:469"
+          "docs/02-usage/050_configuration.md:528"
         ],
         "fallbackExpressions": []
       }
@@ -507,7 +589,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/csharp_language_server.py:377"
+          "src/solidlsp/language_servers/csharp_language_server.py:392"
         ],
         "fallbackExpressions": []
       },
@@ -517,7 +599,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/csharp_language_server.py:362"
+          "src/solidlsp/language_servers/csharp_language_server.py:377"
         ],
         "fallbackExpressions": []
       }
@@ -532,8 +614,8 @@
           "1.39.10"
         ],
         "evidence": [
-          "docs/02-usage/050_configuration.md:526",
-          "src/solidlsp/language_servers/omnisharp.py:156"
+          "docs/02-usage/050_configuration.md:585",
+          "src/solidlsp/language_servers/omnisharp.py:157"
         ],
         "fallbackExpressions": []
       },
@@ -546,8 +628,8 @@
           "7.0.0-preview.23363.1"
         ],
         "evidence": [
-          "docs/02-usage/050_configuration.md:527",
-          "src/solidlsp/language_servers/omnisharp.py:157"
+          "docs/02-usage/050_configuration.md:586",
+          "src/solidlsp/language_servers/omnisharp.py:158"
         ],
         "fallbackExpressions": []
       }
@@ -559,7 +641,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/cue_language_server.py:166"
+          "src/solidlsp/language_servers/cue_language_server.py:167"
         ],
         "fallbackExpressions": []
       }
@@ -572,8 +654,8 @@
         "documentedDefault": "`3.7.1`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:537",
-          "src/solidlsp/language_servers/dart_language_server.py:77"
+          "docs/02-usage/050_configuration.md:596",
+          "src/solidlsp/language_servers/dart_language_server.py:96"
         ],
         "fallbackExpressions": []
       }
@@ -582,13 +664,13 @@
     "elixir": {
       "expert_version": {
         "defaults": [
-          "v0.1.0-rc.6"
+          "v0.1.10"
         ],
-        "documentedDefault": "`v0.1.0-rc.6`",
+        "documentedDefault": "`v0.1.10`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:547",
-          "src/solidlsp/language_servers/elixir_tools/elixir_tools.py:81"
+          "docs/02-usage/050_configuration.md:606",
+          "src/solidlsp/language_servers/elixir_tools/elixir_tools.py:112"
         ],
         "fallbackExpressions": []
       }
@@ -600,7 +682,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/elm_language_server.py:78"
+          "src/solidlsp/language_servers/elm_language_server.py:79"
         ],
         "fallbackExpressions": []
       },
@@ -611,8 +693,8 @@
         "documentedDefault": "`2.8.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:557",
-          "src/solidlsp/language_servers/elm_language_server.py:77"
+          "docs/02-usage/050_configuration.md:626",
+          "src/solidlsp/language_servers/elm_language_server.py:78"
         ],
         "fallbackExpressions": []
       },
@@ -623,8 +705,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:558",
-          "src/solidlsp/language_servers/elm_language_server.py:79"
+          "docs/02-usage/050_configuration.md:627",
+          "src/solidlsp/language_servers/elm_language_server.py:80"
         ],
         "fallbackExpressions": []
       }
@@ -637,7 +719,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/fortran_language_server.py:181"
+          "src/solidlsp/language_servers/fortran_language_server.py:189"
         ],
         "fallbackExpressions": []
       }
@@ -650,8 +732,8 @@
         "documentedDefault": "`0.83.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:568",
-          "src/solidlsp/language_servers/fsharp_language_server.py:137"
+          "docs/02-usage/050_configuration.md:637",
+          "src/solidlsp/language_servers/fsharp_language_server.py:144"
         ],
         "fallbackExpressions": []
       }
@@ -662,7 +744,7 @@
         "documentedDefault": "`6008`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:579"
+          "docs/02-usage/050_configuration.md:648"
         ],
         "fallbackExpressions": []
       },
@@ -671,7 +753,7 @@
         "documentedDefault": "`30.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:580"
+          "docs/02-usage/050_configuration.md:649"
         ],
         "fallbackExpressions": []
       }
@@ -684,8 +766,8 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/gopls.py:135",
-          "src/solidlsp/language_servers/gopls.py:178"
+          "src/solidlsp/language_servers/gopls.py:137",
+          "src/solidlsp/language_servers/gopls.py:180"
         ],
         "fallbackExpressions": []
       }
@@ -698,8 +780,8 @@
         "documentedDefault": "`\"\"`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:627",
-          "src/solidlsp/language_servers/groovy_language_server.py:87"
+          "docs/02-usage/050_configuration.md:696",
+          "src/solidlsp/language_servers/groovy_language_server.py:88"
         ],
         "fallbackExpressions": []
       },
@@ -710,8 +792,8 @@
         "documentedDefault": "required",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:625",
-          "src/solidlsp/language_servers/groovy_language_server.py:231"
+          "docs/02-usage/050_configuration.md:694",
+          "src/solidlsp/language_servers/groovy_language_server.py:232"
         ],
         "fallbackExpressions": []
       },
@@ -722,8 +804,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:626",
-          "src/solidlsp/language_servers/groovy_language_server.py:130"
+          "docs/02-usage/050_configuration.md:695",
+          "src/solidlsp/language_servers/groovy_language_server.py:131"
         ],
         "fallbackExpressions": []
       },
@@ -734,8 +816,8 @@
         "documentedDefault": "`1.42.0-561`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:628",
-          "src/solidlsp/language_servers/groovy_language_server.py:116"
+          "docs/02-usage/050_configuration.md:697",
+          "src/solidlsp/language_servers/groovy_language_server.py:117"
         ],
         "fallbackExpressions": []
       }
@@ -749,8 +831,8 @@
         "documentedDefault": "auto-discovered `.hxml`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:668",
-          "src/solidlsp/language_servers/haxe_language_server.py:211"
+          "docs/02-usage/050_configuration.md:737",
+          "src/solidlsp/language_servers/haxe_language_server.py:212"
         ],
         "fallbackExpressions": []
       },
@@ -761,9 +843,9 @@
         "documentedDefault": "`haxe` from PATH",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:669",
-          "src/solidlsp/language_servers/haxe_language_server.py:224",
-          "src/solidlsp/language_servers/haxe_language_server.py:379"
+          "docs/02-usage/050_configuration.md:738",
+          "src/solidlsp/language_servers/haxe_language_server.py:225",
+          "src/solidlsp/language_servers/haxe_language_server.py:380"
         ],
         "fallbackExpressions": []
       },
@@ -772,7 +854,7 @@
         "documentedDefault": "auto-discovered",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:666"
+          "docs/02-usage/050_configuration.md:735"
         ],
         "fallbackExpressions": []
       },
@@ -783,8 +865,8 @@
         "documentedDefault": "not set (LS default)",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:670",
-          "src/solidlsp/language_servers/haxe_language_server.py:220"
+          "docs/02-usage/050_configuration.md:739",
+          "src/solidlsp/language_servers/haxe_language_server.py:221"
         ],
         "fallbackExpressions": []
       },
@@ -795,8 +877,8 @@
         "documentedDefault": "`2.34.2`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:667",
-          "src/solidlsp/language_servers/haxe_language_server.py:94"
+          "docs/02-usage/050_configuration.md:736",
+          "src/solidlsp/language_servers/haxe_language_server.py:95"
         ],
         "fallbackExpressions": []
       }
@@ -807,7 +889,7 @@
         "documentedDefault": "managed install or build",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:651"
+          "docs/02-usage/050_configuration.md:720"
         ],
         "fallbackExpressions": []
       },
@@ -818,8 +900,8 @@
         "documentedDefault": "`1.3.1`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:652",
-          "src/solidlsp/language_servers/hlsl_language_server.py:79"
+          "docs/02-usage/050_configuration.md:721",
+          "src/solidlsp/language_servers/hlsl_language_server.py:80"
         ],
         "fallbackExpressions": []
       }
@@ -830,7 +912,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:696"
+          "docs/02-usage/050_configuration.md:765"
         ],
         "fallbackExpressions": []
       },
@@ -841,8 +923,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:699",
-          "src/solidlsp/language_servers/vscode_html_language_server.py:77"
+          "docs/02-usage/050_configuration.md:768",
+          "src/solidlsp/language_servers/vscode_html_language_server.py:78"
         ],
         "fallbackExpressions": []
       },
@@ -853,8 +935,8 @@
         "documentedDefault": "`vscode-langservers-extracted`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:697",
-          "src/solidlsp/language_servers/vscode_html_language_server.py:75"
+          "docs/02-usage/050_configuration.md:766",
+          "src/solidlsp/language_servers/vscode_html_language_server.py:76"
         ],
         "fallbackExpressions": []
       },
@@ -865,13 +947,51 @@
         "documentedDefault": "`4.10.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:698",
-          "src/solidlsp/language_servers/vscode_html_language_server.py:76"
+          "docs/02-usage/050_configuration.md:767",
+          "src/solidlsp/language_servers/vscode_html_language_server.py:77"
         ],
         "fallbackExpressions": []
       }
     },
     "java": {
+      "autobuild_enabled": {
+        "defaults": [
+          true
+        ],
+        "documentedDefault": "`true`",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:807",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:1046"
+        ],
+        "fallbackExpressions": []
+      },
+      "custom_jre_path": {
+        "defaults": [
+          null
+        ],
+        "documentedDefault": "`null`",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:810",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:826",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:863",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:869"
+        ],
+        "fallbackExpressions": []
+      },
+      "gradle_import_enabled": {
+        "defaults": [
+          true
+        ],
+        "documentedDefault": "`true`",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:805",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:1038"
+        ],
+        "fallbackExpressions": []
+      },
       "gradle_java_home": {
         "defaults": [
           null
@@ -879,8 +999,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:735",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:828"
+          "docs/02-usage/050_configuration.md:808",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:894"
         ],
         "fallbackExpressions": []
       },
@@ -891,8 +1011,8 @@
         "documentedDefault": "`~/.gradle`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:733",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:934"
+          "docs/02-usage/050_configuration.md:802",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:1000"
         ],
         "fallbackExpressions": []
       },
@@ -901,8 +1021,8 @@
         "documentedDefault": "`8.14.2`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:738",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:343"
+          "docs/02-usage/050_configuration.md:812",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:355"
         ],
         "fallbackExpressions": [
           "cls.DEFAULT_GRADLE_VERSION"
@@ -915,8 +1035,8 @@
         "documentedDefault": "`false`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:734",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:964"
+          "docs/02-usage/050_configuration.md:803",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:1030"
         ],
         "fallbackExpressions": []
       },
@@ -927,8 +1047,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:731",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:585"
+          "docs/02-usage/050_configuration.md:800",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:597"
         ],
         "fallbackExpressions": []
       },
@@ -939,9 +1059,9 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:729",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:330",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:716"
+          "docs/02-usage/050_configuration.md:798",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:342",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:733"
         ],
         "fallbackExpressions": []
       },
@@ -952,8 +1072,8 @@
         "documentedDefault": "`100m`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:742",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:752"
+          "docs/02-usage/050_configuration.md:816",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:769"
         ],
         "fallbackExpressions": []
       },
@@ -964,8 +1084,8 @@
         "documentedDefault": "`3G`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:741",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:751"
+          "docs/02-usage/050_configuration.md:815",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:768"
         ],
         "fallbackExpressions": []
       },
@@ -976,8 +1096,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:730",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:331"
+          "docs/02-usage/050_configuration.md:799",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:343"
         ],
         "fallbackExpressions": []
       },
@@ -988,8 +1108,20 @@
         "documentedDefault": "`true`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:740",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:961"
+          "docs/02-usage/050_configuration.md:814",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:1027"
+        ],
+        "fallbackExpressions": []
+      },
+      "maven_import_enabled": {
+        "defaults": [
+          true
+        ],
+        "documentedDefault": "`true`",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:804",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:1037"
         ],
         "fallbackExpressions": []
       },
@@ -1000,8 +1132,8 @@
         "documentedDefault": "`~/.m2/settings.xml`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:732",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:912"
+          "docs/02-usage/050_configuration.md:801",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:978"
         ],
         "fallbackExpressions": []
       },
@@ -1012,8 +1144,24 @@
         "documentedDefault": "`[]`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:737",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:865"
+          "docs/02-usage/050_configuration.md:811",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:931"
+        ],
+        "fallbackExpressions": []
+      },
+      "update_build_configuration": {
+        "defaults": [
+          "interactive"
+        ],
+        "documentedDefault": "`interactive`",
+        "enum": [
+          "automatic",
+          "disabled",
+          "interactive"
+        ],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:806",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:1039"
         ],
         "fallbackExpressions": []
       },
@@ -1024,9 +1172,9 @@
         "documentedDefault": "`false`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:736",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:808",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:842"
+          "docs/02-usage/050_configuration.md:809",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:874",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:908"
         ],
         "fallbackExpressions": []
       },
@@ -1035,9 +1183,9 @@
         "documentedDefault": "`1.54.0-923`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:739",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:344",
-          "src/solidlsp/language_servers/eclipse_jdtls.py:717"
+          "docs/02-usage/050_configuration.md:813",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:356",
+          "src/solidlsp/language_servers/eclipse_jdtls.py:734"
         ],
         "fallbackExpressions": [
           "cls.DEFAULT_VSCODE_JAVA_VERSION"
@@ -1051,7 +1199,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/json_language_server.py:61"
+          "src/solidlsp/language_servers/json_language_server.py:62"
         ],
         "fallbackExpressions": []
       },
@@ -1061,20 +1209,42 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/json_language_server.py:62"
+          "src/solidlsp/language_servers/json_language_server.py:63"
         ],
         "fallbackExpressions": []
       }
     },
     "julia": {},
+    "julia_fatou": {
+      "fatou_version": {
+        "defaults": [
+          "0.18.0"
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/fatou_language_server.py:35"
+        ],
+        "fallbackExpressions": []
+      },
+      "indexing_timeout": {
+        "defaults": [
+          60.0
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/fatou_language_server.py:32"
+        ],
+        "fallbackExpressions": []
+      }
+    },
     "kotlin": {
       "jvm_options": {
         "defaults": [],
         "documentedDefault": "`-Xmx2G`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:800",
-          "src/solidlsp/language_servers/kotlin_language_server.py:237"
+          "docs/02-usage/050_configuration.md:874",
+          "src/solidlsp/language_servers/kotlin_language_server.py:288"
         ],
         "fallbackExpressions": [
           "_sentinel"
@@ -1082,13 +1252,13 @@
       },
       "kotlin_lsp_version": {
         "defaults": [
-          "262.9593.0"
+          "261.13587.0"
         ],
-        "documentedDefault": "`262.9593.0`",
+        "documentedDefault": "`263.4702.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:799",
-          "src/solidlsp/language_servers/kotlin_language_server.py:190"
+          "docs/02-usage/050_configuration.md:873",
+          "src/solidlsp/language_servers/kotlin_language_server.py:241"
         ],
         "fallbackExpressions": []
       },
@@ -1097,7 +1267,7 @@
         "documentedDefault": "managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:798"
+          "docs/02-usage/050_configuration.md:872"
         ],
         "fallbackExpressions": []
       }
@@ -1109,7 +1279,7 @@
         "documentedDefault": "`lean` from PATH",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:824"
+          "docs/02-usage/050_configuration.md:898"
         ],
         "fallbackExpressions": []
       }
@@ -1122,9 +1292,21 @@
         "documentedDefault": "`3.15.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:834",
-          "src/solidlsp/language_servers/lua_ls.py:122",
-          "src/solidlsp/language_servers/lua_ls.py:95"
+          "docs/02-usage/050_configuration.md:908",
+          "src/solidlsp/language_servers/lua_ls.py:123",
+          "src/solidlsp/language_servers/lua_ls.py:96"
+        ],
+        "fallbackExpressions": []
+      }
+    },
+    "lua_emmylua": {
+      "emmylua_ls_version": {
+        "defaults": [
+          null
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/emmylua_ls.py:101"
         ],
         "fallbackExpressions": []
       }
@@ -1136,7 +1318,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/luau_lsp.py:117"
+          "src/solidlsp/language_servers/luau_lsp.py:118"
         ],
         "fallbackExpressions": []
       },
@@ -1149,7 +1331,7 @@
           "standard"
         ],
         "evidence": [
-          "src/solidlsp/language_servers/luau_lsp.py:244"
+          "src/solidlsp/language_servers/luau_lsp.py:245"
         ],
         "fallbackExpressions": []
       },
@@ -1164,7 +1346,7 @@
           "RobloxScriptSecurity"
         ],
         "evidence": [
-          "src/solidlsp/language_servers/luau_lsp.py:251"
+          "src/solidlsp/language_servers/luau_lsp.py:252"
         ],
         "fallbackExpressions": []
       }
@@ -1175,7 +1357,7 @@
         "documentedDefault": "managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:869"
+          "docs/02-usage/050_configuration.md:964"
         ],
         "fallbackExpressions": []
       },
@@ -1186,8 +1368,8 @@
         "documentedDefault": "`2024-12-18`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:870",
-          "src/solidlsp/language_servers/marksman.py:123"
+          "docs/02-usage/050_configuration.md:965",
+          "src/solidlsp/language_servers/marksman.py:124"
         ],
         "fallbackExpressions": []
       }
@@ -1200,9 +1382,9 @@
         "documentedDefault": "`1.3.9`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:881",
-          "src/solidlsp/language_servers/matlab_language_server.py:169",
-          "src/solidlsp/language_servers/matlab_language_server.py:196"
+          "docs/02-usage/050_configuration.md:976",
+          "src/solidlsp/language_servers/matlab_language_server.py:170",
+          "src/solidlsp/language_servers/matlab_language_server.py:197"
         ],
         "fallbackExpressions": []
       },
@@ -1213,8 +1395,8 @@
         "documentedDefault": "auto-detected",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:880",
-          "src/solidlsp/language_servers/matlab_language_server.py:314"
+          "docs/02-usage/050_configuration.md:975",
+          "src/solidlsp/language_servers/matlab_language_server.py:315"
         ],
         "fallbackExpressions": []
       }
@@ -1230,7 +1412,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/nextflow_language_server.py:218"
+          "src/solidlsp/language_servers/nextflow_language_server.py:219"
         ],
         "fallbackExpressions": []
       },
@@ -1240,7 +1422,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/nextflow_language_server.py:146"
+          "src/solidlsp/language_servers/nextflow_language_server.py:147"
         ],
         "fallbackExpressions": []
       },
@@ -1250,7 +1432,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/nextflow_language_server.py:130"
+          "src/solidlsp/language_servers/nextflow_language_server.py:131"
         ],
         "fallbackExpressions": []
       },
@@ -1260,7 +1442,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/nextflow_language_server.py:115"
+          "src/solidlsp/language_servers/nextflow_language_server.py:116"
         ],
         "fallbackExpressions": []
       }
@@ -1272,7 +1454,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/nixd_ls.py:245"
+          "src/solidlsp/language_servers/nixd_ls.py:252"
         ],
         "fallbackExpressions": []
       }
@@ -1285,7 +1467,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pascal_server.py:158"
+          "src/solidlsp/language_servers/pascal_server.py:159"
         ],
         "fallbackExpressions": []
       },
@@ -1295,7 +1477,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pascal_server.py:164"
+          "src/solidlsp/language_servers/pascal_server.py:165"
         ],
         "fallbackExpressions": []
       },
@@ -1305,7 +1487,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pascal_server.py:146"
+          "src/solidlsp/language_servers/pascal_server.py:147"
         ],
         "fallbackExpressions": []
       },
@@ -1315,7 +1497,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pascal_server.py:152"
+          "src/solidlsp/language_servers/pascal_server.py:153"
         ],
         "fallbackExpressions": []
       },
@@ -1325,7 +1507,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pascal_server.py:642"
+          "src/solidlsp/language_servers/pascal_server.py:643"
         ],
         "fallbackExpressions": []
       },
@@ -1335,7 +1517,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pascal_server.py:140"
+          "src/solidlsp/language_servers/pascal_server.py:141"
         ],
         "fallbackExpressions": []
       }
@@ -1345,7 +1527,7 @@
         "defaults": [],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/perl_language_server.py:124"
+          "src/solidlsp/language_servers/perl_language_server.py:112"
         ],
         "fallbackExpressions": [
           "list(_DEFAULT_FILE_FILTER)"
@@ -1355,7 +1537,7 @@
         "defaults": [],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/perl_language_server.py:125"
+          "src/solidlsp/language_servers/perl_language_server.py:113"
         ],
         "fallbackExpressions": [
           "list(_DEFAULT_IGNORE_DIRS)"
@@ -1370,8 +1552,8 @@
         "documentedDefault": "unset",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1010",
-          "src/solidlsp/language_servers/intelephense.py:116"
+          "docs/02-usage/050_configuration.md:1110",
+          "src/solidlsp/language_servers/intelephense.py:103"
         ],
         "fallbackExpressions": []
       },
@@ -1382,8 +1564,8 @@
         "documentedDefault": "`true`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1007",
-          "src/solidlsp/language_servers/intelephense.py:110"
+          "docs/02-usage/050_configuration.md:1107",
+          "src/solidlsp/language_servers/intelephense.py:97"
         ],
         "fallbackExpressions": []
       },
@@ -1394,8 +1576,8 @@
         "documentedDefault": "`1.14.4`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1005",
-          "src/solidlsp/language_servers/intelephense.py:72"
+          "docs/02-usage/050_configuration.md:1105",
+          "src/solidlsp/language_servers/intelephense.py:59"
         ],
         "fallbackExpressions": []
       },
@@ -1404,7 +1586,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1004"
+          "docs/02-usage/050_configuration.md:1104"
         ],
         "fallbackExpressions": []
       },
@@ -1415,8 +1597,8 @@
         "documentedDefault": "unset",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1008",
-          "src/solidlsp/language_servers/intelephense.py:155"
+          "docs/02-usage/050_configuration.md:1108",
+          "src/solidlsp/language_servers/intelephense.py:142"
         ],
         "fallbackExpressions": []
       },
@@ -1427,8 +1609,8 @@
         "documentedDefault": "unset",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1009",
-          "src/solidlsp/language_servers/intelephense.py:154"
+          "docs/02-usage/050_configuration.md:1109",
+          "src/solidlsp/language_servers/intelephense.py:141"
         ],
         "fallbackExpressions": []
       },
@@ -1439,8 +1621,60 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1006",
-          "src/solidlsp/language_servers/intelephense.py:73"
+          "docs/02-usage/050_configuration.md:1106",
+          "src/solidlsp/language_servers/intelephense.py:60"
+        ],
+        "fallbackExpressions": []
+      }
+    },
+    "php_devsense": {
+      "devsense_php_ls_version": {
+        "defaults": [
+          "1.0.19197"
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/devsense_php_language_server.py:89"
+        ],
+        "fallbackExpressions": []
+      },
+      "file_filter": {
+        "defaults": [
+          null
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/devsense_php_language_server.py:129"
+        ],
+        "fallbackExpressions": []
+      },
+      "ignore_vendor": {
+        "defaults": [
+          true
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/devsense_php_language_server.py:126"
+        ],
+        "fallbackExpressions": []
+      },
+      "npm_registry": {
+        "defaults": [
+          null
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/devsense_php_language_server.py:90"
+        ],
+        "fallbackExpressions": []
+      },
+      "php_version": {
+        "defaults": [
+          null
+        ],
+        "enum": [],
+        "evidence": [
+          "src/solidlsp/language_servers/devsense_php_language_server.py:145"
         ],
         "fallbackExpressions": []
       }
@@ -1453,8 +1687,8 @@
         "documentedDefault": "`true`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1034",
-          "src/solidlsp/language_servers/phpactor.py:114"
+          "docs/02-usage/050_configuration.md:1134",
+          "src/solidlsp/language_servers/phpactor.py:115"
         ],
         "fallbackExpressions": []
       },
@@ -1463,7 +1697,7 @@
         "documentedDefault": "managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1032"
+          "docs/02-usage/050_configuration.md:1132"
         ],
         "fallbackExpressions": []
       },
@@ -1474,8 +1708,8 @@
         "documentedDefault": "`2025.12.21.1`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1033",
-          "src/solidlsp/language_servers/phpactor.py:62"
+          "docs/02-usage/050_configuration.md:1133",
+          "src/solidlsp/language_servers/phpactor.py:63"
         ],
         "fallbackExpressions": []
       }
@@ -1487,7 +1721,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/phpantom.py:169"
+          "src/solidlsp/language_servers/phpantom.py:170"
         ],
         "fallbackExpressions": []
       },
@@ -1497,7 +1731,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/phpantom.py:143"
+          "src/solidlsp/language_servers/phpantom.py:144"
         ],
         "fallbackExpressions": []
       }
@@ -1510,9 +1744,9 @@
         "documentedDefault": "`4.4.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1044",
-          "src/solidlsp/language_servers/powershell_language_server.py:123",
-          "src/solidlsp/language_servers/powershell_language_server.py:136"
+          "docs/02-usage/050_configuration.md:1163",
+          "src/solidlsp/language_servers/powershell_language_server.py:124",
+          "src/solidlsp/language_servers/powershell_language_server.py:137"
         ],
         "fallbackExpressions": []
       },
@@ -1522,7 +1756,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/powershell_language_server.py:187"
+          "src/solidlsp/language_servers/powershell_language_server.py:188"
         ],
         "fallbackExpressions": []
       }
@@ -1533,7 +1767,7 @@
         "documentedDefault": "`1.39.9`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1077"
+          "docs/02-usage/050_configuration.md:1196"
         ],
         "fallbackExpressions": []
       },
@@ -1542,8 +1776,8 @@
         "documentedDefault": "managed executable",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1059",
-          "docs/02-usage/050_configuration.md:1078"
+          "docs/02-usage/050_configuration.md:1178",
+          "docs/02-usage/050_configuration.md:1197"
         ],
         "fallbackExpressions": []
       },
@@ -1554,8 +1788,8 @@
         "documentedDefault": "`1.1.403`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1058",
-          "src/solidlsp/language_servers/pyright_server.py:47"
+          "docs/02-usage/050_configuration.md:1177",
+          "src/solidlsp/language_servers/pyright_server.py:48"
         ],
         "fallbackExpressions": []
       }
@@ -1567,7 +1801,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/basedpyright_server.py:43"
+          "src/solidlsp/language_servers/basedpyright_server.py:44"
         ],
         "fallbackExpressions": []
       }
@@ -1580,17 +1814,17 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pyrefly_server.py:123"
+          "src/solidlsp/language_servers/pyrefly_server.py:124"
         ],
         "fallbackExpressions": []
       },
       "pyrefly_version": {
         "defaults": [
-          "1.1.1"
+          "1.2.0"
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pyrefly_server.py:129"
+          "src/solidlsp/language_servers/pyrefly_server.py:130"
         ],
         "fallbackExpressions": []
       },
@@ -1600,7 +1834,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/pyrefly_server.py:126"
+          "src/solidlsp/language_servers/pyrefly_server.py:127"
         ],
         "fallbackExpressions": []
       }
@@ -1612,7 +1846,7 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/ty_server.py:42"
+          "src/solidlsp/language_servers/ty_server.py:43"
         ],
         "fallbackExpressions": []
       }
@@ -1628,8 +1862,8 @@
         "documentedDefault": "`0.26.8`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1094",
-          "src/solidlsp/language_servers/ruby_lsp.py:112"
+          "docs/02-usage/050_configuration.md:1213",
+          "src/solidlsp/language_servers/ruby_lsp.py:113"
         ],
         "fallbackExpressions": []
       }
@@ -1641,7 +1875,7 @@
         "documentedDefault": "auto-detected",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1104"
+          "docs/02-usage/050_configuration.md:1223"
         ],
         "fallbackExpressions": []
       }
@@ -1651,9 +1885,11 @@
         "defaults": [
           true
         ],
+        "documentedDefault": "`true`",
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/scala_language_server.py:284"
+          "docs/02-usage/050_configuration.md:1249",
+          "src/solidlsp/language_servers/scala_language_server.py:441"
         ],
         "fallbackExpressions": []
       },
@@ -1664,8 +1900,44 @@
         "documentedDefault": "`Serena`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1115",
-          "src/solidlsp/language_servers/scala_language_server.py:281"
+          "docs/02-usage/050_configuration.md:1246",
+          "src/solidlsp/language_servers/scala_language_server.py:438"
+        ],
+        "fallbackExpressions": []
+      },
+      "indexing_quiet_period": {
+        "defaults": [
+          null
+        ],
+        "documentedDefault": "`3`",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:1254",
+          "src/solidlsp/language_servers/scala_language_server.py:449"
+        ],
+        "fallbackExpressions": []
+      },
+      "indexing_start_grace": {
+        "defaults": [
+          null
+        ],
+        "documentedDefault": "`15`",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:1253",
+          "src/solidlsp/language_servers/scala_language_server.py:446"
+        ],
+        "fallbackExpressions": []
+      },
+      "indexing_timeout": {
+        "defaults": [
+          null
+        ],
+        "documentedDefault": "`180`",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:1252",
+          "src/solidlsp/language_servers/scala_language_server.py:444"
         ],
         "fallbackExpressions": []
       },
@@ -1676,20 +1948,20 @@
         "documentedDefault": "`true`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1117",
-          "src/solidlsp/language_servers/scala_language_server.py:283"
+          "docs/02-usage/050_configuration.md:1248",
+          "src/solidlsp/language_servers/scala_language_server.py:440"
         ],
         "fallbackExpressions": []
       },
       "metals_version": {
         "defaults": [
-          "1.6.4"
+          "1.6.8"
         ],
-        "documentedDefault": "`1.6.4`",
+        "documentedDefault": "`1.6.8`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1114",
-          "src/solidlsp/language_servers/scala_language_server.py:280"
+          "docs/02-usage/050_configuration.md:1245",
+          "src/solidlsp/language_servers/scala_language_server.py:437"
         ],
         "fallbackExpressions": []
       },
@@ -1704,8 +1976,8 @@
           "warn"
         ],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1116",
-          "src/solidlsp/language_servers/scala_language_server.py:272"
+          "docs/02-usage/050_configuration.md:1247",
+          "src/solidlsp/language_servers/scala_language_server.py:429"
         ],
         "fallbackExpressions": []
       },
@@ -1713,9 +1985,11 @@
         "defaults": [
           null
         ],
+        "documentedDefault": "`3`",
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/scala_language_server.py:286"
+          "docs/02-usage/050_configuration.md:1251",
+          "src/solidlsp/language_servers/scala_language_server.py:443"
         ],
         "fallbackExpressions": []
       },
@@ -1723,9 +1997,11 @@
         "defaults": [
           null
         ],
+        "documentedDefault": "auto-detected",
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/scala_language_server.py:285"
+          "docs/02-usage/050_configuration.md:1250",
+          "src/solidlsp/language_servers/scala_language_server.py:442"
         ],
         "fallbackExpressions": []
       }
@@ -1736,7 +2012,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1135"
+          "docs/02-usage/050_configuration.md:1272"
         ],
         "fallbackExpressions": []
       },
@@ -1747,8 +2023,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1137",
-          "src/solidlsp/language_servers/some_sass_language_server.py:125"
+          "docs/02-usage/050_configuration.md:1274",
+          "src/solidlsp/language_servers/some_sass_language_server.py:126"
         ],
         "fallbackExpressions": []
       },
@@ -1759,8 +2035,8 @@
         "documentedDefault": "`2.3.8`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1136",
-          "src/solidlsp/language_servers/some_sass_language_server.py:124"
+          "docs/02-usage/050_configuration.md:1273",
+          "src/solidlsp/language_servers/some_sass_language_server.py:125"
         ],
         "fallbackExpressions": []
       }
@@ -1772,8 +2048,8 @@
         ],
         "enum": [],
         "evidence": [
-          "src/solidlsp/language_servers/solidity_language_server.py:174",
-          "src/solidlsp/language_servers/solidity_language_server.py:99"
+          "src/solidlsp/language_servers/solidity_language_server.py:108",
+          "src/solidlsp/language_servers/solidity_language_server.py:183"
         ],
         "fallbackExpressions": []
       },
@@ -1782,7 +2058,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1147"
+          "docs/02-usage/050_configuration.md:1284"
         ],
         "fallbackExpressions": []
       },
@@ -1793,8 +2069,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1149",
-          "src/solidlsp/language_servers/solidity_language_server.py:100"
+          "docs/02-usage/050_configuration.md:1287",
+          "src/solidlsp/language_servers/solidity_language_server.py:109"
         ],
         "fallbackExpressions": []
       },
@@ -1805,11 +2081,23 @@
         "documentedDefault": "`0.8.4`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1148",
-          "src/solidlsp/language_servers/solidity_language_server.py:171",
-          "src/solidlsp/language_servers/solidity_language_server.py:96"
+          "docs/02-usage/050_configuration.md:1285",
+          "src/solidlsp/language_servers/solidity_language_server.py:105",
+          "src/solidlsp/language_servers/solidity_language_server.py:180"
         ],
         "fallbackExpressions": []
+      },
+      "solidity_state_dir": {
+        "defaults": [],
+        "documentedDefault": "`<ls_resources_dir>/solidity-state` on macOS",
+        "enum": [],
+        "evidence": [
+          "docs/02-usage/050_configuration.md:1286",
+          "src/solidlsp/language_servers/solidity_language_server.py:210"
+        ],
+        "fallbackExpressions": [
+          "os.path.join(self._ls_resources_dir, 'solidity-state')"
+        ]
       }
     },
     "svelte": {
@@ -1818,8 +2106,8 @@
         "documentedDefault": "`120.0` (falls back to `ls_specific_settings.typescript.indexing_timeout`)",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1215",
-          "src/solidlsp/language_servers/svelte_language_server.py:341"
+          "docs/02-usage/050_configuration.md:1376",
+          "src/solidlsp/language_servers/svelte_language_server.py:340"
         ],
         "fallbackExpressions": [
           "ts_settings.get('indexing_timeout', SvelteTypeScriptServer.INDEXING_PROGRESS_TIMEOUT)"
@@ -1832,7 +2120,7 @@
         "documentedDefault": "`{}`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1216",
+          "docs/02-usage/050_configuration.md:1377",
           "src/solidlsp/language_servers/svelte_language_server.py:515"
         ],
         "fallbackExpressions": []
@@ -1842,7 +2130,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1209"
+          "docs/02-usage/050_configuration.md:1370"
         ],
         "fallbackExpressions": []
       },
@@ -1853,8 +2141,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1214",
-          "src/solidlsp/language_servers/svelte_language_server.py:196"
+          "docs/02-usage/050_configuration.md:1375",
+          "src/solidlsp/language_servers/svelte_language_server.py:195"
         ],
         "fallbackExpressions": [
           "self._ts_settings.get('npm_registry')"
@@ -1867,10 +2155,10 @@
         "documentedDefault": "`0.18.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1210",
-          "src/solidlsp/language_servers/svelte_language_server.py:195",
-          "src/solidlsp/language_servers/svelte_language_server.py:301",
-          "src/solidlsp/language_servers/svelte_language_server.py:311"
+          "docs/02-usage/050_configuration.md:1371",
+          "src/solidlsp/language_servers/svelte_language_server.py:194",
+          "src/solidlsp/language_servers/svelte_language_server.py:300",
+          "src/solidlsp/language_servers/svelte_language_server.py:310"
         ],
         "fallbackExpressions": []
       },
@@ -1881,9 +2169,9 @@
         "documentedDefault": "`5.1.3` (falls back to `ls_specific_settings.typescript.typescript_language_server_version`)",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1212",
-          "src/solidlsp/language_servers/svelte_language_server.py:198",
-          "src/solidlsp/language_servers/svelte_language_server.py:200"
+          "docs/02-usage/050_configuration.md:1373",
+          "src/solidlsp/language_servers/svelte_language_server.py:197",
+          "src/solidlsp/language_servers/svelte_language_server.py:199"
         ],
         "fallbackExpressions": [
           "self._ts_settings.get('typescript_language_server_version', '5.1.3')"
@@ -1896,8 +2184,8 @@
         "documentedDefault": "`0.3.52`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1213",
-          "src/solidlsp/language_servers/svelte_language_server.py:202"
+          "docs/02-usage/050_configuration.md:1374",
+          "src/solidlsp/language_servers/svelte_language_server.py:201"
         ],
         "fallbackExpressions": []
       },
@@ -1908,8 +2196,8 @@
         "documentedDefault": "`6.0.3` (falls back to `ls_specific_settings.typescript.typescript_version`)",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1211",
-          "src/solidlsp/language_servers/svelte_language_server.py:197"
+          "docs/02-usage/050_configuration.md:1372",
+          "src/solidlsp/language_servers/svelte_language_server.py:196"
         ],
         "fallbackExpressions": [
           "self._ts_settings.get('typescript_version', '6.0.3')"
@@ -1923,7 +2211,7 @@
         "documentedDefault": "system PATH or managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1159"
+          "docs/02-usage/050_configuration.md:1307"
         ],
         "fallbackExpressions": []
       },
@@ -1934,8 +2222,8 @@
         "documentedDefault": "`v0.0-4051-g9fdb4057`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1160",
-          "src/solidlsp/language_servers/systemverilog_server.py:62"
+          "docs/02-usage/050_configuration.md:1308",
+          "src/solidlsp/language_servers/systemverilog_server.py:63"
         ],
         "fallbackExpressions": []
       }
@@ -1948,8 +2236,8 @@
         "documentedDefault": "`0.36.5`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1170",
-          "src/solidlsp/language_servers/terraform_ls.py:128"
+          "docs/02-usage/050_configuration.md:1318",
+          "src/solidlsp/language_servers/terraform_ls.py:130"
         ],
         "fallbackExpressions": []
       }
@@ -1960,7 +2248,7 @@
         "documentedDefault": "managed download",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1180"
+          "docs/02-usage/050_configuration.md:1328"
         ],
         "fallbackExpressions": []
       },
@@ -1971,8 +2259,8 @@
         "documentedDefault": "`0.10.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1181",
-          "src/solidlsp/language_servers/taplo_server.py:150"
+          "docs/02-usage/050_configuration.md:1329",
+          "src/solidlsp/language_servers/taplo_server.py:151"
         ],
         "fallbackExpressions": []
       }
@@ -1983,8 +2271,8 @@
         "documentedDefault": "`5.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1197",
-          "src/solidlsp/language_servers/typescript_language_server.py:183"
+          "docs/02-usage/050_configuration.md:1345",
+          "src/solidlsp/language_servers/typescript_language_server.py:227"
         ],
         "fallbackExpressions": [
           "self.INDEXING_START_GRACE"
@@ -1995,11 +2283,13 @@
         "documentedDefault": "`30.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1195",
-          "src/solidlsp/language_servers/svelte_language_server.py:343",
-          "src/solidlsp/language_servers/typescript_language_server.py:179"
+          "docs/02-usage/050_configuration.md:1343",
+          "src/solidlsp/language_servers/astro_language_server.py:331",
+          "src/solidlsp/language_servers/svelte_language_server.py:342",
+          "src/solidlsp/language_servers/typescript_language_server.py:223"
         ],
         "fallbackExpressions": [
+          "AstroTypeScriptServer.INDEXING_PROGRESS_TIMEOUT",
           "SvelteTypeScriptServer.INDEXING_PROGRESS_TIMEOUT",
           "self.INDEXING_PROGRESS_TIMEOUT"
         ]
@@ -2009,7 +2299,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1191"
+          "docs/02-usage/050_configuration.md:1339"
         ],
         "fallbackExpressions": []
       },
@@ -2020,10 +2310,10 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1194",
-          "src/solidlsp/language_servers/angular_language_server.py:305",
-          "src/solidlsp/language_servers/typescript_language_server.py:248",
-          "src/solidlsp/language_servers/vue_language_server.py:544"
+          "docs/02-usage/050_configuration.md:1342",
+          "src/solidlsp/language_servers/angular_language_server.py:325",
+          "src/solidlsp/language_servers/typescript_language_server.py:277",
+          "src/solidlsp/language_servers/vue_language_server.py:543"
         ],
         "fallbackExpressions": []
       },
@@ -2032,8 +2322,8 @@
         "documentedDefault": "`10.0`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1196",
-          "src/solidlsp/language_servers/typescript_language_server.py:175"
+          "docs/02-usage/050_configuration.md:1344",
+          "src/solidlsp/language_servers/typescript_language_server.py:219"
         ],
         "fallbackExpressions": [
           "self.SERVER_READY_TIMEOUT"
@@ -2046,10 +2336,10 @@
         "documentedDefault": "`5.1.3`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1193",
-          "src/solidlsp/language_servers/angular_language_server.py:303",
-          "src/solidlsp/language_servers/typescript_language_server.py:245",
-          "src/solidlsp/language_servers/vue_language_server.py:541"
+          "docs/02-usage/050_configuration.md:1341",
+          "src/solidlsp/language_servers/angular_language_server.py:323",
+          "src/solidlsp/language_servers/typescript_language_server.py:274",
+          "src/solidlsp/language_servers/vue_language_server.py:540"
         ],
         "fallbackExpressions": []
       },
@@ -2060,24 +2350,21 @@
         "documentedDefault": "`5.9.3`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1192",
-          "src/solidlsp/language_servers/angular_language_server.py:300",
-          "src/solidlsp/language_servers/typescript_language_server.py:244",
-          "src/solidlsp/language_servers/vue_language_server.py:540"
+          "docs/02-usage/050_configuration.md:1340",
+          "src/solidlsp/language_servers/angular_language_server.py:320",
+          "src/solidlsp/language_servers/typescript_language_server.py:273",
+          "src/solidlsp/language_servers/vue_language_server.py:539"
         ],
         "fallbackExpressions": []
       }
     },
     "typescript_vts": {
       "initialization_options": {
-        "defaults": [
-          null
-        ],
+        "defaults": [],
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1236",
-          "src/solidlsp/language_servers/vts_language_server.py:133"
+          "docs/02-usage/050_configuration.md:1397"
         ],
         "fallbackExpressions": []
       },
@@ -2088,7 +2375,7 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1235",
+          "docs/02-usage/050_configuration.md:1396",
           "src/solidlsp/language_servers/vts_language_server.py:92"
         ],
         "fallbackExpressions": []
@@ -2100,7 +2387,7 @@
         "documentedDefault": "`0.2.9`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1234",
+          "docs/02-usage/050_configuration.md:1395",
           "src/solidlsp/language_servers/vts_language_server.py:91"
         ],
         "fallbackExpressions": []
@@ -2112,8 +2399,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1270",
-          "src/solidlsp/language_servers/vue_language_server.py:544"
+          "docs/02-usage/050_configuration.md:1431",
+          "src/solidlsp/language_servers/vue_language_server.py:543"
         ],
         "fallbackExpressions": [
           "typescript_config.get('npm_registry')"
@@ -2126,8 +2413,8 @@
         "documentedDefault": "`3.1.5`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1269",
-          "src/solidlsp/language_servers/vue_language_server.py:543"
+          "docs/02-usage/050_configuration.md:1430",
+          "src/solidlsp/language_servers/vue_language_server.py:542"
         ],
         "fallbackExpressions": []
       }
@@ -2139,7 +2426,7 @@
         "documentedDefault": "managed install",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1283"
+          "docs/02-usage/050_configuration.md:1444"
         ],
         "fallbackExpressions": []
       },
@@ -2150,8 +2437,8 @@
         "documentedDefault": "`null`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1285",
-          "src/solidlsp/language_servers/yaml_language_server.py:74"
+          "docs/02-usage/050_configuration.md:1446",
+          "src/solidlsp/language_servers/yaml_language_server.py:75"
         ],
         "fallbackExpressions": []
       },
@@ -2162,8 +2449,8 @@
         "documentedDefault": "`1.19.2`",
         "enum": [],
         "evidence": [
-          "docs/02-usage/050_configuration.md:1284",
-          "src/solidlsp/language_servers/yaml_language_server.py:73"
+          "docs/02-usage/050_configuration.md:1445",
+          "src/solidlsp/language_servers/yaml_language_server.py:74"
         ],
         "fallbackExpressions": []
       }
@@ -2172,15 +2459,19 @@
   },
   "mode": {
     "description": "Description of the mode (meta-information only)",
+    "excluded_apis": [],
     "excluded_tools": [],
     "fixed_tools": [],
+    "included_apis": [],
     "included_optional_tools": [],
     "prompt": "This prompt will form part of the system prompt/initial instructions for agents started in this context.\nAdd as much content as needed.\nLeave it undefined if no prompt is needed, i.e.\n   prompt: null\n"
   },
   "modeSupportedFields": [
     "description",
+    "excluded_apis",
     "excluded_tools",
     "fixed_tools",
+    "included_apis",
     "included_optional_tools",
     "name",
     "prompt"
@@ -2189,13 +2480,16 @@
     "activation_command": null,
     "activation_command_timeout": 180,
     "added_modes": null,
+    "agent_interface": null,
     "default_modes": null,
     "encoding": "utf-8",
+    "excluded_apis": [],
     "excluded_tools": [],
     "fixed_tools": [],
     "ignore_all_files_in_gitignore": true,
     "ignored_memory_patterns": [],
     "ignored_paths": [],
+    "included_apis": [],
     "included_optional_tools": [],
     "initial_prompt": "",
     "language_backend": null,
@@ -2263,40 +2557,43 @@
   "schemaVersion": 2,
   "sourceGuard": {
     "files": {
-      "docs/01-about/020_programming-languages.md": "ea93f95d780bf7e12c3f11105e2a0fa276c2879d1287815b3c10f5460e67a023",
+      "docs/01-about/020_programming-languages.md": "29b74b5c986db95222e770ebc3f624b330f513378fcd65924ad6f710a8321df2",
       "docs/01-about/030_serena-in-action.md": "36a5acca55f9895d7346669bc1466cb42e2b6d0da1af583b10d2fdc93f291660",
       "docs/01-about/050_acknowledgements.md": "20519f7da4cc043c2363c5c23d94b55b5d8f7a73e6983937e2268e080fb6f6b3",
+      "docs/01-about/060_license.md": "cff5d35c91600ca4c5e1eb62ce89225033069dffde4edd43d5b56b236e8c5235",
+      "docs/01-about/070_privacy.md": "69d82d8e33f30f93345f59babd24fa849d6904d75cc639b07cd102364d7f7d15",
       "docs/02-usage/000_intro.md": "795ba8bb1ff3e4d082a7ed445100f219d84f4d9bf36e814e96705c594d6cd3af",
       "docs/02-usage/010_installation.md": "8b3348659ee09afa3a3e0beee15270bd189161e101503920f8dd0ed14a710443",
       "docs/02-usage/020_running.md": "a9598a2baeda92fcd0e050a848261b2c6a209a5e11f289bd1fefc658d0ee06fa",
       "docs/02-usage/025_jetbrains_plugin.md": "5e2db5e8c517f93f80cfd04c51c6085cc6c5be14da5aff5443c69f94946234d5",
-      "docs/02-usage/030_clients.md": "62b271277e5ba7783695646da04cab1cc9618e63d066b35e31b731a280f8481e",
-      "docs/02-usage/040_workflow.md": "e78ad1b108101b09e0886c1040cec5e358623ae0eba73a41e3b9ced00fa5f1c2",
-      "docs/02-usage/045_memories.md": "f8e7d66bdd1621d7d513f38d8085ae83e6405dac5125f5743998e5013678af0e",
-      "docs/02-usage/050_configuration.md": "ec8db2db1768e8cfa56af17885f5216da316b0d3a65b6b2bc2a85d066469730e",
+      "docs/02-usage/030_clients.md": "a7c3d75e53a2688581be05a341a0cd6b9831e7fc29b7dcf547cf28dcb47a8a1e",
+      "docs/02-usage/040_workflow.md": "5b82076a17f5602811307392c36568581b0180c1fa745a03af58175b4f678f4d",
+      "docs/02-usage/045_memories.md": "68e0c07c015385c4563acf352fe0cdad31a409c5f1b7a0acd11ec4d90fabb6a6",
+      "docs/02-usage/050_configuration.md": "5d667cc94a477d78b76f9fe9e8cfcb11990d449889d1786ec1ef6ca6feccafc8",
       "docs/02-usage/060_dashboard.md": "837c705de53ffde1f1722ce98ec1f11b33837c0fb520925345453e999373f35d",
       "docs/02-usage/065_logs.md": "3f6aa14a740eb8454edf8e818ff335dcecf9d94e640220e11df84be9bdce4762",
-      "docs/02-usage/070_security.md": "29c9d076ebd075d657244d8d7eb611f924fcedf602d95ec1e862511fcfe78b63",
+      "docs/02-usage/070_security.md": "f057bffeafe818b61e9da2ca78d919c01aad0dfe85a58001dd15bdac0f16fe07",
       "docs/02-usage/999_additional-usage.md": "77eb6511618be31cc9679188561aa7d8c4f7d3add68db43c94db04936494bee3",
-      "docs/03-special-guides/000_intro.md": "552f52054c0989d0f8135baf2868876959952c5811521ee2db4c4d9e72d24309",
-      "docs/03-special-guides/cpp_setup.md": "7c391bcede5ff13c3dbffd0d267ce3f228396db873b1b13c8469c5e7884c91db",
+      "docs/03-special-guides/000_intro.md": "89be4a504e6344512c7ad8e5257103dc234c9638eb32520ba60bc4f6a176d093",
+      "docs/03-special-guides/cpp_setup.md": "17df781020ad58c61b06150ca540dee872bbd68a0b2a4da8130c36a26fc97abe",
       "docs/03-special-guides/custom_agent.md": "41ea9d88c56bfabd5edad5c60e9e15202ea8dba88f6411cf73bbe7b54d9cf499",
+      "docs/03-special-guides/external_language_server_registration.md": "d306aa1a081273617de4119ba992a6b62a9160111116ab99ed89343aaab5ad14",
       "docs/03-special-guides/godot_gdscript_setup_guide_for_serena.md": "01a0fd0074bdfe7a79391870c6982d933ba1a1f7ce689219e34a1e2e4215974e",
       "docs/03-special-guides/groovy_setup_guide_for_serena.md": "5d54bbb9b79fa0a1c36f4be7f574d8b4e2033126b1030ee99d0c5b3559929ef0",
       "docs/03-special-guides/ocaml_setup_guide_for_serena.md": "cb92101b79d087e955f6d558f1dbf1e5fb1646ddc717c131f07f7bef4541d0e4",
-      "docs/03-special-guides/scala_setup_guide_for_serena.md": "3bd4d7a2afef9bd36f395e43200e273b5829c2b6d4c717d46ed107eae8011416",
+      "docs/03-special-guides/scala_setup_guide_for_serena.md": "cbe1c367bc91db771d471d2d43d6954d349211a290e1a42ab5a9913561f7032b",
       "docs/03-special-guides/serena_on_chatgpt.md": "45ba5f61dfe68b494b4290e9089b932e9beab926dc3df5331135b045e2b4b122",
       "docs/03-special-guides/unreal_engine_setup_guide_for_serena.md": "43c1de8a7a56a7fc4bf5c4f921a2bcd89f07a5918d9bc0b22184f0e14d73c308",
-      "src/serena/config/context_mode.py": "a733108d7f98ed859cecf8532bdbfc77d999012aa93e6d365f177f1b9dfc09e9",
-      "src/serena/config/serena_config.py": "8277d32a0f3b6f6760240351129792c8e24bb4631e461789e0b911204f468218",
-      "src/serena/prompt_factory.py": "0537bea45c00c4550dc86d4ca16b4886554bf4fd5e00ab050017ab13e9038f8a",
+      "src/serena/config/context_mode.py": "a71dc70248997e8c5eb8a732b35135405f3b410a9c5199e85f83cb0304a61047",
+      "src/serena/config/serena_config.py": "53df45e41e12554ddddc87c087d76e923dec3ba92b303b0b9d49775c14c52565",
+      "src/serena/prompt_factory.py": "39d13a3625bc1fca0ad49bdf7d16b62e764fb1adf266ec5b2c154ca7024db66c",
       "src/serena/resources/config/contexts/agent.yml": "b3cec20f21ef0bd14121260d8d87e0af56ffc9ff76607cca7cec569efd331d1b",
       "src/serena/resources/config/contexts/antigravity.yml": "e7909900b8c229cdb8647e25b109d437957adae26331cf4bfe2011b284d2dbb8",
       "src/serena/resources/config/contexts/chatgpt.yml": "e2f74828240da78679d3d09efe6b939fae37270677d2172429e06257df72f401",
       "src/serena/resources/config/contexts/claude-code.yml": "78403573e7c71fe70b82253cb12a19b99b5c48f9702ea671f64257ad0e59c492",
       "src/serena/resources/config/contexts/codebuddy.yml": "fac12723348ce7514015a45450154a7f96ec37327a453452574cdfc0d72e084e",
       "src/serena/resources/config/contexts/codex.yml": "cfe3c9221915f0c2a874404b866211402110c216bcea534a29ff73d008afc03e",
-      "src/serena/resources/config/contexts/context.template.yml": "b162438f3afa1ba76d405737799ea36ba7a187b9fd26b0db57a3817a4a0b2d28",
+      "src/serena/resources/config/contexts/context.template.yml": "93be54d72ae91034d3a6cc265ae4a74ce696a1f9fb5bd1c8287cf44ba935fd91",
       "src/serena/resources/config/contexts/copilot-cli.yml": "3e70f06c0edc075b9c251e9656141e28f8a0fac47d84d5ef388983c0de930d6b",
       "src/serena/resources/config/contexts/desktop-app.yml": "3ddd8d538e690559dff55c958b7608cdf042682eb927ebcac147da899054a58c",
       "src/serena/resources/config/contexts/grok.yml": "bc3bc89c479633ba3d5ca3024f55f7df9b8296eb203f5bde18b639f329621e66",
@@ -2306,104 +2603,109 @@
       "src/serena/resources/config/contexts/junie.yml": "48f7e88b3059df513419a8142f73fdbd012ad6cf90e104c5fbcb8aa414605640",
       "src/serena/resources/config/contexts/oaicompat-agent.yml": "9b09d9148249ec973d9129a1aee9c576b99d24d3dfbf1bfd8d3d2828899d072d",
       "src/serena/resources/config/contexts/vscode.yml": "6246d5af4e4250fd9a755c57a2f049dc8b3b7f555e52ba6a2a6eae6cb40c41c0",
+      "src/serena/resources/config/contexts/zcode.yml": "ec7eebdb6e5145ff14ba89ab8a2c9538aeb25baeb32509ee261c34f84f90f0a8",
       "src/serena/resources/config/internal_modes/jetbrains.yml": "0af8fba4e7176eb0d2e99a5f3a083757f5e22c98a4d7fa922423be51634a154f",
-      "src/serena/resources/config/modes/benchmark.yml": "ba1726f5d6b59cb3d79e28755396a31461ca19e10287ab8e729841021ee4b752",
-      "src/serena/resources/config/modes/editing.yml": "9f0c0447446790671698b431a5a409e0b7d3105e581f98a581c17dd99816fd32",
+      "src/serena/resources/config/modes/benchmark.yml": "7071eaf3e703713faca3e6193e67c672d9dcf5e3666b9473330bf0602ae51302",
+      "src/serena/resources/config/modes/editing.yml": "5e9cb2b1ec6dd02ad58f647f12c023828b5312bfd334db13c893f048e5504d37",
       "src/serena/resources/config/modes/interactive.yml": "556346c2d3718d54de8e0eda5a9d230d46308eaecf247b085f97a62fd4c222bc",
-      "src/serena/resources/config/modes/mode.template.yml": "48bedb4f170eeafd0d48ebcbbf25900ba01214369c8180e09284a376e000986c",
-      "src/serena/resources/config/modes/no-memories.yml": "67a7778c80d55951d1f8cf958ea9287635d827c56729e95cf2e64891005de8c3",
-      "src/serena/resources/config/modes/no-onboarding.yml": "7f9dc85c5f07efe3c76ede1f20de54081ac5da841ae04cdd122b4d4ffc2b81c9",
+      "src/serena/resources/config/modes/mode.template.yml": "7ae05c7ec650a1ed03a195774fbe70478e050e8e489a46c58f5cab906b2d8919",
+      "src/serena/resources/config/modes/no-memories.yml": "86c398f98ce6c794621d3b556cf7b75b90eabda2e470ae30491e16f7fca6e926",
+      "src/serena/resources/config/modes/no-onboarding.yml": "5f02397f21071db679d68f5014c295b6a6750485913683126180a528deed441f",
       "src/serena/resources/config/modes/onboarding.yml": "3ed47df92f47692a44db8c8fda1ec0eb00fcd23ca476183a131b937ed0e61834",
       "src/serena/resources/config/modes/one-shot.yml": "88bed4fe08c73fe8908268667dac1ac0e55fafad3f0184d3219a43ee927f4b98",
       "src/serena/resources/config/modes/planning.yml": "cd775c131bf63f42baa656615c6dbb5785d01198d5c4efc3e0cdb300d1208e77",
-      "src/serena/resources/config/modes/query-projects.yml": "fbed6fcbaccbcb34d962bdcf958c3021a3bedaee6706135fd7dd35d55d16112b",
+      "src/serena/resources/config/modes/query-projects.yml": "e17e9f3fd2a65ba3cc9ba0e3ae3f4938b41400523891df79f7e202178a284caa",
       "src/serena/resources/config/prompt_templates/info_prompts.yml": "6d8ae2a0f68778748a8e81d4788dc7f5b3a447778ad0ba1b0e8cb5c70cfdae23",
       "src/serena/resources/config/prompt_templates/simple_tool_outputs.yml": "1198711f2c4d5ea0777e13be671528bec5b02f282c60ef1f51d7750e16f559e1",
-      "src/serena/resources/config/prompt_templates/system_prompt.yml": "3237bf43a2ad80785273255cdb6579a3a878ccbeba8d622058fceca8ad7a70f4",
+      "src/serena/resources/config/prompt_templates/system_prompt.yml": "3c14199e3e2bda83ba067f9f72e823be0aa629da9ca52f32804cf5c44becf28a",
       "src/serena/resources/project.local.template.yml": "7b5753e9fcf8348db026f8d23ff601b1cf90d9543532fe979f31650e27b15d2b",
-      "src/serena/resources/project.template.yml": "564c58451b52a8d3226c6e9d7890d69ad953afcdd43341073975ef69368d8c76",
-      "src/serena/resources/serena_config.template.yml": "b06f491e1ba3d91dc3766dfbbb658f09ba5d4ae276fbce0135f7af063fdb42d3",
-      "src/solidlsp/language_servers/ada_language_server.py": "426243c64752b19ff2f5a605a241be0b6fd8c7939dfeb14fd0f067a5b853c956",
-      "src/solidlsp/language_servers/al_language_server.py": "a11569964d6db6388eb63bca0a943955931cc089c9ad9e78778b0ceb15a358b9",
-      "src/solidlsp/language_servers/angular_language_server.py": "ddd8e8eb591c1d65c9871b4b5c9ad1d75efccad83017684096509436b7413d63",
-      "src/solidlsp/language_servers/ansible_language_server.py": "74ea49be1a2202cd48ae864a4e13bfe4b673edde4af131eb18c7c6fd34c3fdf2",
-      "src/solidlsp/language_servers/basedpyright_server.py": "2f695bc6f8e26cb0a2d73fe4c0bee8a4be869e8121b1a0b570a57e53dc9b7a8a",
-      "src/solidlsp/language_servers/bash_language_server.py": "bd0a4f40e7c6df491c1743251c631e5bc319bfe9d4b739a0b59027a742f221ea",
-      "src/solidlsp/language_servers/bsl_language_server.py": "0c15359d9ebf15bb890d549e4593579df8131aba0e44fc7e5ba75b76c5f92322",
-      "src/solidlsp/language_servers/ccls_language_server.py": "c519dc0dd16106acf243b96c11cbdb50fa3fe77af120411a78b77576fb8dbb05",
-      "src/solidlsp/language_servers/clangd_language_server.py": "6f14fa8631c6e6522640209a936a7548c5c9e81c0c6822c279c9ff2b6906153b",
-      "src/solidlsp/language_servers/clojure_lsp.py": "7bce9d36241f8e368aba6c4000aecbb46ae5cd2c1b855ba9d3c0a3d77568bed2",
-      "src/solidlsp/language_servers/common.py": "34e8d86fc848e71e6cd9510d958ee8415b09d401ad97cb99ca07e9228f722aa1",
-      "src/solidlsp/language_servers/crystal_language_server.py": "a183ac49902cf81c93fed6002070038fb21c6b0c1d3cef1f3685527d3e53624e",
-      "src/solidlsp/language_servers/csharp_language_server.py": "c719160d222ca72be7236813d59c937c86b16612abddea75610367f9438b6265",
-      "src/solidlsp/language_servers/cue_language_server.py": "074c3808deb800f66d7c0392e476c97fcaf45cd97ae7caa314e4091eb5d02d4b",
-      "src/solidlsp/language_servers/dart_language_server.py": "b5239676a25ba2db55f3f62d06476f5c8b48f287ecea237b30eea1af275e733d",
-      "src/solidlsp/language_servers/deno_language_server.py": "91978dcdeae6dfa67c3013d8e05a362fd68e738403c0bbece39e79c33e12f267",
-      "src/solidlsp/language_servers/eclipse_jdtls.py": "52557fafaba2913a3fdf70720c182f17ad38b350f879e067dab3ced5e866d09d",
+      "src/serena/resources/project.template.yml": "7604df9112d767d4e58f59ce9c190dd67c6c03c6f449dc5cb2c53e59563643cb",
+      "src/serena/resources/serena_config.template.yml": "e65f0a23ad679d3879f597f27a95bc22e6997b1fa319e73413df8d4d45f72508",
+      "src/solidlsp/language_servers/ada_language_server.py": "f6ff521d1ddfb50409b4914e5222d24af4dd0c316e6c944f531619ff16107c04",
+      "src/solidlsp/language_servers/al_language_server.py": "98cb23f28057cddd99ed7734b8964646c668d3e0ad74d5f0c1c9085c3a9518b1",
+      "src/solidlsp/language_servers/angular_language_server.py": "9419fc8ee9a747d04e23f2ca637ccdff13547e3b908dc31948e54ffd3675ace5",
+      "src/solidlsp/language_servers/ansible_language_server.py": "1f75dba38af91798bdb07117b52a39f00842fbdc17a68670a1f98c8ca0a0f697",
+      "src/solidlsp/language_servers/astro_language_server.py": "94380f0a5b9dd0c8d9b360d2628f336a182abcfae5b0a079553d4732117c40e7",
+      "src/solidlsp/language_servers/basedpyright_server.py": "e4e11ed62da7a96e10eb203f6882cefa4ff10f493764c4a2129ef2a4dffbea64",
+      "src/solidlsp/language_servers/bash_language_server.py": "5c713c9ffc721c12da08098133d03d04e1ff4bdb2e665dea611014c49d482c39",
+      "src/solidlsp/language_servers/bsl_language_server.py": "4fde5ef90c0ecd812745a4fb7234104b0342bbc4d3c88732126f4891157224c9",
+      "src/solidlsp/language_servers/ccls_language_server.py": "c2af24257eee40682c1bb28fdf3cbe22d6421b6d4c5641a9f95906fb4b0bc969",
+      "src/solidlsp/language_servers/clangd_language_server.py": "057f8e589f74632b073f35900b6e7617e8d5547bee7e9a9bb8e9944d3a294308",
+      "src/solidlsp/language_servers/clojure_lsp.py": "0b46e6fad7498f8e626ae9e6d27dba452500f45e951e443122f9fefe90f08582",
+      "src/solidlsp/language_servers/common.py": "24aeb4cf4a9b5b33ce10db7202b60e650f9f809ee7c27ca49bbe2c6697748b74",
+      "src/solidlsp/language_servers/crystal_language_server.py": "81ed2cb1a45735c7add07a296df51cff9874cd159e314f92c256f6c8e7522fb3",
+      "src/solidlsp/language_servers/csharp_language_server.py": "9246a6d9e33dc9d80d3f7c68c85d44ea977100fcca7b71c96e89b58f3cf03034",
+      "src/solidlsp/language_servers/cue_language_server.py": "fa514304cfdb4ffb9314acdd6089561a64df0ed008dfe023d54c2a524b016457",
+      "src/solidlsp/language_servers/dart_language_server.py": "92a7cfcdd2e59504a4144bad75ed338b8a8a2e9cec9a1a1d4d012c09b4488d39",
+      "src/solidlsp/language_servers/deno_language_server.py": "cbdc75e95a3ff9479007e90c6a2e4fddd855e0fb9fcc1a4270738cf40cfc99a9",
+      "src/solidlsp/language_servers/devsense_php_language_server.py": "8236b7db0a81f556b4a5899c49c95f0579c37f2a330cd8bec3d4a4e434211d85",
+      "src/solidlsp/language_servers/eclipse_jdtls.py": "cf4b06cdfa80918991873cefc3c0dd395a558d53bd03430093298cd53f1076c2",
       "src/solidlsp/language_servers/elixir_tools/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-      "src/solidlsp/language_servers/elixir_tools/elixir_tools.py": "d25727b271b7a0e007de92ac4e1d081d75d5c5bd07b647d5cec8ed6a3f60c87c",
-      "src/solidlsp/language_servers/elm_language_server.py": "87a444ce9423b0a8dae9f454c26e1c36ffbabd0785ada4f831d7c33ff7042c50",
-      "src/solidlsp/language_servers/erlang_language_server.py": "82d5bf39367b417edf5c25ded2c306a637d47666e80fe6cb7f04f36c8b7cd21a",
-      "src/solidlsp/language_servers/fortran_language_server.py": "f9ffd6dc63fce456676d3963dcfcf9aa35bdb26b36fdbec26bafbd39208c2a2c",
-      "src/solidlsp/language_servers/fsharp_language_server.py": "c4ebaa654fd4bfb20ffcda104766b53ff7321cfe7032ae3882cbdb96e4a934cd",
-      "src/solidlsp/language_servers/gleam_language_server.py": "023acf931434bdbbe419c65ee5dbc996fa13c9c3a289501599a2cf535918d295",
-      "src/solidlsp/language_servers/godot_language_server.py": "2a6de207e2f7577e82ddcdec44cea89e037936c107437f17c48a0440bac8930a",
-      "src/solidlsp/language_servers/gopls.py": "5f53e1c21a53606afca3498ade5dcc27b8f4890d9c7399937cffb56d495ae88e",
-      "src/solidlsp/language_servers/groovy_language_server.py": "cc1c6f173a4e8cab3e42570ffc8c03425699bf69dfa05e5f42a1233da4ad0014",
-      "src/solidlsp/language_servers/haskell_language_server.py": "3f92271c86d7e1334fbfba763d61c61cc060e590aa8d33e6d51fbdf6b711fcb0",
-      "src/solidlsp/language_servers/haxe_language_server.py": "9033d99bfb9dc14e9a8bb78bd1b5dc4cb7b3c8b57392ec1332f353c5991dd951",
-      "src/solidlsp/language_servers/hlsl_language_server.py": "0b6bc6c058d767d071c63104d0576686bcb4d85ed2049dd696f2c13710fd4088",
-      "src/solidlsp/language_servers/intelephense.py": "55d2feca7268496723793d0613e15413488d7c1b9eafff0de3f35ccd3ea839bb",
-      "src/solidlsp/language_servers/jedi_server.py": "4bcc2bf96b764da293145bcf81c50309735e85a9425b4b278f6c7f453d0bf5ef",
-      "src/solidlsp/language_servers/json_language_server.py": "89f15a3dde866700e394c4d0533d3a09a9e71f1265761c32f19075da23ebf4c7",
-      "src/solidlsp/language_servers/julia_server.py": "830bf4cf438042eae913c91cac9e31af5a96e6347e19d563c4cbffa3b6aefa53",
-      "src/solidlsp/language_servers/kotlin_language_server.py": "f53f16500d6fea765942ee1a9bd1db7915de4509d31264126d687114205be40e",
-      "src/solidlsp/language_servers/lean4_language_server.py": "fec9a899ec8cfc07f318364965ce7e45377070862b549e883a40946373d6bdca",
-      "src/solidlsp/language_servers/lua_ls.py": "43308189167e46746a8d689bd089385c58e43bef3b02671c93a8d2e03a2f0bf7",
-      "src/solidlsp/language_servers/luau_lsp.py": "20420cb472e91b258135e5c8961827d953523f09bf5ad8fda8fb4651198d737a",
-      "src/solidlsp/language_servers/marksman.py": "25b56abc3fe48f46fdb0e9b257436615854f69dcb009bb7bc6e84c769d60c5f3",
-      "src/solidlsp/language_servers/matlab_language_server.py": "247878e039d0b97c6336be52884d4b2f0b799758a791430a7a636deda6cd3e80",
-      "src/solidlsp/language_servers/msl_language_server.py": "2879f49a37456581038838475c94726dd65658de608882b32d0430f2c307eade",
-      "src/solidlsp/language_servers/msl_lsp_server.py": "bcc85c37b11ab64b99e62ca11f4e7ea0acddebd461cb78955f16ce1df9c4ab19",
-      "src/solidlsp/language_servers/nextflow_language_server.py": "31547d38912165119e2cbfab2b0b5d4a8d59013966e0bbe8e653273b99dd7058",
-      "src/solidlsp/language_servers/nixd_ls.py": "da1ba46cec43a123285976d20ef3e36e858bd946422917f31c8492dd25b1d6e7",
-      "src/solidlsp/language_servers/ocaml_lsp_server.py": "67839ef978d8fe7beb22680c312dbba0b43124b609afafc7a19e51839ccde3f0",
-      "src/solidlsp/language_servers/omnisharp.py": "a0f90d942c0d6de9ed68b419fd08ec2456457288604cf229b1e645b1d4db9ee3",
-      "src/solidlsp/language_servers/pascal_server.py": "e8916fa9aff398075fb2dc86e389bd6b114e0248d138a60d99977d4a753fabd1",
-      "src/solidlsp/language_servers/perl_language_server.py": "0162b86710fec2e21049cd23dedddbe553b3b71221417f3db34a0fe589f8d01f",
-      "src/solidlsp/language_servers/phpactor.py": "116f89cf928180dcb0a01900e218f86a15162421ce641e9b239cdfe15a5811d9",
-      "src/solidlsp/language_servers/phpantom.py": "460f8d6cac09c7539dd8fede1fceef03bdd63b238d801a7c6bb2a77daf5c8c4d",
-      "src/solidlsp/language_servers/powershell_language_server.py": "4d5006843f9f24cbe95327cad74f16b4011f7818fe628fe2e2306f895dd6f1ac",
-      "src/solidlsp/language_servers/pyrefly_server.py": "9c6f3a81fd1187be77f63973d3a3643d2c6fa73eb29a11c50e6c7b3be1d8b5af",
-      "src/solidlsp/language_servers/pyright_server.py": "2d87b1a80847a613e1ec18bd2c73b1b070c84ea3037b848f975c79b47a501c2f",
-      "src/solidlsp/language_servers/qml_language_server.py": "133b82324240a75b15bcdf3584d7f6c0941d02e6ca0fca64c61ee7f5a67f4bb7",
-      "src/solidlsp/language_servers/r_language_server.py": "bf316592ca52cad2623ebe35d8a7a157d96c83038f37053ebf35daebd7f1d3b9",
-      "src/solidlsp/language_servers/regal_server.py": "9f8fb649bc9b1721561773677a99d76aaa96504edc7936117deed2dbca1c6363",
-      "src/solidlsp/language_servers/ruby_lsp.py": "afc0670d983689466da5a77fef4bd5e4d9e520a2e64bbe49e2b48a154c36cbce",
-      "src/solidlsp/language_servers/rust_analyzer.py": "7f3304d6fd5ca38dd90e3251358125726e5002e2e5da04f81ede79f499d73a51",
-      "src/solidlsp/language_servers/scala_language_server.py": "bf8df64bb38dfddc7080448fc7abc1cdc11cb0dbce85050ba6b43b8ad14f7bd8",
-      "src/solidlsp/language_servers/solargraph.py": "acf83a4bd573477258f01cc4e4e3cad2d6351992d7dcb6c4a10c3c2f3864df97",
-      "src/solidlsp/language_servers/solidity_language_server.py": "c354ae56772efaa16c7579fc5073d4a28cb09f6c12b8c55187a93bf5ff5a6d55",
-      "src/solidlsp/language_servers/some_sass_language_server.py": "3b0149eac3285d7882153f49374f5744641d3a7d80ee1dcbed09a888062efb1d",
-      "src/solidlsp/language_servers/sourcekit_lsp.py": "67055a636c0b04d1c57acecea18ac42d8f63d3a8d3d0b2325e34332a10944b34",
-      "src/solidlsp/language_servers/svelte_language_server.py": "88c4be5dc41c71fc1fa3a630b162c14621deb3ff08c064ce1712a36e8d27e996",
-      "src/solidlsp/language_servers/systemverilog_server.py": "b25eeee11522f01e270431d28cf487e3f56fa0fb53a19c12ce71d069cd06ca49",
-      "src/solidlsp/language_servers/taplo_server.py": "93fb288db9b2333e72ad4e2db7d157361ea5c6e70c0781a64c5ec115037db261",
-      "src/solidlsp/language_servers/terraform_ls.py": "73a8fb835a5867d5e5db46a6138f662ebc22a4263cb9e7f65afc1fb995f94712",
-      "src/solidlsp/language_servers/texlab_language_server.py": "7da27656c79fb30eee695b7132e2df8b41f9057c0ee572f75036450952b22ad1",
-      "src/solidlsp/language_servers/ty_server.py": "7623b4eb40c3df68f0c934d0db4a480e0bbd95f5808bbc0fa2fea05dbdc83e24",
-      "src/solidlsp/language_servers/typescript_language_server.py": "f70fdb4f52f20198ebbc692189cae80d7a1f98e1f2e0c0fdf90274c5df76645c",
-      "src/solidlsp/language_servers/vscode_html_language_server.py": "25a42e09caed35689cb58558aa1e3e7fc77f4f7c644d0aa5e0ca2c8b56e09e30",
-      "src/solidlsp/language_servers/vts_language_server.py": "1f31a2e4d44cad3ce90f7c9f32aa5390ab5da7d95bee52591be45d5c5fc4d880",
-      "src/solidlsp/language_servers/vue_language_server.py": "a85d9469ee02038ce550cff856a3e9fb7bcc814fe550d461cc8c5c37b435a005",
-      "src/solidlsp/language_servers/wolfram_language_server.py": "8c162989f9d07893a4cae863cabe445f887b36a730ee0ee7695c10c2d4339d13",
-      "src/solidlsp/language_servers/yaml_language_server.py": "d734d08ab3f08663e168f994aa391376d1c5ce821fe8d38a8184f0f744f3d40d",
-      "src/solidlsp/language_servers/zls.py": "c8a7d75c5619099e5ce6c436037168ea6063c3e3f8c66a2fd45634fca5f129e2",
-      "src/solidlsp/ls.py": "890c5a689b95ad7ece7c21226040013325e2df877a7ca730e4376e0dd77eba31",
-      "src/solidlsp/ls_config.py": "cb7719e37da6f71574afce6883c5a2709d0f36d11d4675d8646450ce22f0d969",
-      "src/solidlsp/settings.py": "ce94f7e4f74a7a7990efad4a1ba14d08ecc9da7bac71b4bdff55a76c2d0f5128"
+      "src/solidlsp/language_servers/elixir_tools/elixir_tools.py": "48e5ccc6f13db94e07d51423ad8cc0493c0313a4130fa188268f7046e6ca729b",
+      "src/solidlsp/language_servers/elm_language_server.py": "8e71684bf4eb536bba22614cfeb9d5c26032c5adc50aaa50546ff7ca3c501588",
+      "src/solidlsp/language_servers/emmylua_ls.py": "4171c6a0f1cfc0fa64ef5743bd11d7eb74dc6f4127b3074e49b84f4d6f33aed6",
+      "src/solidlsp/language_servers/erlang_language_server.py": "afb83dea222e445c8a3df33bfe0463ec16f320115669d91021d92604bc2af642",
+      "src/solidlsp/language_servers/fatou_language_server.py": "22338d4bf2bd4777800fcb480c2dfb9a2d70a5ef4507bc56f32b6ba25a819da2",
+      "src/solidlsp/language_servers/fortran_language_server.py": "941193b30fadc81c52ae4e4e47a427fad809fa50535495daee716afee98cb11c",
+      "src/solidlsp/language_servers/fsharp_language_server.py": "b6d4b50feec7297fcfe7001c762aa27fb8ad523893da7cc024fa99e80af4eda1",
+      "src/solidlsp/language_servers/gleam_language_server.py": "511792ff9b18168ba2b8c44cae4ce0b56b855da237d05508a3af6458221683ea",
+      "src/solidlsp/language_servers/godot_language_server.py": "fcf5ebdf2bb6a1da457e126dc97582d884bae344218a8505172a228217cee72a",
+      "src/solidlsp/language_servers/gopls.py": "f3e80052d084be8beead725d12b4b9a461f6d9bd608aa9851d8769c5b511eaae",
+      "src/solidlsp/language_servers/groovy_language_server.py": "70cc46f589711d7f67d38e698b61db4865da8d65c1ee18a7d11afc05483bf4e9",
+      "src/solidlsp/language_servers/haskell_language_server.py": "48e9fdae6bcc287111fb0f7e63cbab9c6a562d663d2cb7146ce92363bf8315c8",
+      "src/solidlsp/language_servers/haxe_language_server.py": "d6a1148d3c7ca1a656752ebe49124799792fa71f56dfcc75a59edc5c29637aaf",
+      "src/solidlsp/language_servers/hlsl_language_server.py": "3ec35360a427907e7dfc690a9d5ace39d066a0c1cc0a55d677845838a76d8c33",
+      "src/solidlsp/language_servers/intelephense.py": "755d50224d5b4d88bc45155e92b1b19d9f0a6db4d6d03bb242ff0055f1af1a73",
+      "src/solidlsp/language_servers/jedi_server.py": "f6976c5e45c1a77528972a557776d1ddd730959ef5f2df58c9f27e1c1d2ff5c8",
+      "src/solidlsp/language_servers/json_language_server.py": "97f1f7cd1daf8a413fe5a8557a7f48db4b4b350f9c7495ecdaf90274c8a86ef1",
+      "src/solidlsp/language_servers/julia_server.py": "1917d5299a84ec9989078c9e8168aaec8e17146c2afa98c36f1ddf261306a913",
+      "src/solidlsp/language_servers/kotlin_language_server.py": "f39008174fe2c6c58fb79530ad68a813c7265fdc13b36c3c90e04983535e259e",
+      "src/solidlsp/language_servers/lean4_language_server.py": "4427fe35daad53b61040d41ea71287abbc0e4360be7b4a0181325c81c24abfd3",
+      "src/solidlsp/language_servers/lua_ls.py": "91aae5eba9a7109ec3e360002765deabb6c85ca444784f31d8faee3a6b2cfb8b",
+      "src/solidlsp/language_servers/luau_lsp.py": "8a9e6631cf43294e550fdebec70c129bd8d807d114dc3660cc08c96b59e6a89f",
+      "src/solidlsp/language_servers/marksman.py": "c5a3647b92082c2a9628aff903338a8a1bac0a8f04e59d6a89e34fcfb3e6298b",
+      "src/solidlsp/language_servers/matlab_language_server.py": "4d727ac8d2ad8d2eebd8ff4327355fe4522f1c855c52d36e410fa2804ccaff4f",
+      "src/solidlsp/language_servers/msl_language_server.py": "ac1b8fa020ea1a0b346db6bb3cd242054b5280edcd0786f82a1f6570c21b7f00",
+      "src/solidlsp/language_servers/msl_lsp_server.py": "b2f102e2bbdf88a8b8fdc457d3db25b048fb71a8f796d6c017ac112a5a964cad",
+      "src/solidlsp/language_servers/nextflow_language_server.py": "528cf6f936ebe8f4d6b8e685d399c8f06d3e8884d24b5be1fd9c262c70c20c79",
+      "src/solidlsp/language_servers/nixd_ls.py": "04b22213f8b4d175659ac3f591cc8449ef185ecc072578eea215bc1b0d922dfe",
+      "src/solidlsp/language_servers/ocaml_lsp_server.py": "ff795e76a4c0a4df0026897f1d57a66bbf60caf577faee6875ac564271ba4e5b",
+      "src/solidlsp/language_servers/omnisharp.py": "eed80289cf14d176e5c09f6980ca2fb504b8a848262a032f68b63c5bbee97854",
+      "src/solidlsp/language_servers/pascal_server.py": "1163055a3a194f4eb3db7ce0111255e57d23718b31038b90043d0aab366294d1",
+      "src/solidlsp/language_servers/perl_language_server.py": "22a65766b19d02a793ca9d36ea039a2fe511a32bcfab8744b1a66d2cac403f44",
+      "src/solidlsp/language_servers/phpactor.py": "561fc7fdfb7f69e0df900acb35ebdbb05cccbc2e748afd0032a0f58660c46897",
+      "src/solidlsp/language_servers/phpantom.py": "c92299d25d6ffe301c301505fe8f5c082be5dd10917d7e55e251c2f8d3951102",
+      "src/solidlsp/language_servers/powershell_language_server.py": "953bdf5751a52f4a1a6f1103d41cf75234660ddb2e85c4e2dc378dfa32197af5",
+      "src/solidlsp/language_servers/pyrefly_server.py": "aceea8eb3427696f6cbb9a923ca873e8bf2a9846821f70d27d9ccd351fdd8761",
+      "src/solidlsp/language_servers/pyright_server.py": "eca908ddcefe78cddde5446f7cde51ea36fb40b3e50711a0d64d58e0508543ff",
+      "src/solidlsp/language_servers/qml_language_server.py": "8b99a96640a6ce8d923a97829682cb2b104efbd0efd05dc1a6f64d072c82d80f",
+      "src/solidlsp/language_servers/r_language_server.py": "9c4d40ca5e26fbe70249b41373b81878ec3a405538943ddcae0fb5612ec80ec1",
+      "src/solidlsp/language_servers/regal_server.py": "4c1640677820a37a3321a2cd69dae8dbff5b216bf01f88d7cc889b3265b28e75",
+      "src/solidlsp/language_servers/ruby_lsp.py": "922beb2ececf6b2e75839148aafd1fc289b7017bdcdb70ab44b96616146cd7cf",
+      "src/solidlsp/language_servers/rust_analyzer.py": "2db9a826673746e4fd88f46f988a12099ac70837d732bd5d0ad43ad8bc37234a",
+      "src/solidlsp/language_servers/scala_language_server.py": "5fb2d4ebe578b092375380869fe3a64ce910e96e7d4dfa41fe0edac8694966be",
+      "src/solidlsp/language_servers/solargraph.py": "0a4fa2e83c6c9ce8819c0fd4e2abeb12b32c1ec6a67e640f779aee26048eb323",
+      "src/solidlsp/language_servers/solidity_language_server.py": "437cf0ec643c158797c78b1325edd281b1103cf504af57b184c4bb8b6dc44207",
+      "src/solidlsp/language_servers/some_sass_language_server.py": "2a1710c50ca619f641d6125102c29a4577a444056ad4f9d0389ae1fc3643d1f8",
+      "src/solidlsp/language_servers/sourcekit_lsp.py": "4e8e0052c0e6d444de6ab11882a73f2f5846aa9a4eff5f2d19222d89a7a80d62",
+      "src/solidlsp/language_servers/svelte_language_server.py": "d5d1cef57d9c5752ac6e210b1836c5e456598d453830376003758ddcd4817e2f",
+      "src/solidlsp/language_servers/systemverilog_server.py": "3a93c164a06cab137b24be5156cd9a14f490ba60556ec8e93b111e6091b383ba",
+      "src/solidlsp/language_servers/taplo_server.py": "24778be18ba2d8103c73b682d1cd555692c8dfff390a8b4d32e43fc720c6cbf7",
+      "src/solidlsp/language_servers/terraform_ls.py": "32f7122c1942e65274eabcf70947e9f508061f2cdb40d49aa4338d6591184f29",
+      "src/solidlsp/language_servers/texlab_language_server.py": "0de4251e7c97e0d189bf97c72d45e0c9592997284bd4298592f65a1019eb78df",
+      "src/solidlsp/language_servers/ty_server.py": "0f25ff94f7ac56e5b79ab7d2032db1134173fc1133f6286024e46fd6b54a1b26",
+      "src/solidlsp/language_servers/typescript_language_server.py": "3694bb9e38b862ff8d82d586c6b9e708dba5ad720a14e4585252be8b69bc8232",
+      "src/solidlsp/language_servers/vscode_html_language_server.py": "f7a6fe56b802d0877bbeb818c12dc8fd8f6e9f589b2c6fbd799c7ad8fe501a64",
+      "src/solidlsp/language_servers/vts_language_server.py": "997e796a4f13992baabbf6b7495d66e9a317140d9e4c19d44e7af3e376e8fb38",
+      "src/solidlsp/language_servers/vue_language_server.py": "3fe78b64c11550c34841f5365ff94e56d3ea5ba01b6beb6bc6b52eeab14d35f5",
+      "src/solidlsp/language_servers/wolfram_language_server.py": "768bf5d10109a103bdd59fb6ee262a970ecdb02ca9f9191aff36a18b5a7286ce",
+      "src/solidlsp/language_servers/yaml_language_server.py": "33b2073449b06ffd8af98ff715b49dfa89c176fd858f97d1b366c63071ffbc4d",
+      "src/solidlsp/language_servers/zls.py": "5006ee3fd5eac601f02451fa9fb44fba567f67bc1cc1b6d1536ff9a161f7cfd3",
+      "src/solidlsp/ls.py": "1217142aa9de8fe81a62fa23207ba20f56ab797d08475b8b327083dab54c5545",
+      "src/solidlsp/ls_config.py": "0685b17750d867cc92ee4b968b45bf7d3736bdd31b88d6bcd8ddf02905b16703",
+      "src/solidlsp/settings.py": "e171c21154797925cf47e53e3462c4e57e4c4220765c0a3dc6dc9ea534dccaab"
     },
-    "sha256": "7abd9d86e6791ca7ae814250cbbb98584df92cab10133f9fbc37ee1fd26a4858"
+    "sha256": "ddfc2b0cc7b9929b169ea2446634a0863ad3bc1decaa591db6cc69c41f3e8792"
   },
-  "sourceGuardSha256": "7abd9d86e6791ca7ae814250cbbb98584df92cab10133f9fbc37ee1fd26a4858"
+  "sourceGuardSha256": "ddfc2b0cc7b9929b169ea2446634a0863ad3bc1decaa591db6cc69c41f3e8792"
 }

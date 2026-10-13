@@ -70,6 +70,9 @@ let
       web_dashboard = "must-not-win";
     };
     webDashboard = false;
+    agentInterface = "tools";
+    excludedApis = [ "lsp.find_symbol" ];
+    includedApis = [ "lsp.get_diagnostics_for_symbol" ];
     lsSpecificSettings = {
       extraSettings.future_language.future_key = 1;
       python = {
@@ -78,12 +81,15 @@ let
       };
     };
   };
+  globalConfigInstaller = render.mkGlobalConfigInstaller { inherit pkgs; };
 
   checks =
     assert schema.manifest.schemaVersion == upstream.schemaVersion;
-    assert builtins.length schema.languageValues == 73;
+    assert builtins.length schema.languageValues == 77;
     assert sortStrings schema.languageValues == sortStrings upstream.languageValues;
-    assert render.toUpstreamGlobal { } == upstream.global;
+    assert
+      render.toUpstreamGlobal { }
+      == ((builtins.removeAttrs upstream.global [ "auth_secret" ]) // { agent_interface = "tools"; });
     assert render.toUpstreamProject { } == upstream.project;
     assert sortStrings (builtins.attrValues schema.promptFieldMappings) == sortStrings promptKeys;
     assert missingTypedLsPairs == [ ];
@@ -105,6 +111,14 @@ let
       ) == sortStrings upstream.modeSupportedFields;
     assert rendered.future_global_key;
     assert rendered.web_dashboard == false;
+    assert rendered.agent_interface == "tools";
+    assert rendered.excluded_apis == [ "lsp.find_symbol" ];
+    assert rendered.included_apis == [ "lsp.get_diagnostics_for_symbol" ];
+    assert !(rendered ? auth_secret);
+    assert
+      !(builtins.tryEval (
+        builtins.deepSeq (render.toUpstreamGlobal { extraSettings.auth_secret = "test-secret"; }) true
+      )).success;
     assert rendered.ls_specific_settings.future_language.future_key == 1;
     assert rendered.ls_specific_settings.python.pyright_version == "typed-wins";
     assert !(rendered ? extra_settings);
@@ -117,4 +131,55 @@ in
     pkgs.runCommand "serena-config-schema-parity" { } ''
       touch "$out"
     '';
+
+  auth-secret-runtime-preservation =
+    pkgs.runCommand "serena-auth-secret-runtime-preservation"
+      {
+        nativeBuildInputs = [
+          pkgs.diffutils
+          pkgs.coreutils
+          pkgs.gnugrep
+          pkgs.yq-go
+        ];
+      }
+      ''
+        set -euo pipefail
+
+        config="$TMPDIR/serena_config.yml"
+        generated="$TMPDIR/generated.yml"
+        installer=${lib.escapeShellArg (toString globalConfigInstaller)}
+        printf 'auth_secret: dummy-secret\nother: old\n' >"$config"
+        chmod 600 "$config"
+        printf 'agent_interface: tools\n' >"$generated"
+
+        "$installer" "$generated" "$config"
+        test "$(stat -c '%a' "$config")" = 600
+        ${pkgs.yq-go}/bin/yq -e '.auth_secret == "dummy-secret" and .agent_interface == "tools"' "$config" >/dev/null
+
+        first_run="$TMPDIR/first-run.yml"
+        "$installer" "$generated" "$first_run"
+        test "$(stat -c '%a' "$first_run")" = 600
+        ! ${pkgs.yq-go}/bin/yq -e 'has("auth_secret")' "$first_run" >/dev/null
+
+        before="$TMPDIR/before.yml"
+        ${pkgs.coreutils}/bin/cp "$config" "$before"
+        malformed="$TMPDIR/malformed.yml"
+        printf 'agent_interface: [broken\n' >"$malformed"
+        if "$installer" "$malformed" "$config"; then
+          echo "malformed generated configuration unexpectedly installed" >&2
+          exit 1
+        fi
+        ${pkgs.diffutils}/bin/cmp "$before" "$config"
+
+        outside="$TMPDIR/outside.yml"
+        unsafe="$TMPDIR/unsafe.yml"
+        printf 'outside\n' >"$outside"
+        ${pkgs.coreutils}/bin/ln -s "$outside" "$unsafe"
+        if "$installer" "$generated" "$unsafe"; then
+          echo "unsafe global configuration target unexpectedly installed" >&2
+          exit 1
+        fi
+        ${pkgs.gnugrep}/bin/grep -qx 'outside' "$outside"
+        touch "$out"
+      '';
 }

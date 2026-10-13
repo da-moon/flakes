@@ -5,10 +5,9 @@ its complete stable YAML configuration surface as typed Nix options for Home
 Manager and project flakes.
 
 The selected release is one immutable stable tag. The current selection is
-`v1.6.1` at commit `bcac0969fb8685783ea6d0f2642468fcc47e6395`.
-The package and Home Manager module therefore both have a `serena_1_6_1`
-alias, so a consumer cannot accidentally combine a package with another
-configuration schema.
+`v1.6.1` at commit `bcac0969fb8685783ea6d0f2642468fcc47e6395`. The package and
+Home Manager module therefore both have a `serena_1_6_1` alias, so a consumer
+cannot accidentally combine a package with another configuration schema.
 
 ## Outputs
 
@@ -102,19 +101,34 @@ updates its registered-project list at runtime. Every Home Manager activation
 restores the declared Nix configuration and removes only files recorded in its
 own managed-file manifest.
 
+## Serena v2 migration
+
+Serena v2 adds the `REPL` agent interface and makes it the upstream default.
+This module continues to render `agentInterface = "tools"` by default so
+existing declarative `excludedTools`, `includedOptionalTools`, and `fixedTools`
+settings retain their v1 behavior. Set `global.agentInterface = "REPL"` to opt
+in. In REPL mode, use `excludedApis` and `includedApis` instead, because the
+tool inclusion settings do not apply.
+
+Serena v2 also creates an `auth_secret` at runtime. The module never accepts
+that secret as a Nix option and never writes it to the store. On activation it
+preserves an existing non-empty secret in the private runtime configuration. On
+first run it omits the key so Serena generates the secret itself.
+
 Serena v1.6.1 exposes dashboard enablement, auto-open behavior, interface,
-listen address, and trusted hosts in YAML. It does **not** expose a dashboard port setting. The
-CLI `--port` option configures the MCP HTTP transport port, not a persistent
-dashboard YAML port, so this module deliberately does not invent one.
+listen address, and trusted hosts in YAML. It does **not** expose a dashboard
+port setting. The CLI `--port` option configures the MCP HTTP transport port,
+not a persistent dashboard YAML port, so this module deliberately does not
+invent one.
 
 ## MCP client registration
 
 With the Home Manager installation, register the wrapped `serena` command once
 at each client's user/global MCP scope. Each client starts its own Serena
-process, and `--project-from-cwd` detects the project from the session's working
-directory by looking for `.serena/project.yml` or `.git`. Global registration
-therefore does not make project configuration global: keep project-specific
-settings in each repository's tracked `.serena/project.yml`.
+process, and `--project-from-cwd` detects the project from the session's
+working directory by looking for `.serena/project.yml` or `.git`. Global
+registration therefore does not make project configuration global: keep
+project-specific settings in each repository's tracked `.serena/project.yml`.
 
 For Codex CLI and the Codex IDE extension, which share MCP configuration:
 
@@ -148,8 +162,8 @@ claude mcp add --scope user serena -- \
 For Command Code, Kimi, and other terminal coding agents, configure a
 user-scoped stdio MCP server with command `serena` and arguments
 `start-mcp-server --context ide --project-from-cwd --open-web-dashboard false`.
-The generic `ide` context avoids exposing tools that duplicate a coding
-agent's built-in file and shell tools. See Serena's
+The generic `ide` context avoids exposing tools that duplicate a coding agent's
+built-in file and shell tools. See Serena's
 [client guide](https://oraios.github.io/serena/02-usage/030_clients.html) for
 client-specific configuration and verification.
 

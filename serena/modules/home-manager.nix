@@ -18,6 +18,7 @@ let
     inherit pkgs;
     settings = cfg.global;
   };
+  globalConfigInstaller = render.mkGlobalConfigInstaller { inherit pkgs; };
   contextFiles = lib.mapAttrs (
     name: settings:
     render.mkContextYaml {
@@ -189,13 +190,16 @@ in
         echo "programs.serena: refusing unsafe managed-file manifest $managed_manifest" >&2
         exit 1
       fi
+      global_config="$serena_dir/serena_config.yml"
       if [[ -f "$managed_manifest" ]]; then
         while IFS= read -r relative_target; do
           if [[ "$relative_target" == "serena_config.yml" \
             || "$relative_target" =~ ^contexts/[A-Za-z0-9][A-Za-z0-9_-]*\.yml$ \
             || "$relative_target" =~ ^modes/[A-Za-z0-9][A-Za-z0-9_-]*\.yml$ \
             || "$relative_target" =~ ^prompt_templates/[A-Za-z0-9][A-Za-z0-9_-]*\.(yml|yaml)$ ]]; then
-            $DRY_RUN_CMD ${pkgs.coreutils}/bin/rm -f -- "$serena_dir/$relative_target"
+            if [[ "$relative_target" != "serena_config.yml" ]]; then
+              $DRY_RUN_CMD ${pkgs.coreutils}/bin/rm -f -- "$serena_dir/$relative_target"
+            fi
           elif [[ -n "$relative_target" ]]; then
             echo "programs.serena: ignoring unsafe path in $managed_manifest: $relative_target" >&2
           fi
@@ -217,7 +221,11 @@ in
         $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -m 0600 -- "$source_file" "$target_file"
       }
 
-      install_managed_file ${lib.escapeShellArg (toString globalFile)} serena_config.yml
+      if [[ -n "$DRY_RUN_CMD" ]]; then
+        $DRY_RUN_CMD ${pkgs.coreutils}/bin/install -m 0600 -- ${lib.escapeShellArg (toString globalFile)} "$global_config"
+      else
+        ${globalConfigInstaller} ${lib.escapeShellArg (toString globalFile)} "$global_config"
+      fi
       ${contextInstalls}
       ${modeInstalls}
       ${promptInstalls}

@@ -317,12 +317,16 @@ for node in getattr(ls_config_tree, "body", []):
 language_values = list(language_names.values())
 
 serena_config_tree = parse(root / "src/serena/config/serena_config.py")
-tool_fields: list[str] = []
+inclusion_fields: dict[str, list[str]] = {}
 for node in getattr(serena_config_tree, "body", []):
-    if isinstance(node, ast.ClassDef) and node.name == "ToolInclusionDefinition":
-        for statement in node.body:
-            if isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
-                tool_fields.append(statement.target.id)
+    if isinstance(node, ast.ClassDef) and node.name in ("ToolInclusionDefinition", "ApiInclusionDefinition"):
+        inclusion_fields[node.name] = [
+            statement.target.id
+            for statement in node.body
+            if isinstance(statement, ast.AnnAssign)
+            and isinstance(statement.target, ast.Name)
+            and not statement.target.id.startswith("_")
+        ]
 
 context_mode_tree = parse(root / "src/serena/config/context_mode.py")
 context_fields: list[str] = []
@@ -337,10 +341,16 @@ for node in getattr(context_mode_tree, "body", []):
         and isinstance(statement.target, ast.Name)
         and not statement.target.id.startswith("_")
     ]
+    inherited_fields = [
+        field
+        for base in node.bases
+        if isinstance(base, ast.Name)
+        for field in inclusion_fields.get(base.id, [])
+    ]
     if node.name == "SerenaAgentContext":
-        context_fields = own_fields + tool_fields
+        context_fields = own_fields + inherited_fields
     elif node.name == "SerenaAgentMode":
-        mode_fields = own_fields + tool_fields
+        mode_fields = own_fields + inherited_fields
 
 
 def shape(value: object) -> object:

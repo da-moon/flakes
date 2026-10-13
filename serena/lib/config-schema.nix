@@ -9,6 +9,10 @@ let
   numberType = types.either types.int types.float;
   nonNegativeNumberType = types.addCheck numberType (value: value >= 0);
   pathStringType = types.either types.str types.path;
+  agentInterfaceType = types.enum [
+    "tools"
+    "REPL"
+  ];
 
   jsonValueType = types.nullOr (
     types.oneOf [
@@ -35,6 +39,7 @@ let
     "cpp"
     "cpp_ccls"
     "php"
+    "php_devsense"
     "r"
     "perl"
     "clojure"
@@ -47,6 +52,7 @@ let
     "cue"
     "zig"
     "lua"
+    "lua_emmylua"
     "luau"
     "nix"
     "erlang"
@@ -56,6 +62,7 @@ let
     "rego"
     "scala"
     "julia"
+    "julia_fatou"
     "fortran"
     "haskell"
     "haxe"
@@ -63,6 +70,7 @@ let
     "groovy"
     "vue"
     "svelte"
+    "astro"
     "powershell"
     "pascal"
     "matlab"
@@ -130,6 +138,7 @@ let
   globalDefaults = {
     extraSettings = { };
     languageBackend = "LSP";
+    agentInterface = "tools";
     lineEnding = "native";
     guiLogWindow = false;
     webDashboard = true;
@@ -154,6 +163,8 @@ let
     excludedTools = [ ];
     includedOptionalTools = [ ];
     fixedTools = [ ];
+    excludedApis = [ ];
+    includedApis = [ ];
     baseModes = [
       "interactive"
       "editing"
@@ -173,6 +184,7 @@ let
     encoding = "utf-8";
     lineEnding = null;
     languageBackend = null;
+    agentInterface = null;
     ignoreAllFilesInGitignore = true;
     lsSpecificSettings = { };
     activationCommand = null;
@@ -184,6 +196,8 @@ let
     excludedTools = [ ];
     includedOptionalTools = [ ];
     fixedTools = [ ];
+    excludedApis = [ ];
+    includedApis = [ ];
     defaultModes = null;
     addedModes = null;
     initialPrompt = "";
@@ -198,6 +212,8 @@ let
     excludedTools = [ ];
     includedOptionalTools = [ ];
     fixedTools = [ ];
+    excludedApis = [ ];
+    includedApis = [ ];
     toolDescriptionOverrides = { };
     singleProject = false;
     structuredToolOutput = null;
@@ -209,10 +225,13 @@ let
     excludedTools = [ ];
     includedOptionalTools = [ ];
     fixedTools = [ ];
+    excludedApis = [ ];
+    includedApis = [ ];
   };
 
   globalFieldMappings = {
     languageBackend = "language_backend";
+    agentInterface = "agent_interface";
     lineEnding = "line_ending";
     guiLogWindow = "gui_log_window";
     webDashboard = "web_dashboard";
@@ -234,6 +253,8 @@ let
     excludedTools = "excluded_tools";
     includedOptionalTools = "included_optional_tools";
     fixedTools = "fixed_tools";
+    excludedApis = "excluded_apis";
+    includedApis = "included_apis";
     baseModes = "base_modes";
     defaultModes = "default_modes";
     defaultMaxToolAnswerChars = "default_max_tool_answer_chars";
@@ -249,6 +270,7 @@ let
     encoding = "encoding";
     lineEnding = "line_ending";
     languageBackend = "language_backend";
+    agentInterface = "agent_interface";
     ignoreAllFilesInGitignore = "ignore_all_files_in_gitignore";
     lsSpecificSettings = "ls_specific_settings";
     activationCommand = "activation_command";
@@ -260,6 +282,8 @@ let
     excludedTools = "excluded_tools";
     includedOptionalTools = "included_optional_tools";
     fixedTools = "fixed_tools";
+    excludedApis = "excluded_apis";
+    includedApis = "included_apis";
     defaultModes = "default_modes";
     addedModes = "added_modes";
     initialPrompt = "initial_prompt";
@@ -275,6 +299,8 @@ let
     excludedTools = "excluded_tools";
     includedOptionalTools = "included_optional_tools";
     fixedTools = "fixed_tools";
+    excludedApis = "excluded_apis";
+    includedApis = "included_apis";
     toolDescriptionOverrides = "tool_description_overrides";
     singleProject = "single_project";
     structuredToolOutput = "structured_tool_output";
@@ -287,6 +313,8 @@ let
     excludedTools = "excluded_tools";
     includedOptionalTools = "included_optional_tools";
     fixedTools = "fixed_tools";
+    excludedApis = "excluded_apis";
+    includedApis = "included_apis";
   };
 
   promptFieldMappings = {
@@ -301,6 +329,7 @@ let
     ada = "ada";
     al = "al";
     angular = "angular";
+    astro = "astro";
     ansible = "ansible";
     bash = "bash";
     bsl = "bsl";
@@ -325,9 +354,11 @@ let
     html = "html";
     java = "java";
     json = "json";
+    juliaFatou = "julia_fatou";
     kotlin = "kotlin";
     lean4 = "lean4";
     lua = "lua";
+    luaEmmyLua = "lua_emmylua";
     luau = "luau";
     markdown = "markdown";
     matlab = "matlab";
@@ -336,6 +367,7 @@ let
     pascal = "pascal";
     perl = "perl";
     php = "php";
+    phpDevsense = "php_devsense";
     phpPhpactor = "php_phpactor";
     phpPhpantom = "php_phpantom";
     powershell = "powershell";
@@ -371,6 +403,14 @@ let
       typescriptVersion = "typescript_version";
       typescriptLanguageServerVersion = "typescript_language_server_version";
       npmRegistry = "npm_registry";
+    };
+    astro = {
+      astroLanguageServerVersion = "astro_language_server_version";
+      astroTsPluginVersion = "astro_ts_plugin_version";
+      typescriptVersion = "typescript_version";
+      typescriptLanguageServerVersion = "typescript_language_server_version";
+      npmRegistry = "npm_registry";
+      indexingTimeout = "indexing_timeout";
     };
     ansible = {
       lsPath = "ls_path";
@@ -473,11 +513,20 @@ let
       lombokShowGenerated = "lombok_show_generated";
       jdtlsXmx = "jdtls_xmx";
       jdtlsXms = "jdtls_xms";
+      autoBuildEnabled = "autobuild_enabled";
+      customJrePath = "custom_jre_path";
+      gradleImportEnabled = "gradle_import_enabled";
+      mavenImportEnabled = "maven_import_enabled";
+      updateBuildConfiguration = "update_build_configuration";
     };
     json = {
       lsPath = "ls_path";
       jsonLanguageServerVersion = "json_language_server_version";
       npmRegistry = "npm_registry";
+    };
+    juliaFatou = {
+      fatouVersion = "fatou_version";
+      indexingTimeout = "indexing_timeout";
     };
     kotlin = {
       lsPath = "ls_path";
@@ -486,6 +535,7 @@ let
     };
     lean4.lsPath = "ls_path";
     lua.luaLanguageServerVersion = "lua_language_server_version";
+    luaEmmyLua.emmyluaLsVersion = "emmylua_ls_version";
     luau = {
       lsPath = "ls_path";
       luauLspVersion = "luau_lsp_version";
@@ -530,6 +580,13 @@ let
       maxMemory = "maxMemory";
       fileFilter = "file_filter";
     };
+    phpDevsense = {
+      devsensePhpLsVersion = "devsense_php_ls_version";
+      fileFilter = "file_filter";
+      ignoreVendor = "ignore_vendor";
+      npmRegistry = "npm_registry";
+      phpVersion = "php_version";
+    };
     phpPhpactor = {
       lsPath = "ls_path";
       phpactorVersion = "phpactor_version";
@@ -570,6 +627,9 @@ let
       autoImportBuild = "auto_import_build";
       projectRoots = "project_roots";
       projectRootScanDepth = "project_root_scan_depth";
+      indexingQuietPeriod = "indexing_quiet_period";
+      indexingStartGrace = "indexing_start_grace";
+      indexingTimeout = "indexing_timeout";
     };
     scss = {
       lsPath = "ls_path";
@@ -581,6 +641,7 @@ let
       solidityLanguageServerVersion = "solidity_language_server_version";
       forgeVersion = "forge_version";
       npmRegistry = "npm_registry";
+      solidityStateDir = "solidity_state_dir";
     };
     svelte = {
       lsPath = "ls_path";
@@ -772,6 +833,18 @@ let
       typescriptLanguageServerVersion = mkStr "5.1.3" "typescript-language-server version.";
       npmRegistry = npmRegistryOption;
     };
+    astro = mkLanguageOption "Astro language-server settings." {
+      astroLanguageServerVersion = mkStr "2.17.0" "Astro language-server version.";
+      astroTsPluginVersion = mkStr "1.10.10" "Astro TypeScript plugin version.";
+      typescriptVersion = mkStr "5.9.3" "TypeScript version used by Astro.";
+      typescriptLanguageServerVersion = mkStr "5.1.3" "Companion TypeScript language-server version.";
+      npmRegistry = npmRegistryOption;
+      indexingTimeout = mkOption {
+        type = types.nullOr numberType;
+        default = null;
+        description = "Astro TypeScript indexing-progress timeout in seconds; null uses Serena's default.";
+      };
+    };
     ansible = mkLanguageOption "Ansible language-server settings." {
       lsPath = lsPathOption;
       ansibleLanguageServerVersion = mkStr "1.2.3" "Ansible language-server version.";
@@ -833,7 +906,7 @@ let
     };
     deno = mkLanguageOption "Deno language-server settings." { };
     elixir = mkLanguageOption "Elixir Expert settings." {
-      expertVersion = mkStr "v0.1.0-rc.6" "Expert release version.";
+      expertVersion = mkStr "v0.1.10" "Expert release version.";
     };
     elm = mkLanguageOption "Elm language-server settings." {
       elmLanguageServerVersion = mkStr "2.8.0" "Elm language-server version.";
@@ -920,20 +993,44 @@ let
       lombokShowGenerated = mkBool true "Show Lombok-generated symbols.";
       jdtlsXmx = mkStr "3G" "Maximum JDTLS JVM heap.";
       jdtlsXms = mkStr "100m" "Initial JDTLS JVM heap.";
+      autoBuildEnabled = mkBool true "Enable automatic Java project builds.";
+      customJrePath = mkNullableStr "Custom JRE path used by JDTLS; null uses Serena's default.";
+      gradleImportEnabled = mkBool true "Import Gradle projects.";
+      mavenImportEnabled = mkBool true "Import Maven projects.";
+      updateBuildConfiguration = mkOption {
+        type = types.enum [
+          "automatic"
+          "disabled"
+          "interactive"
+        ];
+        default = "interactive";
+        description = "How JDTLS updates Java build configuration.";
+      };
     };
     json = mkLanguageOption "JSON language-server settings." {
       lsPath = lsPathOption;
       jsonLanguageServerVersion = mkStr "1.3.4" "vscode-json-languageserver version.";
       npmRegistry = npmRegistryOption;
     };
+    juliaFatou = mkLanguageOption "Julia Fatou language-server settings." {
+      fatouVersion = mkStr "0.18.0" "Fatou language-server version.";
+      indexingTimeout = mkOption {
+        type = numberType;
+        default = 60.0;
+        description = "Fatou indexing-progress timeout in seconds.";
+      };
+    };
     kotlin = mkLanguageOption "Kotlin language-server settings." {
       lsPath = lsPathOption;
-      kotlinLspVersion = mkStr "262.9593.0" "Kotlin language-server version.";
+      kotlinLspVersion = mkStr "261.13587.0" "Kotlin language-server version.";
       jvmOptions = mkStr "-Xmx2G" "JAVA_TOOL_OPTIONS for the Kotlin server; empty disables JVM options.";
     };
     lean4 = mkLanguageOption "Lean 4 language-server settings." { lsPath = lsPathOption; };
     lua = mkLanguageOption "Lua language-server settings." {
       luaLanguageServerVersion = mkStr "3.15.0" "lua-language-server version.";
+    };
+    luaEmmyLua = mkLanguageOption "EmmyLua language-server settings." {
+      emmyluaLsVersion = mkNullableStr "EmmyLua language-server version; null uses Serena's default.";
     };
     luau = mkLanguageOption "Luau language-server settings." {
       lsPath = lsPathOption;
@@ -968,7 +1065,10 @@ let
     nextflow = mkLanguageOption "Nextflow language-server settings." {
       excludePatterns = mkOption {
         type = types.listOf types.str;
-        default = [ "work" ".nextflow" ];
+        default = [
+          "work"
+          ".nextflow"
+        ];
         description = "Glob patterns excluded from Nextflow project indexing.";
       };
       javaHome = mkNullableStr "JDK home used to launch the Nextflow language server.";
@@ -1023,6 +1123,17 @@ let
         description = "Additional file extensions (with leading dot) treated as PHP sources; null keeps the defaults (.php, .phtml).";
       };
     };
+    phpDevsense = mkLanguageOption "DevSense PHP language-server settings." {
+      devsensePhpLsVersion = mkStr "1.0.19197" "DevSense PHP language-server version.";
+      fileFilter = mkOption {
+        type = types.nullOr (types.listOf types.str);
+        default = null;
+        description = "Additional file extensions treated as PHP sources; null uses Serena's default.";
+      };
+      ignoreVendor = mkBool true "Ignore Composer vendor directories.";
+      npmRegistry = npmRegistryOption;
+      phpVersion = mkNullableStr "PHP version reported to the language server; null uses its default.";
+    };
     phpPhpactor = mkLanguageOption "Phpactor settings." {
       lsPath = lsPathOption;
       phpactorVersion = mkStr "2025.12.21.1" "Phpactor PHAR version.";
@@ -1046,7 +1157,7 @@ let
     };
     pythonPyrefly = mkLanguageOption "Astral Pyrefly settings." {
       indexingMode = mkNullableStr "Pyrefly indexing mode forwarded as --indexing-mode; null uses Pyrefly's default.";
-      pyreflyVersion = mkStr "1.1.1" "Pyrefly PyPI version.";
+      pyreflyVersion = mkStr "1.2.0" "Pyrefly PyPI version.";
       workspaceIndexingLimit = mkOption {
         type = types.nullOr types.int;
         default = null;
@@ -1062,7 +1173,7 @@ let
     };
     rust = mkLanguageOption "rust-analyzer settings." { lsPath = lsPathOption; };
     scala = mkLanguageOption "Metals settings." {
-      metalsVersion = mkStr "1.6.4" "Metals version.";
+      metalsVersion = mkStr "1.6.8" "Metals version.";
       clientName = mkStr "Serena" "Client identifier sent to Metals.";
       onStaleLock = mkOption {
         type = types.enum [
@@ -1085,6 +1196,21 @@ let
         default = null;
         description = "Maximum directory depth when scanning for Metals project roots; null uses Serena's default.";
       };
+      indexingQuietPeriod = mkOption {
+        type = types.nullOr numberType;
+        default = null;
+        description = "Quiet period in seconds before Metals indexing is considered complete; null uses Serena's default.";
+      };
+      indexingStartGrace = mkOption {
+        type = types.nullOr numberType;
+        default = null;
+        description = "Grace period in seconds before Metals indexing starts; null uses Serena's default.";
+      };
+      indexingTimeout = mkOption {
+        type = types.nullOr numberType;
+        default = null;
+        description = "Metals indexing timeout in seconds; null uses Serena's default.";
+      };
     };
     scss = mkLanguageOption "SCSS/Sass/CSS language-server settings." {
       lsPath = lsPathOption;
@@ -1096,6 +1222,7 @@ let
       solidityLanguageServerVersion = mkStr "0.8.4" "Nomic Solidity language-server version.";
       forgeVersion = mkStr "1.5.1" "Managed Foundry forge npm package version.";
       npmRegistry = npmRegistryOption;
+      solidityStateDir = mkNullableStr "Solidity language-server state directory; null uses Serena's platform default.";
     };
     svelte = mkLanguageOption "Svelte language-server settings." {
       lsPath = lsPathOption;
@@ -1196,9 +1323,23 @@ let
     };
   };
 
+  apiInclusionOptions = {
+    excludedApis = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "REPL APIs or API methods to exclude.";
+    };
+    includedApis = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "REPL APIs or optional API methods to enable.";
+    };
+  };
+
   mkGlobalOptions =
     { }:
     toolInclusionOptions
+    // apiInclusionOptions
     // {
       extraSettings = mkExtraSettingsOption ''
         Additional top-level Serena global settings. Typed options take
@@ -1211,6 +1352,11 @@ let
         ];
         default = globalDefaults.languageBackend;
         description = "Default code-intelligence backend.";
+      };
+      agentInterface = mkOption {
+        type = agentInterfaceType;
+        default = globalDefaults.agentInterface;
+        description = "Agent interface. The tools default preserves Serena v1 behavior; REPL enables Serena v2's API-based interface.";
       };
       lineEnding = mkOption {
         type = types.enum [
@@ -1322,6 +1468,7 @@ let
       requireIdentity ? false,
     }:
     toolInclusionOptions
+    // apiInclusionOptions
     // {
       extraSettings = mkExtraSettingsOption ''
         Additional top-level Serena project settings. Typed options take
@@ -1366,6 +1513,11 @@ let
         );
         default = projectDefaults.languageBackend;
         description = "Project backend override; null inherits global configuration.";
+      };
+      agentInterface = mkOption {
+        type = types.nullOr agentInterfaceType;
+        default = projectDefaults.agentInterface;
+        description = "Project interface override; null inherits the global interface at startup.";
       };
       ignoreAllFilesInGitignore = mkBool projectDefaults.ignoreAllFilesInGitignore "Honor project .gitignore files.";
       lsSpecificSettings = mkLsSpecificSettingsOption { };
@@ -1426,6 +1578,7 @@ let
   mkContextOptions =
     { }:
     toolInclusionOptions
+    // apiInclusionOptions
     // {
       extraSettings = mkExtraSettingsOption ''
         Additional context settings. Typed options take precedence when
@@ -1452,6 +1605,7 @@ let
   mkModeOptions =
     { }:
     toolInclusionOptions
+    // apiInclusionOptions
     // {
       extraSettings = mkExtraSettingsOption ''
         Additional mode settings. Typed options take precedence when rendered
@@ -1647,7 +1801,7 @@ rec {
 
   manifest = {
     schemaVersion = 2;
-    upstreamVersion = "1.7.0";
+    upstreamVersion = "2.0.0";
     inherit languageValues builtinContexts builtinModes;
     defaults = {
       global = globalDefaults;
