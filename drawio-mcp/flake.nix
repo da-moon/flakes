@@ -150,6 +150,7 @@
       in
       {
         packages = versionPackages // {
+          inherit pnpm;
           default = latestPkg;
           "drawio-mcp" = latestPkg;
         };

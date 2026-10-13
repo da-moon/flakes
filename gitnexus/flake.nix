@@ -269,6 +269,7 @@
       in
       {
         packages = versionedPackages // {
+          inherit pnpm;
           default = latestPkg;
           gitnexus = latestPkg;
         };

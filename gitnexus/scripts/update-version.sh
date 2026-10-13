@@ -43,8 +43,7 @@ readonly NPM_PACKAGE="gitnexus"
 readonly TARBALL_NAME="gitnexus"
 readonly PACKAGE_ATTR="gitnexus"
 readonly BIN_NAME="gitnexus"
-# nixpkgs ref used to obtain the pnpm/node majors that match flake.nix
-# (pnpm_10, nodejs_22 — neither is assumed to be on PATH).
+# Nixpkgs provides the Node.js runtime; pnpm comes from this flake.
 readonly NIXPKGS_REF="github:NixOS/nixpkgs/nixos-26.05"
 # lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
 readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -75,9 +74,8 @@ extract_got_hash() {
   sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
 }
 
-# pnpm/node from the pinned nixpkgs (majors must match flake.nix's pnpm_10 /
-# nodejs_22). Neither tool is assumed to be on PATH.
-pnpm_run() { nix shell "${NIXPKGS_REF}#pnpm_10" --command pnpm "$@"; }
+# Use the same patched pnpm as the package build.
+pnpm_run() { nix shell "${pkg_dir}#pnpm" --no-write-lock-file --command pnpm "$@"; }
 node_run() { nix shell "${NIXPKGS_REF}#nodejs_22" --command node "$@"; }
 
 # Relative path (from pkg_dir) of a version's committed lockfile.

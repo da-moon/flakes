@@ -31,8 +31,6 @@ readonly NPM_PACKAGE="@drawio/mcp"
 readonly TARBALL_NAME="mcp"
 readonly PACKAGE_ATTR="drawio-mcp"
 readonly BIN_NAME="drawio-mcp"
-# nixpkgs ref used to obtain the pnpm major that matches flake.nix (pnpm_10).
-readonly NIXPKGS_REF="github:NixOS/nixpkgs/nixos-26.05"
 # lib.fakeHash — the sentinel nix rejects, forcing it to print the real "got:" hash.
 readonly FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
@@ -62,8 +60,8 @@ extract_got_hash() {
   sed -n 's~.*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*~\1~p' | head -n1
 }
 
-# pnpm from the pinned nixpkgs (major must match flake.nix's pnpm_10).
-pnpm_run() { nix shell "${NIXPKGS_REF}#pnpm_10" --command pnpm "$@"; }
+# Use the same patched pnpm as the package build.
+pnpm_run() { nix shell "${pkg_dir}#pnpm" --no-write-lock-file --command pnpm "$@"; }
 
 # Relative path (from pkg_dir) of a version's committed lockfile.
 lockfile_rel() { printf 'deps/%s/pnpm-lock.yaml' "$1"; }

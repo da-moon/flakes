@@ -171,6 +171,7 @@
       in
       {
         packages = {
+          inherit pnpm;
           default = latestPkg;
           evolver = latestPkg;
         }
