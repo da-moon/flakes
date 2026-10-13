@@ -34,6 +34,105 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
         py = pkgs.python3Packages;
+        securePy =
+          let
+            fetchPypi =
+              pname: version: hash:
+              pkgs.fetchPypi {
+                inherit pname version hash;
+              };
+          in
+          py
+          // {
+            hatchling = py.hatchling.overridePythonAttrs (_: {
+              version = "1.32.4";
+              src = fetchPypi "hatchling" "1.32.4" "sha256-xEaPcxRMBU0qq07w8DeMQ7mHi/B/j/1reWkOlw03Xwc=";
+              dependencies = [
+                py.editables
+                py.packaging
+                py.pathspec
+                py.pluggy
+                py.tomlkit
+                py.trove-classifiers
+              ];
+            });
+
+            cryptography-vectors = py.cryptography.vectors.overridePythonAttrs (_: rec {
+              version = "50.0.2";
+              src =
+                fetchPypi "cryptography_vectors" version
+                  "sha256-2ZER/l3VqNQGUOMAqtNLbmkQyhmMZ0uACEUMpp+PBcQ=";
+              sourceRoot = "cryptography_vectors-${version}";
+            });
+
+            cryptography = py.cryptography.overridePythonAttrs (old: rec {
+              version = "50.0.2";
+              src = fetchPypi "cryptography" version "sha256-e0YWW7VutHBOLqr4bzyUDRkVRTXZsMp9bVkLBAYOANU=";
+              # These CVE fixes are included in 50.0.2.
+              patches = [ ];
+              nativeCheckInputs = map (
+                dep: if (dep.pname or "") == "cryptography-vectors" then securePy.cryptography-vectors else dep
+              ) old.nativeCheckInputs;
+              cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+                pname = "cryptography";
+                inherit version src;
+                hash = "sha256-OUfcs3MIoEwUx1BQV1ZYnAx9IDEbQUWEaeddwK0LLmQ=";
+              };
+            });
+
+            "pydantic-settings" = py."pydantic-settings".overridePythonAttrs (_: {
+              version = "2.14.2";
+              src = fetchPypi "pydantic_settings" "2.14.2" "sha256-wZ3WSxkJfx3oAYTwzHsCcqE65uFwy/JAo+J+OB7RSl8=";
+              dependencies = [
+                securePy.pydantic
+                securePy.python-dotenv
+                securePy."typing-inspection"
+              ];
+            });
+
+            "python-multipart" = py."python-multipart".overridePythonAttrs (_: {
+              version = "0.0.32";
+              src = fetchPypi "python_multipart" "0.0.32" "sha256-vlS38/oWe7g+T82Ta4h7cI9OV/51kRwCrr9T76+Nk44=";
+            });
+
+            starlette = py.starlette.overridePythonAttrs (old: {
+              nativeCheckInputs = old.nativeCheckInputs ++ [ py.httpx2 ];
+              version = "1.3.1";
+              src = fetchPypi "starlette" "1.3.1" "sha256-BdAhMZPy+6rmDi7LWTtK3UJirU5GU2tUq+NvEacXJOA=";
+              dependencies = [ securePy.anyio ];
+            });
+
+            pyjwt = py.pyjwt.overridePythonAttrs (_: {
+              version = "2.15.1";
+              src = fetchPypi "pyjwt" "2.15.1" "sha256-TyWegM37az/Bin3lH9HvnseWUvJQGbrmiXXKJGijTfg=";
+              optional-dependencies.crypto = [ securePy.cryptography ];
+            });
+
+            mcp = py.mcp.overridePythonAttrs (_: {
+              pythonRelaxDeps = [ ];
+              version = "1.28.1";
+              src = fetchPypi "mcp" "1.28.1" "sha256-1R42pfVkT66k+F6mSb//prxsJncNQnmK1qPePSumloM=";
+              build-system = [
+                securePy.hatchling
+                py.uv-dynamic-versioning
+              ];
+              dependencies = [
+                securePy.anyio
+                securePy.httpx
+                securePy.httpx-sse
+                securePy.jsonschema
+                securePy.pydantic
+                securePy."pydantic-settings"
+                securePy.pyjwt
+                securePy."python-multipart"
+                securePy.sse-starlette
+                securePy.starlette
+                securePy."typing-extensions"
+                securePy."typing-inspection"
+                securePy.uvicorn
+              ];
+            });
+          };
         pname = "cloudcraft-mcp";
 
         # Builder: derive a cloudcraft-mcp package from one releases.json entry.
@@ -42,20 +141,12 @@
         mk =
           _key: entry:
           let
-            # cloudcraft-mcp 0.1.6 hard-pins the hatchling build backend
-            # (`hatchling==1.31.0`, vs 1.29.0 in nixpkgs 26.05) and declares
-            # runtime deps newer than ANY current nixpkgs channel packages:
-            # mcp>=1.28.1, pydantic-settings>=2.14.2, python-multipart>=0.0.31,
-            # starlette>=1.3.1 (nixos-unstable tops out at mcp 1.27.1 etc.), plus
-            # a new cryptography>=48.0.1 dependency (nixpkgs has 48.0.0). We add
-            # cryptography and relax those lower bounds to the packaged versions
-            # so the tool builds today; this trades strict upstream pinning for
-            # buildability and should be revisited once nixpkgs ships the pinned
-            # versions. 0.1.5 keeps its pristine build (its looser bounds are
-            # satisfied by nixpkgs).
-            needsRelaxedDeps = lib.versionAtLeast entry.version "0.1.6";
+            needsRelaxedDeps =
+              lib.versionAtLeast entry.version "0.1.6" && lib.versionOlder entry.version "0.1.7";
+            needsSecureDeps = lib.versionAtLeast entry.version "0.1.7";
+            buildPy = if needsSecureDeps then securePy else py;
           in
-          py.buildPythonApplication {
+          buildPy.buildPythonApplication {
             inherit pname;
             version = entry.version;
             pyproject = true;
@@ -89,18 +180,26 @@
               "cryptography"
             ];
 
-            nativeBuildInputs = [ py.hatchling ];
+            nativeBuildInputs = [ buildPy.hatchling ];
 
             propagatedBuildInputs = [
-              py.httpx
-              py.mcp
-              py."typing-extensions"
+              buildPy.httpx
+              buildPy.mcp
+              buildPy."typing-extensions"
             ]
             ++ lib.optionals needsRelaxedDeps [
-              py.cryptography
-              py.pydantic-settings
-              py.python-multipart
-              py.starlette
+              buildPy.cryptography
+              buildPy.pydantic-settings
+              buildPy.python-multipart
+              buildPy.starlette
+            ]
+            ++ lib.optionals needsSecureDeps [
+              buildPy.cryptography
+              buildPy."pydantic-settings"
+              buildPy."python-multipart"
+              buildPy.starlette
+              buildPy.pyjwt
+              buildPy.pydantic
             ];
 
             doCheck = false;
