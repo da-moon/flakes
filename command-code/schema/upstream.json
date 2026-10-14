@@ -394,6 +394,20 @@
         ]
       },
       {
+        "contextWindow": 1000000,
+        "id": "google/gemini-4-argon",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 4 Argon",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
         "contextWindow": 400000,
         "id": "gpt-5.3-codex",
         "inputModalities": [
@@ -1278,8 +1292,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 3140508,
-    "modelCount": 96,
+    "bundleBytes": 3142600,
+    "modelCount": 97,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1299,14 +1313,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 821852
+    "tokenCount": 822204
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-kJkcFAangVgstcjXMg2S/A8e3y7Wcakvo2UZ+YrfbgY=",
+    "entrypointHash": "sha256-WOJY0+LNRt9my2d0IVJ7fYudjKKfYBDQiiD14vi+9IU=",
     "name": "command-code",
-    "packageJsonHash": "sha256-Ni6WX1vHU7dpfPWn0vJ4tAodTvZja+Dq1ypMNlI33Cg=",
-    "version": "1.81.0"
+    "packageJsonHash": "sha256-cwmr6UHCnLgn+qYsmlUaEaR94jsnMz3OTyaiIqve+nk=",
+    "version": "1.82.1"
   },
   "schemaVersion": 1,
   "structural": {
