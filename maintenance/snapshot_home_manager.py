@@ -81,7 +81,7 @@ def dmtool_entries(text):
     result = []
     for start, end in blocks(text):
         block = text[start:end]
-        for match in re.finditer(r'(?ms)^\s{8}([A-Za-z0-9-]+)\s*=\s*\{(.*?)^\s{8}\};', block):
+        for match in re.finditer(r'(?m)^[ \t]{8}([A-Za-z0-9-]+)\s*=\s*\{([^{}]*)\};', block):
             name, body = match.groups()
             version = re.search(r'\bversion\s*=\s*"([^"]+)"', body)
             override = re.search(r'\binput\s*=\s*"([^"]+)"', body)

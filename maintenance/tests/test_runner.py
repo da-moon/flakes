@@ -10,6 +10,7 @@ import unittest
 SOURCE = Path(__file__).resolve().parents[1]
 CONFIG = '''{
       dmTools = {
+        auto = { };
         tool = {
           version = "1.0.0";
         };
