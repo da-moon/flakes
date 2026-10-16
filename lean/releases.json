@@ -33,9 +33,9 @@
       "hash": "sha256-NVnb5C3LpdJIPaskh0CgjpQqOkMd90KHmmWEBQx3+Yw=",
       "stubsVersion": "18189",
       "stubsHash": "sha256-7dVqVM+xdP+Hwen0iQqIAcrUc9O2nbe8R1s+qyV0eJQ=",
-      "engineImageTag": "18189",
-      "engineImageDigest": "sha256:4e620f08f0fa237bd47c6d3d300bf4bb2006638b70ea68c609230b64b8d8d73d",
-      "researchImageDigest": "sha256:f678fd1040e030375e19cf8129f4b265eb0c556c7d4918a5c6407c17f140b76a"
+      "engineImageTag": "18190",
+      "engineImageDigest": "sha256:a3d045c2660c49992322ca22e7a503864b699dd3963305f999bf88b7b7f4da32",
+      "researchImageDigest": "sha256:69bfcb2496577b3cda15a06159b9533dab84371429ba58e57c850fc70927668a"
     }
   }
 }
