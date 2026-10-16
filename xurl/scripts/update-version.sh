@@ -52,7 +52,11 @@ sanitize_key() {
 
 get_latest_release_tag() {
   local release_json
-  release_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
+  release_json="$(curl -fsSL --config <(
+    if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+      printf 'header = "Authorization: Bearer %s"\n' "${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    fi
+  ) "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest")"
   printf '%s\n' "$release_json" | jq -r '.tag_name'
 }
 

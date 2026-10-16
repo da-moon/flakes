@@ -66,7 +66,11 @@ has_version_entry() {
 }
 
 get_latest_release_tag() {
-  curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest" |
+  curl -fsSL --config <(
+    if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+      printf 'header = "Authorization: Bearer %s"\n' "${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    fi
+  ) "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/releases/latest" |
     jq -r '.tag_name // empty'
 }
 

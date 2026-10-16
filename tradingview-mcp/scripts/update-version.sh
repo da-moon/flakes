@@ -68,7 +68,11 @@ resolve_head() {
   [ -n "$sha" ] || { log_error "could not resolve upstream rev"; exit 2; }
   # The commits API accepts short shas and returns the full sha + date, so this
   # both validates and canonicalises the rev (fetchFromGitHub needs 40 chars).
-  commit_json="$(curl -fsSL "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/commits/$sha")"
+  commit_json="$(curl -fsSL --config <(
+    if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+      printf 'header = "Authorization: Bearer %s"\n' "${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    fi
+  ) "$GITHUB_API_BASE/repos/$REPO_OWNER/$REPO_NAME/commits/$sha")"
   full_sha="$(printf '%s' "$commit_json" | jq -r '.sha')"
   date="$(printf '%s' "$commit_json" | jq -r '.commit.committer.date' | cut -dT -f1)"
   [ -n "$full_sha" ] && [ "$full_sha" != "null" ] || { log_error "could not resolve full sha for $sha"; exit 2; }
