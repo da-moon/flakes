@@ -1,0 +1,15 @@
+[Unit]
+Description=Update and repair flakes, then switch Home Manager
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ubuntu/sync/github/flakes
+Environment=HOME=/home/ubuntu
+Environment=XDG_STATE_HOME=/home/ubuntu/.local/state
+Environment=PATH=/home/ubuntu/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/ubuntu/sync/github/flakes/maintenance/run.sh
+TimeoutStartSec=6h
+Nice=10
+IOSchedulingClass=idle

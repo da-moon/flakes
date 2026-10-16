@@ -1,0 +1,11 @@
+[Unit]
+Description=Run flakes maintenance at 08:00 and 20:00 UTC
+
+[Timer]
+OnCalendar=*-*-* 08,20:00:00 UTC
+Persistent=true
+AccuracySec=1min
+Unit=flakes-maintenance.service
+
+[Install]
+WantedBy=timers.target

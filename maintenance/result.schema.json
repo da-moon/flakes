@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "summary",
+    "updater_results",
+    "schema_reviews",
+    "flakes_commit",
+    "flakes_pushed",
+    "home_manager",
+    "verification",
+    "blocked_reasons"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "blocked",
+        "partial",
+        "failed"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updater_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "script",
+          "attempts",
+          "final_exit_code"
+        ],
+        "properties": {
+          "script": {
+            "type": "string",
+            "pattern": "^[^/]+/scripts/update-version\\.sh$"
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "final_exit_code": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "schema_reviews": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "flakes_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,64}$"
+    },
+    "flakes_pushed": {
+      "type": "boolean"
+    },
+    "home_manager": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "non_darwin_pins_updated",
+        "switch_completed",
+        "dirty_state_preserved",
+        "root_inputs_current",
+        "profile_after"
+      ],
+      "properties": {
+        "non_darwin_pins_updated": {
+          "type": "boolean"
+        },
+        "switch_completed": {
+          "type": "boolean"
+        },
+        "dirty_state_preserved": {
+          "type": "boolean"
+        },
+        "root_inputs_current": {
+          "type": "boolean"
+        },
+        "profile_after": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "blocked_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
