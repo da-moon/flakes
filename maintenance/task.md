@@ -20,6 +20,12 @@ every non-tool root lock input. The Home Manager checkout is provided in
 `FLAKES_MAINTENANCE_HOME_MANAGER_REPO`; logs belong in
 `FLAKES_MAINTENANCE_RUN_DIR`.
 
+Package release tables cover all supported platforms, including Darwin. Run
+their normal updaters without dropping Darwin assets or hashes. The host
+configuration switch is Ubuntu-only: this checkout has no Mac host
+configuration or Darwin builder. Do not claim native macOS build or runtime
+validation from a successful Linux build.
+
 Run every currently discovered `*/scripts/update-version.sh` under the flakes
 checkout. Discover scripts dynamically at runtime. Give each script stdin from
 `/dev/null`. The runner's current inventory is

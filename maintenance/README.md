@@ -17,6 +17,12 @@ The timer runs at 08:00 and 20:00 UTC. `Persistent=true` starts one missed run
 after the user manager becomes available. Linger must stay enabled for runs
 while no user session is open.
 
+Package release metadata is updated for all supported platforms, including
+Darwin assets and hashes. Host version pins and activation use the available
+Ubuntu/WSL Home Manager files. There is no Mac host configuration or Darwin
+builder here; macOS builds and activation need a native Mac or remote Darwin
+builder. The Linux runner leaves any separate Darwin host configuration alone.
+
 `run.sh` takes a nonblocking `flock` before work begins. It rejects a dirty
 flakes worktree, records the pre-existing Home Manager state, and starts Codex
 with `--no-daemon` before `exec`. Codex uses the existing saved login and model
