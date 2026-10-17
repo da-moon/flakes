@@ -20,7 +20,7 @@
       ];
 
       # Version table: consumers select the latest OR any past version.
-      # New entries are appended by scripts/update-version.sh via jq — do
+      # New entries are appended by scripts/update-version.sh via jq. Do
       # NOT hand-edit the version data in this file.
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
@@ -87,6 +87,11 @@
 
               mkdir -p $out/libexec/feynman $out/bin
               cp -R . $out/libexec/feynman/
+
+              ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                # The glibc host uses the bundled GNU variant.
+                rm -rf $out/libexec/feynman/app/node_modules/@llamaindex/liteparse-linux-x64-musl
+              ''}
 
               makeWrapper $out/libexec/feynman/node/bin/node $out/bin/feynman \
                 --add-flags "$out/libexec/feynman/app/bin/feynman.js"
