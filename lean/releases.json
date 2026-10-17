@@ -31,11 +31,11 @@
     "1.0.230": {
       "version": "1.0.230",
       "hash": "sha256-NVnb5C3LpdJIPaskh0CgjpQqOkMd90KHmmWEBQx3+Yw=",
-      "stubsVersion": "18189",
-      "stubsHash": "sha256-7dVqVM+xdP+Hwen0iQqIAcrUc9O2nbe8R1s+qyV0eJQ=",
-      "engineImageTag": "18190",
-      "engineImageDigest": "sha256:a3d045c2660c49992322ca22e7a503864b699dd3963305f999bf88b7b7f4da32",
-      "researchImageDigest": "sha256:69bfcb2496577b3cda15a06159b9533dab84371429ba58e57c850fc70927668a"
+      "stubsVersion": "18192",
+      "stubsHash": "sha256-1fQoSFTs+mbMbJb+WfJKGEICSxb8XHzaj19btXt4MFM=",
+      "engineImageTag": "18192",
+      "engineImageDigest": "sha256:64fdcc26430fb589077a89797555557eab576b04b9a23133dc4fd39ff2d9a5c6",
+      "researchImageDigest": "sha256:bd8d376ce4ae0371d4657ab53dc9a17beec1404f4fb71d55eac281e46b1dc2e1"
     }
   }
 }
