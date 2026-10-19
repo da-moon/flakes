@@ -28,6 +28,7 @@ let
 
   languageValues = [
     "csharp"
+    "vbnet"
     "python"
     "rust"
     "java"
@@ -83,6 +84,7 @@ let
     "nextflow"
     "wolfram"
     "typescript_vts"
+    "typescript_tsgo"
     "python_jedi"
     "python_ty"
     "python_pyrefly"
@@ -142,7 +144,7 @@ let
     lineEnding = "native";
     guiLogWindow = false;
     webDashboard = true;
-    webDashboardOpenOnLaunch = true;
+    webDashboardOpenOnLaunch = null;
     webDashboardInterface = null;
     webDashboardListenAddress = "127.0.0.1";
     webDashboardTrustedHosts = [
@@ -385,7 +387,9 @@ let
     terraform = "terraform";
     toml = "toml";
     typescript = "typescript";
+    typescriptTsgo = "typescript_tsgo";
     typescriptVts = "typescript_vts";
+    vbnet = "vbnet";
     vue = "vue";
     wolfram = "wolfram";
     yaml = "yaml";
@@ -630,6 +634,7 @@ let
       indexingQuietPeriod = "indexing_quiet_period";
       indexingStartGrace = "indexing_start_grace";
       indexingTimeout = "indexing_timeout";
+      terminateBloopOnStop = "terminate_bloop_on_stop";
     };
     scss = {
       lsPath = "ls_path";
@@ -671,10 +676,17 @@ let
       indexingTimeout = "indexing_timeout";
       serverReadyTimeout = "server_ready_timeout";
     };
+    typescriptTsgo = {
+      npmRegistry = "npm_registry";
+      typescriptVersion = "typescript_version";
+    };
     typescriptVts = {
       vtslsVersion = "vtsls_version";
       npmRegistry = "npm_registry";
       initializationOptions = "initialization_options";
+    };
+    vbnet = {
+      runtimeDependencies = "runtime_dependencies";
     };
     vue = {
       vueLanguageServerVersion = "vue_language_server_version";
@@ -1211,6 +1223,7 @@ let
         default = null;
         description = "Metals indexing timeout in seconds; null uses Serena's default.";
       };
+      terminateBloopOnStop = mkBool false "Terminate the Bloop build server when Metals stops.";
     };
     scss = mkLanguageOption "SCSS/Sass/CSS language-server settings." {
       lsPath = lsPathOption;
@@ -1274,6 +1287,10 @@ let
         description = "Language-server readiness timeout in seconds; null uses Serena's default (10).";
       };
     };
+    typescriptTsgo = mkLanguageOption "tsgo TypeScript language-server settings." {
+      npmRegistry = npmRegistryOption;
+      typescriptVersion = mkStr "7.0.2" "TypeScript version used by the tsgo language server.";
+    };
     typescriptVts = mkLanguageOption "vtsls settings." {
       vtslsVersion = mkStr "0.2.9" "@vtsls/language-server version.";
       npmRegistry = npmRegistryOption;
@@ -1281,6 +1298,13 @@ let
         type = types.nullOr jsonObjectType;
         default = null;
         description = "Raw vtsls initializationOptions; null lets Serena compute its defaults.";
+      };
+    };
+    vbnet = mkLanguageOption "VB.NET language-server settings." {
+      runtimeDependencies = mkOption {
+        type = types.listOf runtimeDependencyType;
+        default = [ ];
+        description = "Runtime dependency overrides for the VB.NET language-server package.";
       };
     };
     vue = mkLanguageOption "Vue language-server settings." {
@@ -1369,7 +1393,11 @@ let
       };
       guiLogWindow = mkBool globalDefaults.guiLogWindow "Open Serena's graphical log window.";
       webDashboard = mkBool globalDefaults.webDashboard "Enable the Serena dashboard.";
-      webDashboardOpenOnLaunch = mkBool globalDefaults.webDashboardOpenOnLaunch "Open the dashboard when Serena starts.";
+      webDashboardOpenOnLaunch = mkOption {
+        type = types.nullOr types.bool;
+        default = globalDefaults.webDashboardOpenOnLaunch;
+        description = "Open the dashboard when Serena starts; null opens the dashboard with a first-launch configuration dialog.";
+      };
       webDashboardInterface = mkOption {
         type = types.nullOr (
           types.enum [
@@ -1801,7 +1829,7 @@ rec {
 
   manifest = {
     schemaVersion = 2;
-    upstreamVersion = "2.0.0";
+    upstreamVersion = "2.1.0";
     inherit languageValues builtinContexts builtinModes;
     defaults = {
       global = globalDefaults;

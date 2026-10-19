@@ -85,7 +85,7 @@ let
 
   checks =
     assert schema.manifest.schemaVersion == upstream.schemaVersion;
-    assert builtins.length schema.languageValues == 77;
+    assert builtins.length schema.languageValues == 79;
     assert sortStrings schema.languageValues == sortStrings upstream.languageValues;
     assert
       render.toUpstreamGlobal { }
