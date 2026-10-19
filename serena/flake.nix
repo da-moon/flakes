@@ -10,7 +10,7 @@
     };
 
     # BEGIN GENERATED SERENA UPSTREAM INPUT
-    serena-upstream.url = "github:oraios/serena/4c4268f9c0adf8743a75e6dda2ef1fa635f34cc3";
+    serena-upstream.url = "github:oraios/serena/5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc";
     # END GENERATED SERENA UPSTREAM INPUT
   };
 
