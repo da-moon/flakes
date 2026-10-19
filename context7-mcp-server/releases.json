@@ -1,5 +1,5 @@
 {
-  "latest": "4.4.2",
+  "latest": "4.4.4",
   "versions": {
     "3.2.4": {
       "version": "3.2.4",
@@ -55,6 +55,11 @@
       "version": "4.4.2",
       "rev": "4.4.2",
       "hash": "sha256-qqqW6Lb762P0lu9WDw3ZbGd0pql1gDeNU6tjzMWFDS4="
+    },
+    "4.4.4": {
+      "version": "4.4.4",
+      "rev": "4.4.4",
+      "hash": "sha256-KuN8OitB/01ZGidf8dxWiDy2C/xx40w5nBTr04g3uzg="
     }
   }
 }
