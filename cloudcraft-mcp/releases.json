@@ -1,5 +1,5 @@
 {
-  "latest": "0.1.7",
+  "latest": "0.1.8",
   "versions": {
     "0.1.5": {
       "version": "0.1.5",
@@ -15,6 +15,11 @@
       "version": "0.1.7",
       "rev": "v0.1.7",
       "hash": "sha256-T4AavWU1ET6EEJUHD7TPCwCpuDJUIfu+si35IBT5Dvk="
+    },
+    "0.1.8": {
+      "version": "0.1.8",
+      "rev": "v0.1.8",
+      "hash": "sha256-jLd/ZsfrzOyqrBbxnWhtDb1aZdLu+S+KTAOafp6IET8="
     }
   }
 }
