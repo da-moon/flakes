@@ -286,7 +286,7 @@
           "image",
           "text"
         ],
-        "label": "DeepSeek V4.1 Flash",
+        "label": "DeepSeek V4.1 Flash (latest)",
         "reasoningEfforts": [
           "off",
           "low",
@@ -301,7 +301,7 @@
           "image",
           "text"
         ],
-        "label": "DeepSeek V4.1 Flash Fast",
+        "label": "DeepSeek V4.1 Flash Fast (latest)",
         "reasoningEfforts": [
           "off",
           "low",
@@ -744,6 +744,38 @@
         ]
       },
       {
+        "contextWindow": 1000000,
+        "id": "minimax/minimax-m3.1-flash",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiniMax M3.1 Flash",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "minimax/minimax-m3.1-flash:free",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "MiniMax M3.1 Flash",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 200000,
         "id": "MiniMaxAI/MiniMax-M2.5",
         "inputModalities": [
@@ -1006,6 +1038,21 @@
         ]
       },
       {
+        "contextWindow": 1048576,
+        "id": "reflection/beam:free",
+        "inputModalities": [
+          "text"
+        ],
+        "label": "Beam 1.0",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 1000000,
         "id": "sakana/fugu-ultra",
         "inputModalities": [
@@ -1016,21 +1063,6 @@
         "reasoningEfforts": [
           "high",
           "xhigh"
-        ]
-      },
-      {
-        "contextWindow": 1048576,
-        "id": "stealth/cat-jam:free",
-        "inputModalities": [
-          "text"
-        ],
-        "label": "Cat Jam",
-        "reasoningEfforts": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
         ]
       },
       {
@@ -1341,8 +1373,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 3362140,
-    "modelCount": 100,
+    "bundleBytes": 3390186,
+    "modelCount": 102,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1362,14 +1394,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 884886
+    "tokenCount": 892767
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-lXIsXQFv8uaLwURI8gi9eSTANT9FEKGNOoa/mzp/Wq4=",
+    "entrypointHash": "sha256-8I87k3sgunBdUvlCatKjmKC2BaHUMga2cX32ZUhg3l0=",
     "name": "command-code",
-    "packageJsonHash": "sha256-ZkJsc0WFoRUXTF43rBLfZgTIdsL46SUOxHrVH+Ynqgo=",
-    "version": "1.84.0"
+    "packageJsonHash": "sha256-NHqPAfXZkgle0r1MJju81WUZ7bdowOjse89xso6Zdbs=",
+    "version": "1.85.1"
   },
   "schemaVersion": 1,
   "structural": {
