@@ -110,16 +110,37 @@ generate_deps_lock() {
 
   # Strip devDependencies and scripts so the committed package.json is stable
   # and only production dependencies are locked.
-  jq 'del(.devDependencies, .scripts)' "${extracted}/package.json" >"${tmp}/package.json"
+  # Upstream pins vulnerable dependencies. Chokidar 4 removes unpatched braces;
+  # the CLI watches a literal manifest path, so it does not need glob support.
+  jq 'del(.devDependencies, .scripts)
+    | .dependencies.chokidar = "4.0.3"
+    | .overrides = ((.overrides // {}) + {
+        "@actions/http-client": {"undici": "6.29.1"},
+        "@fastify/busboy": "3.2.3",
+        "axios": "1.20.0",
+        "basic-ftp": "6.2.3",
+        "echarts": "6.1.0",
+        "handlebars": "4.7.10",
+        "moment": "2.31.0",
+        "sanitize-html": "2.18.1",
+        "snowflake-sdk": "3.4.0",
+        "thrift": "0.23.0",
+        "toml": "4.2.0",
+        "uuid": "$uuid"
+      })' "${extracted}/package.json" >"${tmp}/package.json"
 
   cp "${tmp}/package.json" "${extracted}/package.json"
 
   log_info "Running npm install --package-lock-only (Node 24)..."
-  (
+  if ! (
     cd "$extracted"
     nix shell nixpkgs#nodejs_24 -c \
-      npm install --package-lock-only --ignore-scripts --legacy-peer-deps
-  )
+      npm install --package-lock-only --ignore-scripts --legacy-peer-deps \
+      && nix shell nixpkgs#nodejs_24 -c npm audit --omit=dev
+  ); then
+    log_error "Dependency resolution or vulnerability audit failed"
+    return 1
+  fi
 
   if [ ! -f "${extracted}/package-lock.json" ]; then
     log_error "npm did not produce package-lock.json"
@@ -149,7 +170,15 @@ verify_build() {
     log_error "nix build failed for default"
     return 1
   fi
-  timeout 10 "$out_path/bin/lightdash" --help >/dev/null 2>&1 || true
+  if ! timeout 30 "$out_path/bin/lightdash" --help >/dev/null 2>&1; then
+    log_error "Binary failed its help smoke test"
+    return 1
+  fi
+  if ! nix shell nixpkgs#nodejs_24 -c \
+    timeout 45 node "${script_dir}/test-dependencies.cjs" "$out_path"; then
+    log_error "Dependency compatibility checks failed"
+    return 1
+  fi
   log_info "Build successful!"
 }
 
@@ -236,6 +265,7 @@ current flake and will be dropped for new versions.
 Options:
   --version VERSION   Append a specific version (default: latest)
   --check             Only check for updates (exit 1 if update available)
+  --rehash            Regenerate and audit dependencies for the selected version
   --no-build          Skip build verification
   --help              Show this help message
 
@@ -254,6 +284,7 @@ main() {
   local target_version=""
   local check_only=false
   local no_build=false
+  local rehash=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -268,6 +299,10 @@ main() {
         ;;
       --no-build)
         no_build=true
+        shift
+        ;;
+      --rehash)
+        rehash=true
         shift
         ;;
       --help)
@@ -312,8 +347,10 @@ main() {
     exit 1
   fi
 
-  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ]; then
-    log_info "Already up to date!"
+  if has_version_entry "$latest_version" && [ "$current_version" = "$latest_version" ] \
+    && [ "$rehash" != true ]; then
+    (cd "${deps_dir}/${latest_version}" && nix shell nixpkgs#nodejs_24 -c npm audit --omit=dev)
+    log_info "Already up to date; dependency audit passed."
     exit 0
   fi
 
