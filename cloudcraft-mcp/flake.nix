@@ -110,8 +110,8 @@
 
             mcp = py.mcp.overridePythonAttrs (_: {
               pythonRelaxDeps = [ ];
-              version = "1.28.1";
-              src = fetchPypi "mcp" "1.28.1" "sha256-1R42pfVkT66k+F6mSb//prxsJncNQnmK1qPePSumloM=";
+              version = "1.30.0";
+              src = fetchPypi "mcp" "1.30.0" "sha256-RFQUYl/OXClfqlBbsRus7OZhq29AKNV8k121eCC3o+Q=";
               build-system = [
                 securePy.hatchling
                 py.uv-dynamic-versioning
