@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "2.2.0"
+    "version": "2.3.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -98,6 +98,7 @@
       "mcp": {
         "deprecations": [],
         "fields": [
+          "defaultDeferred",
           "startupTimeoutMs",
           "toolTimeoutMs"
         ]
@@ -222,6 +223,7 @@
       "defaultPermissionMode",
       "defaultPlanMode",
       "defaultProvider",
+      "disableFeedbackSurvey",
       "experimental",
       "extraAgentDirs",
       "extraSkillDirs",
@@ -260,6 +262,7 @@
         ]
       },
       "topLevel": [
+        "auto_session_title",
         "cache_expiry_hint",
         "disable_feedback_survey",
         "disable_paste_burst",
