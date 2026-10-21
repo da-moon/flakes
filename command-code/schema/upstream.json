@@ -905,6 +905,24 @@
         ]
       },
       {
+        "contextWindow": 262144,
+        "id": "ornith/ornith-1.5-122b",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Ornith 1.5 122B"
+      },
+      {
+        "contextWindow": 262144,
+        "id": "ornith/ornith-1.5-122b:free",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Ornith 1.5 122B"
+      },
+      {
         "contextWindow": 256000,
         "id": "poolside/laguna-s-2.1-free",
         "inputModalities": [
@@ -1373,8 +1391,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 3390186,
-    "modelCount": 102,
+    "bundleBytes": 3408291,
+    "modelCount": 104,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1394,14 +1412,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 892767
+    "tokenCount": 896465
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-8I87k3sgunBdUvlCatKjmKC2BaHUMga2cX32ZUhg3l0=",
+    "entrypointHash": "sha256-BQSBOT2VbOwWSQKFOAedOQYR2lUfR0uRgy1+FA1rFpk=",
     "name": "command-code",
-    "packageJsonHash": "sha256-NHqPAfXZkgle0r1MJju81WUZ7bdowOjse89xso6Zdbs=",
-    "version": "1.85.1"
+    "packageJsonHash": "sha256-iG4mMW0boc8KwD3hBrpjJtjO6IgeK6eQ6poAwC3uzOg=",
+    "version": "1.86.3"
   },
   "schemaVersion": 1,
   "structural": {
