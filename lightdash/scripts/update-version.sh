@@ -125,7 +125,7 @@ generate_deps_lock() {
         "sanitize-html": "2.18.1",
         "snowflake-sdk": "3.4.0",
         "thrift": "0.23.0",
-        "toml": "4.2.0",
+        "toml": "5.0.1",
         "uuid": "$uuid"
       })' "${extracted}/package.json" >"${tmp}/package.json"
 
