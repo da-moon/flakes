@@ -1,5 +1,5 @@
 {
-  "latest": "0.4.37",
+  "latest": "0.4.39",
   "versions": {
     "0.4.27": {
       "version": "0.4.27",
@@ -199,6 +199,26 @@
       "wasmHashes": {
         "prompt_gateway": "sha256-CaloQHQMG5thckEXM2KVf9GphD1YKQ/8QDW1RhXHjq0=",
         "llm_gateway": "sha256-EGA0aUhFRNZe8+7O5SttUWCAUfUvXBrj6h+eQklxhiI="
+      }
+    },
+    "0.4.39": {
+      "version": "0.4.39",
+      "rev": "0.4.39",
+      "wheelHash": "sha256-wjJf2fIWB2qCgfaVjy/HhfcZmFly3iwJh4YIieItWLY=",
+      "envoyVersion": "v1.37.8",
+      "envoyHashes": {
+        "aarch64-linux": "sha256-YFieVnRilkCdin+TokGzvjRaB+N/yD4C608MJBZ98TE=",
+        "x86_64-linux": "sha256-Vcn3827lv/z2/xHQI/6oYxbrT8TAhKXq6gLLGiCCfV0=",
+        "aarch64-darwin": "sha256-9eSarf8GBDGDibNPYGytzrdQkxNMx5HWdb9llRkTu/c="
+      },
+      "brightstaffHashes": {
+        "aarch64-linux": "sha256-bWXix9EG3r8zyOvo93Z0kZ0/xf0yzvKD4ZV/ILvJqB8=",
+        "x86_64-linux": "sha256-ZrAgHjzPms4fkDaC5/DQ1GM++6+6xb7TlJ+spY6u8BU=",
+        "aarch64-darwin": "sha256-xxnfrMu38Vw+g4q8F+CceSmroflZI/UtaDPMsmSmQUA="
+      },
+      "wasmHashes": {
+        "prompt_gateway": "sha256-E7V7GCM8hXwwpUzsqIvVL0UhDGiPSnZFl0ZXOnvi2Rs=",
+        "llm_gateway": "sha256-jU59WUjCnlqAMf2zmHj1UQRiDsh5Jb7oC8uxlggSQaI="
       }
     }
   }
