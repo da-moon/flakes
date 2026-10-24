@@ -107,12 +107,65 @@ function testChartsAndTemplates() {
   assert.equal(load("moment")("2026-10-20").format("YYYY-MM-DD"), "2026-10-20");
 }
 
+function testSchemaCompatibility() {
+  const { z } = load("zod");
+  const commonRoot = path.dirname(load.resolve("@lightdash/common/package.json"));
+  const { createMcpCompatibleInputSchema } = load(path.join(commonRoot,
+    "dist/cjs/ee/AiAgent/schemas/McpSchemaCompatLayer.js"));
+  const schema = createMcpCompatibleInputSchema(z.object({
+    count: z.number().min(1),
+    label: z.string().nullable(),
+    tags: z.array(z.string()).max(2),
+  }));
+  assert.deepEqual(schema.parse({ count: "2", label: null, tags: ["ok"] }),
+    { count: 2, label: null, tags: ["ok"] });
+  assert.equal(schema.safeParse({ count: 0, label: "ok", tags: [] }).success, false);
+  assert.equal(schema.safeParse({ count: 1, label: "ok", tags: ["a", "b", "c"] }).success, false);
+  const converted = load("@mastra/schema-compat").convertSchemaToZod({
+    type: "object", properties: { name: { type: "string" } }, required: ["name"],
+  });
+  assert.deepEqual(converted.parse({ name: "fixture" }), { name: "fixture" });
+  assert.equal(converted.safeParse({ name: 1 }).success, false);
+}
+
+async function testAzureAuthentication() {
+  const identity = createRequire(load.resolve("@azure/identity"));
+  const { ConfidentialClientApplication } = identity("@azure/msal-node");
+  const authority = "https://login.microsoftonline.com/organizations";
+  const client = new ConfidentialClientApplication({
+    auth: {
+      clientId: "offline-fixture", clientSecret: "offline-fixture", authority,
+      knownAuthorities: ["login.microsoftonline.com"],
+      authorityMetadata: JSON.stringify({
+        authorization_endpoint: `${authority}/oauth2/v2.0/authorize`,
+        token_endpoint: `${authority}/oauth2/v2.0/token`,
+        issuer: `${authority}/v2.0`,
+        jwks_uri: `${authority}/discovery/v2.0/keys`,
+      }),
+    },
+    system: { networkClient: {
+      sendGetRequestAsync: async () => { throw new Error("Unexpected authentication network request"); },
+      sendPostRequestAsync: async () => { throw new Error("Unexpected authentication network request"); },
+    } },
+  });
+  const url = new URL(await client.getAuthCodeUrl({
+    scopes: ["https://management.azure.com/.default"], redirectUri: "http://localhost/callback",
+  }));
+  assert.equal(url.origin, "https://login.microsoftonline.com");
+  assert.equal(url.searchParams.get("client_id"), "offline-fixture");
+  const credential = new (load("@azure/identity").ClientSecretCredential)(
+    "00000000-0000-0000-0000-000000000000", "offline-fixture", "offline-fixture");
+  assert.equal(typeof credential.getToken, "function");
+}
+
 (async () => {
   try {
     await testWatcher();
     await testDatabricksProtocol();
     testSnowflakeConfig();
     testChartsAndTemplates();
+    testSchemaCompatibility();
+    await testAzureAuthentication();
     console.log("Lightdash dependency compatibility checks passed");
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });

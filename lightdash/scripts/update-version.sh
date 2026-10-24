@@ -116,7 +116,9 @@ generate_deps_lock() {
     | .dependencies.chokidar = "4.0.3"
     | .overrides = ((.overrides // {}) + {
         "@actions/http-client": {"undici": "6.29.1"},
+        "@azure/msal-node": "7.1.1",
         "@fastify/busboy": "3.2.3",
+        "@mastra/schema-compat": "1.3.16",
         "axios": "1.20.0",
         "basic-ftp": "6.2.3",
         "echarts": "6.1.0",
@@ -126,7 +128,8 @@ generate_deps_lock() {
         "snowflake-sdk": "3.4.0",
         "thrift": "0.23.0",
         "toml": "5.0.1",
-        "uuid": "$uuid"
+        "uuid": "$uuid",
+        "zod": "4.6.7"
       })' "${extracted}/package.json" >"${tmp}/package.json"
 
   cp "${tmp}/package.json" "${extracted}/package.json"
