@@ -31,8 +31,8 @@
     "1.0.230": {
       "version": "1.0.230",
       "hash": "sha256-NVnb5C3LpdJIPaskh0CgjpQqOkMd90KHmmWEBQx3+Yw=",
-      "stubsVersion": "18203",
-      "stubsHash": "sha256-4VJTmQZsXD5ESBwBbvuf6aHhH1DIwSFo+3LNN9DB17Y=",
+      "stubsVersion": "18206",
+      "stubsHash": "sha256-AqE3Z7OeDhSBZ9EG8DOV7/GI6YhsKvbqULpIzjOCrbM=",
       "engineImageTag": "18206",
       "engineImageDigest": "sha256:53790fc945834b8eca725041153150bfa64a7cda487621b0c4690f1ebe5da2bc",
       "researchImageDigest": "sha256:85be2076bd929f977b175a83e003935a9f4881683fbf55571cb35282824c8274"
