@@ -579,6 +579,22 @@
         ]
       },
       {
+        "contextWindow": 1050000,
+        "id": "gpt-6.1-terra",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "GPT-6.1 Terra",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 262144,
         "id": "inclusionai/ling-3.1-flash",
         "inputModalities": [
@@ -876,6 +892,20 @@
           "text"
         ],
         "label": "Kimi K3",
+        "reasoningEfforts": [
+          "low",
+          "high",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "moonshotai/Kimi-K3.1-Pro",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Kimi K3.1 Pro",
         "reasoningEfforts": [
           "low",
           "high",
@@ -1391,8 +1421,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 3431679,
-    "modelCount": 104,
+    "bundleBytes": 3446040,
+    "modelCount": 106,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1412,14 +1442,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 903055
+    "tokenCount": 907392
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-YAcl+WfMmPYUQGbCToUNk0vUofUDw7+C8r0lhKh1ff0=",
+    "entrypointHash": "sha256-0lz8lCmOFzvdy9MLTsTOgzFwwldN4NxECNbO2lqIiJA=",
     "name": "command-code",
-    "packageJsonHash": "sha256-QAYFqKvQfBBiSYJc5hMGw+XGwrwTzLAuEMCaTITTfng=",
-    "version": "1.88.0"
+    "packageJsonHash": "sha256-NRBOuJLADt81vFY25v2/vlxv35Mtncyjh9a2j9H+C1k=",
+    "version": "1.88.1"
   },
   "schemaVersion": 1,
   "structural": {
