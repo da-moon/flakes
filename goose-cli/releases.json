@@ -1,5 +1,5 @@
 {
-  "latest": "1.56.0",
+  "latest": "1.57.0",
   "versions": {
     "1.39.0": {
       "version": "1.39.0",
@@ -270,6 +270,24 @@
         "aarch64-darwin": "goose-aarch64-apple-darwin.tar.bz2"
       },
       "srcHash": "sha256-U05s2/qsny4tH3DtHnaC8mdWhpp5B5Nbe25+EiTuuUY=",
+      "cargoOutputHashes": {
+        "cudaforge-0.1.6": "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY="
+      }
+    },
+    "1.57.0": {
+      "version": "1.57.0",
+      "rev": "v1.57.0",
+      "prebuiltHashes": {
+        "x86_64-linux": "sha256-EOuWy2oVm24dOO7tvvarZM0oFoqtkZSPH6XDTu/fmOM=",
+        "x86_64-darwin": "sha256-5I/gJIkaTCcqicdLmuhD12pzIpZDyRe3hbBoD++cZHo=",
+        "aarch64-darwin": "sha256-L7r6InqyhlTEcGXxyevNEvUn8BfjDAjmGLxvzzY9eTU="
+      },
+      "prebuiltAssets": {
+        "x86_64-linux": "goose-x86_64-unknown-linux-gnu.tar.gz",
+        "x86_64-darwin": "goose-x86_64-apple-darwin.tar.bz2",
+        "aarch64-darwin": "goose-aarch64-apple-darwin.tar.bz2"
+      },
+      "srcHash": "sha256-hFW9gcuYFyyXOU/tB2v5WVNlX9arMG0Qs5qMb+KRmqw=",
       "cargoOutputHashes": {
         "cudaforge-0.1.6": "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY="
       }
