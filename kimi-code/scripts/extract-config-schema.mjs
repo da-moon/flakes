@@ -69,7 +69,7 @@ function objectFields(block) {
 // Find `<name> = object({` / `strictObject({` and return its fields (sorted),
 // or null when the schema is not an inline object literal.
 function extractObjectSchemaFields(bin, schemaRef) {
-  const decl = new RegExp(`\\b${schemaRef}\\s*=\\s*(?:object|strictObject)\\(\\s*\\{`).exec(bin);
+  const decl = new RegExp(`\\b${schemaRef}\\s*=\\s*(?:object|strictObject)(?:\\$\\d+)?\\(\\s*\\{`).exec(bin);
   if (!decl) return null;
   const braceStart = bin.indexOf("{", decl.index + decl[0].length - 1);
   const block = balanced(bin, braceStart, "{", "}");
@@ -119,14 +119,14 @@ function extract(binaryPath, version) {
   // per-section inline objects (editor/notifications/upgrade).
   const tui = { topLevel: null, sections: {} };
   {
-    const decl = /\bTuiConfigFileSchema\s*=\s*object\(\s*\{/.exec(bin);
+    const decl = /\bTuiConfigFileSchema\s*=\s*object(?:\$\d+)?\(\s*\{/.exec(bin);
     if (decl) {
       const block = balanced(bin, bin.indexOf("{", decl.index + decl[0].length - 1), "{", "}");
       if (block) {
         // Blank out nested inline objects so their fields do not leak top-level.
         let flat = "";
         let cursor = 0;
-        const nested = /(\w+):\s*object\(\s*\{/g;
+        const nested = /(\w+):\s*object(?:\$\d+)?\(\s*\{/g;
         for (const nm of block.matchAll(nested)) {
           const sub = balanced(block, block.indexOf("{", nm.index + nm[0].length - 1), "{", "}");
           if (!sub) continue;
