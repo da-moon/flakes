@@ -1,5 +1,5 @@
 {
-  "latest": "3.109.0",
+  "latest": "3.114.2",
   "versions": {
     "1.188.0": {
       "version": "1.188.0",
@@ -298,6 +298,11 @@
       "version": "3.109.0",
       "rev": "3.109.0",
       "tarballHash": "sha256-kun0oRB5IisZ+po3tPQWJQqQUBpOxtSlJooxNvrHczo="
+    },
+    "3.114.2": {
+      "version": "3.114.2",
+      "rev": "3.114.2",
+      "tarballHash": "sha256-ilm+BCPlDuBNU5y5+mnK0ID6x7kZDNSwiR4AhtC3H6s="
     }
   }
 }
