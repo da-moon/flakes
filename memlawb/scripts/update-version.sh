@@ -155,10 +155,11 @@ generate_npm_lock() {
   local missing
   missing="$(jq '[.packages | to_entries[] | select(.key != "" and .value.link != true) | select(.value.integrity == null)] | length' "$srcdir/package-lock.json")"
   [ "$missing" = "0" ] || { log_error "lockfile has ${missing} packages without integrity hashes"; rm -rf "$work"; return 1; }
-  mkdir -p "$dest"
-  cp "$srcdir/package.json" "$dest/package.json"
-  cp "$srcdir/package-lock.json" "$dest/package-lock.json"
-  cp "$srcdir/.npmrc" "$dest/.npmrc"
+  mkdir -p "$dest" || { rm -rf "$work"; return 1; }
+  cp "$srcdir/package.json" "$dest/package.json" \
+    && cp "$srcdir/package-lock.json" "$dest/package-lock.json" \
+    && cp "$srcdir/.npmrc" "$dest/.npmrc" \
+    || { rm -rf "$work"; return 1; }
   rm -rf "$work"
   log_info "  committed deps/${key}/{package.json,package-lock.json,.npmrc}"
 }
@@ -381,6 +382,8 @@ main() {
       rm -rf "${pkg_dir}/deps/${short_key}"
       mkdir -p "${pkg_dir}/deps/${short_key}"
       cp -r "$deps_backup/." "${pkg_dir}/deps/${short_key}/"
+    else
+      rm -rf "${pkg_dir}/deps/${short_key}"
     fi
     rm -f "$backup"
     exit 1
@@ -402,6 +405,7 @@ main() {
       else
         rm -rf "${pkg_dir}/deps/${short_key}"
       fi
+      git -C "$pkg_dir" add -u -- "deps/$short_key"
       rm -f "$backup"
       exit 1
     fi
