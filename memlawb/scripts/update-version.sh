@@ -12,7 +12,7 @@
 # Reproducible-deps model (npm, github source): dependencies are pinned by a
 # COMMITTED package-lock.json under deps/<key>/, consumed at build time by
 # pkgs.importNpmLock (each module is fetched as its own content-addressed
-# derivation keyed to the lockfile's integrity hashes — there is NO aggregate
+# derivation keyed to the lockfile's integrity hashes; there is NO aggregate
 # deps hash to record). This script therefore, per rev:
 #   - .hash : the fetchFromGitHub source hash (SRI, unpacked NAR, arch-
 #             agnostic), prefetched via `nix-prefetch-url --unpack`.
@@ -21,15 +21,13 @@
 #
 # Lockfile generation deviates from the plain "npm install --package-lock-only"
 # recipe in two ways that MUST be preserved by generate_npm_lock():
-#   1. It is a FULL `npm install` (not --package-lock-only) — the
+#   1. It is a FULL `npm install` (not --package-lock-only); the
 #      --package-lock-only fast path can leave packages in the tree without
 #      resolved/integrity fields populated; a full install (with
 #      ignore-scripts=true so no lifecycle script ever runs) fills them all in.
-#   2. zod is added to the committed package.json: src/mcp/server.ts does
-#      `import { z } from 'zod'` but upstream never declares it (today it only
-#      arrives transitively via @modelcontextprotocol/sdk). EXTRA_DEPS is
-#      merged UNDER upstream's dependencies, so upstream's own spec wins if it
-#      ever declares the same package.
+#   2. The MCP SDK and zod are runtime imports even when upstream puts them
+#      in devDependencies for its bundled release. Preserve their upstream
+#      constraints; EXTRA_DEPS supplies zod for older unbundled revisions.
 set -euo pipefail
 
 readonly RED='\033[0;31m'
@@ -136,21 +134,23 @@ generate_npm_lock() {
   local dest="${pkg_dir}/deps/${key}"
   local work; work="$(mktemp -d)"
   log_info "Generating package-lock.json for ${key} (${rev})..."
-  curl -fsSL "${REPO_URL}/archive/${rev}.tar.gz" -o "$work/src.tgz"
-  tar -xzf "$work/src.tgz" -C "$work"
-  local srcdir; srcdir="$(find "$work" -maxdepth 1 -type d -name "${REPO_NAME}-*" | head -n1)"
-  [ -n "$srcdir" ] || { log_error "could not locate extracted source dir"; rm -rf "$work"; return 1; }
+  curl -fsSL "${REPO_URL}/archive/${rev}.tar.gz" -o "$work/src.tgz" || { rm -rf "$work"; return 1; }
+  local srcdir="$work/source"
+  mkdir -p "$srcdir"
+  tar -xzf "$work/src.tgz" -C "$srcdir" --strip-components=1 || { rm -rf "$work"; return 1; }
+  [ -f "$srcdir/package.json" ] || { log_error "archive has no package.json"; rm -rf "$work"; return 1; }
   (
-    cd "$srcdir"
-    node -e 'const fs=require("fs");const p=require("./package.json");delete p.devDependencies;delete p.packageManager;const extra=JSON.parse(process.argv[1]);p.dependencies=Object.assign({},extra,p.dependencies||{});fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")' \
-      "$EXTRA_DEPS"
+    cd "$srcdir" || exit 1
+    node -e 'const fs=require("fs");const p=require("./package.json");const extra=JSON.parse(process.argv[1]);for(const name of ["@modelcontextprotocol/sdk","zod"]){if(p.devDependencies?.[name])extra[name]=p.devDependencies[name];}delete p.devDependencies;delete p.packageManager;p.dependencies=Object.assign({},extra,p.dependencies||{});fs.writeFileSync("package.json",JSON.stringify(p,null,2).replace(/[^\x00-\x7f]/g,c=>"\\u"+c.charCodeAt(0).toString(16).padStart(4,"0"))+"\n")' \
+      "$EXTRA_DEPS" || exit 1
     printf 'ignore-scripts=true\n' > .npmrc
     # FULL install (not --package-lock-only): --package-lock-only can leave
     # transitive packages without resolved/integrity populated. Only npm's
-    # cache is redirected — exporting HOME would hide the user's nix.conf
+    # cache is redirected; exporting HOME would hide the user's nix.conf
     # (experimental-features) from `nix shell` on single-user installs.
-    npm_config_cache="$work/npm-cache" npm_run install >/dev/null 2>&1
-  )
+    npm_config_cache="$work/npm-cache" npm_run install || exit 1
+    npm_config_cache="$work/npm-cache" npm_run audit --omit=dev || exit 1
+  ) || { rm -rf "$work"; return 1; }
   [ -f "$srcdir/package-lock.json" ] || { log_error "lockfile generation produced no package-lock.json"; rm -rf "$work"; return 1; }
   local missing
   missing="$(jq '[.packages | to_entries[] | select(.key != "" and .value.link != true) | select(.value.integrity == null)] | length' "$srcdir/package-lock.json")"
@@ -191,12 +191,12 @@ verify_build() {
     log_error "nix build failed for default"
     return 1
   fi
-  # memlawb has no --version flag; with no arguments it prints usage (exit 1 —
+  # memlawb has no --version flag; with no arguments it prints usage (exit 1;
   # so pipe it through `|| true`, not straight into grep under pipefail).
   local cli_out
   cli_out="$("$out_path/bin/$BIN_NAME" 2>&1 || true)"
   case "$cli_out" in
-    *"memlawb serve"*) ;;
+    *"memlawb serve"*|*"openrecall serve"*) ;;
     *)
       log_error "memlawb binary did not print its usage text"
       return 1
@@ -375,7 +375,6 @@ main() {
   upsert_release_entry "$short_key" "$entry_json"
 
   if ! generate_npm_lock "$short_key" "$target_rev"; then
-  git -C "$pkg_dir" add "deps/$short_key"
     log_error "Lockfile generation failed; restoring previous releases.json and deps/"
     cp "$backup" "$releases_file"
     if [ -n "$deps_backup" ]; then
@@ -386,6 +385,8 @@ main() {
     rm -f "$backup"
     exit 1
   fi
+
+  git -C "$pkg_dir" add -- "deps/$short_key"
 
   local sanitized_key
   sanitized_key="$(sanitize_key "$short_key")"

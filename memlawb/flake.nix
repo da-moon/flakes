@@ -29,7 +29,7 @@
       ];
 
       # Version table: consumers select the latest OR any past version.
-      # New entries are appended by scripts/update-version.sh via jq — do
+      # New entries are appended by scripts/update-version.sh via jq; do
       # NOT hand-edit the version data in this file.
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
@@ -58,7 +58,7 @@
 
         # Builder: derive a memlawb package from one releases.json entry.
         # Dependencies are resolved from the committed lockfile under
-        # ./deps/<key>/ via importNpmLock — there is no drift-prone
+        # ./deps/<key>/ via importNpmLock; there is no drift-prone
         # recursive FOD hash. The runtime is bun, which executes the
         # TypeScript entrypoint directly.
         mk =
@@ -91,7 +91,7 @@
 
             # Read the lockfile straight from the committed deps/<key>/
             # directory (a plain flake path, not a derivation) so evaluation
-            # needs no import-from-derivation — consumers can reference the
+            # needs no import-from-derivation; consumers can reference the
             # package from their own modules without breaking
             # `nix flake show`. The identical files are overlaid onto src
             # above, so npmConfigHook stays consistent with npmDeps.
@@ -108,7 +108,7 @@
               ;
 
             meta = with pkgs.lib; {
-              description = "Zero-knowledge, end-to-end-encrypted agent memory — server, CLI, and MCP server";
+              description = "Zero-knowledge, end-to-end-encrypted agent memory; server, CLI, and MCP server";
               homepage = "https://github.com/Gitlawb/memlawb";
               license = licenses.mit;
               mainProgram = "memlawb";
@@ -132,8 +132,17 @@
               cp -r ./* $out/lib/${pname}/
               shopt -u dotglob
 
+              if [ -f "$out/lib/${pname}/bin/openrecall.ts" ]; then
+                # Keep existing encrypted memories readable across the upstream rename.
+                substituteInPlace "$out/lib/${pname}/client/crypto.ts" \
+                  --replace-fail 'openrecall:' 'memlawb:'
+                cp ${./lib/compat.ts} "$out/lib/${pname}/compat.ts"
+                entrypoint="$out/lib/${pname}/compat.ts"
+              else
+                entrypoint="$out/lib/${pname}/bin/memlawb.ts"
+              fi
               makeWrapper ${pkgs-unstable.bun}/bin/bun $out/bin/memlawb \
-                --add-flags "$out/lib/${pname}/bin/memlawb.ts"
+                --add-flags "$entrypoint"
 
               runHook postInstall
             '';
@@ -197,7 +206,7 @@
           export HOME="$TMPDIR"
           usage_text="$(${latestPkg}/bin/memlawb 2>&1 || true)"
           case "$usage_text" in
-            *"memlawb push"*"memlawb mcp"*"memlawb serve"*) ;;
+            *"memlawb push"*"memlawb mcp"*"memlawb serve"*|*"openrecall push"*"openrecall mcp"*"openrecall serve"*) ;;
             *)
               echo "memlawb CLI did not print its usage text:" >&2
               echo "$usage_text" >&2
@@ -238,7 +247,7 @@
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"nix-check","version":"0"}}}' \
             | timeout 30 ${latestPkg}/bin/memlawb mcp >mcp.log 2>mcp.err || true
           grep -q '"protocolVersion"' mcp.log
-          grep -q '\[memlawb mcp\] ready' mcp.err
+          grep -Eq '\[(memlawb|openrecall) mcp\] ready' mcp.err
           touch $out
         '';
       in
@@ -274,6 +283,10 @@
           cli = cliSmoke;
           server = serverSmoke;
           mcp-stdio = mcpSmoke;
+          compatibility = pkgs.runCommand "memlawb-compatibility" { } ''
+            ${pkgs-unstable.bun}/bin/bun ${./scripts/test-compat.ts} ${latestPkg}
+            touch $out
+          '';
           module-eval = moduleEvaluation.activationPackage;
         };
       }
