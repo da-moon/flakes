@@ -44,7 +44,9 @@
       "stubsHash": "sha256-YeIxkJqcwNXxtdMtdrmfmQgy9+ixsHlPBCfB+DZWsdU=",
       "engineImageTag": "18225",
       "engineImageDigest": "sha256:3e7618bcc80a539f28c3ba765cf9f630fcf8ae04560057b56cf5b16c06326a32",
-      "researchImageDigest": "sha256:d9661a372b1addd227cfa40513cf2f2ee0b637207d80678c5428b46aa26d98c7"
+      "researchImageDigest": "sha256:d9661a372b1addd227cfa40513cf2f2ee0b637207d80678c5428b46aa26d98c7",
+      "modulesFile": "modules-1.14.json",
+      "modulesHash": "sha256-hGzc7aee/Ui0UstBLi415KtTW/XYTMYxK5QUKKWlR94="
     }
   }
 }
