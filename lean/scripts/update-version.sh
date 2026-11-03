@@ -61,7 +61,12 @@ read_metadata() {
   local requested_engine="$2"
   python3 - "$requested_cli" "$requested_engine" <<'PY'
 import json
+import ast
+import hashlib
+import io
+import re
 import sys
+import tarfile
 import urllib.request
 
 cli_version, engine_tag = sys.argv[1], sys.argv[2]
@@ -72,6 +77,7 @@ if not cli_version:
 for item in lean["releases"][cli_version]:
     if item["packagetype"] == "sdist":
         lean_hash = item["digests"]["sha256"]
+        lean_url = item["url"]
         break
 else:
     raise SystemExit(f"no lean sdist found for {cli_version}")
@@ -93,6 +99,23 @@ if not engine_tag:
 engine = json.load(urllib.request.urlopen(f"https://registry.hub.docker.com/v2/repositories/quantconnect/lean/tags/{engine_tag}"))
 research = json.load(urllib.request.urlopen(f"https://registry.hub.docker.com/v2/repositories/quantconnect/research/tags/{engine_tag}"))
 
+source = urllib.request.urlopen(lean_url).read()
+if hashlib.sha256(source).hexdigest() != lean_hash:
+    raise SystemExit("Lean source hash does not match PyPI metadata")
+with tarfile.open(fileobj=io.BytesIO(source), mode="r:gz") as archive:
+    member = archive.getmember(f"lean-{cli_version}/lean/models/__init__.py")
+    tree = ast.parse(archive.extractfile(member).read())
+filenames = [node.value.value for node in tree.body
+             if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+             and any(isinstance(target, ast.Name) and target.id == "file_name"
+                     for target in node.targets)]
+if len(filenames) != 1 or not re.fullmatch(r"modules-[0-9.]+\.json", filenames[0]):
+    raise SystemExit("Unrecognized Lean module catalog declaration")
+modules_file = filenames[0]
+modules_data = urllib.request.urlopen(f"https://cdn.quantconnect.com/cli/{modules_file}").read()
+if not json.loads(modules_data).get("modules"):
+    raise SystemExit("Lean module catalog is empty")
+
 print(cli_version)
 print(lean_hash)
 print(stubs_version)
@@ -100,6 +123,8 @@ print(stubs_hash)
 print(engine_tag)
 print(engine["digest"])
 print(research["digest"])
+print(modules_file)
+print(hashlib.sha256(modules_data).hexdigest())
 PY
 }
 
@@ -122,13 +147,19 @@ upsert_release_entry() {
 verify_build() {
   local sanitized_key="$1"
   log_info "Verifying build..."
-  if ! (cd "$pkg_dir" && nix build ".#lean_${sanitized_key}" --no-link --no-write-lock-file); then
+  local out_path
+  if ! out_path="$(cd "$pkg_dir" && nix build ".#lean_${sanitized_key}" --no-link --no-write-lock-file --print-out-paths)"; then
     log_error "nix build failed for lean_${sanitized_key}"
     return 1
   fi
   # default must also resolve (it points at the new .latest).
   if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
     log_error "nix build failed for default"
+    return 1
+  fi
+  if ! timeout 30 "$out_path/bin/lean" --version \
+    || ! timeout 30 "$out_path/bin/lean" --help >/dev/null; then
+    log_error "Lean CLI runtime checks failed"
     return 1
   fi
   log_info "Build successful!"
@@ -244,8 +275,8 @@ main() {
     exit 1
   fi
   mapfile -t fields <<<"$metadata"
-  if [ "${#fields[@]}" -ne 7 ]; then
-    log_error "expected 7 metadata fields, got ${#fields[@]}"
+  if [ "${#fields[@]}" -ne 9 ]; then
+    log_error "expected 9 metadata fields, got ${#fields[@]}"
     exit 1
   fi
 
@@ -266,9 +297,10 @@ main() {
     exit 1
   fi
 
-  local lean_sri stubs_sri
+  local lean_sri stubs_sri modules_sri
   lean_sri="$(sha256_hex_to_sri "$lean_hash_hex")"
   stubs_sri="$(sha256_hex_to_sri "$stubs_hash_hex")"
+  modules_sri="$(sha256_hex_to_sri "${fields[8]}")"
 
   local entry_json
   entry_json="$(jq -n \
@@ -279,8 +311,11 @@ main() {
     --arg et "$engine_tag" \
     --arg ed "$engine_digest" \
     --arg rd "$research_digest" \
+    --arg mf "${fields[7]}" \
+    --arg mh "$modules_sri" \
     '{version: $v, hash: $hash, stubsVersion: $sv, stubsHash: $sh,
-      engineImageTag: $et, engineImageDigest: $ed, researchImageDigest: $rd}')"
+      engineImageTag: $et, engineImageDigest: $ed, researchImageDigest: $rd,
+      modulesFile: $mf, modulesHash: $mh}')"
 
   local backup
   backup="$(mktemp)"

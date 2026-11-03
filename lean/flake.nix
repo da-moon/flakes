@@ -21,7 +21,7 @@
       ];
 
       # Version table: consumers select the latest OR any past version.
-      # New entries are appended by scripts/update-version.sh via jq — do
+      # New entries are appended by scripts/update-version.sh via jq; do
       # NOT hand-edit the version data in this file.
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
@@ -79,6 +79,10 @@
             researchImageDigest = entry.researchImageDigest;
 
             quantconnect-stubs = mkStubs entry;
+            modulesJson = pkgs.fetchurl {
+              url = "https://cdn.quantconnect.com/cli/${entry.modulesFile}";
+              hash = entry.modulesHash;
+            };
           in
           python.pkgs.buildPythonApplication rec {
             pname = "lean";
@@ -113,6 +117,16 @@
                           'DEFAULT_ENGINE_IMAGE = "quantconnect/lean:${engineImageTag}@${engineImageDigest}"' \
                 --replace 'DEFAULT_RESEARCH_IMAGE = "quantconnect/research:latest"' \
                           'DEFAULT_RESEARCH_IMAGE = "quantconnect/research:${engineImageTag}@${researchImageDigest}"'
+            ''
+            + pkgs.lib.optionalString (entry ? modulesHash) ''
+              grep -Fxq 'file_name = "${entry.modulesFile}"' lean/models/__init__.py
+              substituteInPlace lean/models/__init__.py \
+                --replace-fail 'if not path.exists(file_path) or (time() - path.getmtime(file_path) > 86400):' \
+                               'if not path.exists(file_path):'
+            '';
+
+            postInstall = pkgs.lib.optionalString (entry ? modulesHash) ''
+              cp ${modulesJson} "$out/${python.sitePackages}/lean/${entry.modulesFile}"
             '';
 
             propagatedBuildInputs = with python.pkgs; [
@@ -130,7 +144,7 @@
               setuptools
             ];
 
-            pythonImportsCheck = [ "lean" ];
+            pythonImportsCheck = [ "lean" ] ++ pkgs.lib.optional (entry ? modulesHash) "lean.models";
             doCheck = false;
 
           };
