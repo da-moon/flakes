@@ -6,7 +6,7 @@
 # Reproducible-deps model (npm): dependencies are pinned by a COMMITTED
 # package-lock.json under deps/<version>/, consumed at build time by
 # pkgs.importNpmLock (each module is fetched as its own content-addressed
-# derivation keyed to the lockfile's integrity hashes — there is NO aggregate
+# derivation keyed to the lockfile's integrity hashes; there is NO aggregate
 # deps hash to record). This script therefore, per version:
 #   - .hash : the npm tarball fetchurl hash (SRI, arch-agnostic)
 #   - deps/<v>/{package.json,package-lock.json,.npmrc} : the committed, pinned
@@ -72,9 +72,11 @@ generate_npm_lock() {
     # nix shell (*_run) reads experimental-features/substituters from nix.conf.
     export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
     export HOME="$work/home"; mkdir -p "$HOME"
-    node -e 'const fs=require("fs");const p=require("./package.json");delete p.devDependencies;delete p.packageManager;fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
+    # The MCP Node adapter's v1 range includes GHSA-rmxm-3fg6-px4f.
+    node -e 'const fs=require("fs");const p=require("./package.json");delete p.devDependencies;delete p.packageManager;p.overrides={...p.overrides,"@hono/node-server":"2.1.6"};fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
     printf 'legacy-peer-deps=true\n' > .npmrc
-    npm_run install --package-lock-only --legacy-peer-deps >/dev/null 2>&1
+    npm_run install --package-lock-only --legacy-peer-deps --ignore-scripts
+    npm_run audit --omit=dev
   )
   [ -f "$work/package/package-lock.json" ] || { log_error "lockfile generation produced no package-lock.json"; rm -rf "$work"; return 1; }
   mkdir -p "$dest"
@@ -179,7 +181,8 @@ main() {
   fi
 
   if [ "$up_to_date" = true ] && [ "$rehash" != true ]; then
-    log_info "Already up to date!"; exit 0
+    (cd "${pkg_dir}/deps/${latest_version}" && npm_run audit --omit=dev)
+    log_info "Already up to date; dependency audit passed."; exit 0
   fi
 
   local sanitized_key attr
@@ -227,6 +230,16 @@ main() {
     fi
     if ! (cd "$pkg_dir" && nix build ".#default" --no-link --no-write-lock-file); then
       log_error "nix build failed for default; restoring previous releases.json"
+      cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
+    fi
+    if ! (
+      timeout 30 "$out_path/bin/$BIN_NAME" --help >/dev/null || exit 1
+      if [ -f "$out_path/lib/context7-mcp/node_modules/@modelcontextprotocol/node/package.json" ]; then
+        nix shell "${NIXPKGS_REF}#nodejs_22" --command \
+          timeout 45 node "${script_dir}/test-dependencies.mjs" "$out_path"
+      fi
+    ); then
+      log_error "runtime verification failed; restoring previous releases.json"
       cp "$backup" "$releases_file"; rm -f "$backup"; exit 1
     fi
     log_info "Build OK: $out_path"
