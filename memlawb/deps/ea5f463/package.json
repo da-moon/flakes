@@ -1,0 +1,87 @@
+{
+  "name": "@twigpine/openrecall",
+  "version": "0.2.1",
+  "description": "Unified, zero-knowledge memory for every agent and every session \u2014 open-source, self-hostable; server, client, CLI, and MCP in one package",
+  "type": "module",
+  "license": "MIT",
+  "author": "Twigpine",
+  "homepage": "https://github.com/Twigpine/openrecall#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Twigpine/openrecall.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Twigpine/openrecall/issues"
+  },
+  "keywords": [
+    "agent",
+    "memory",
+    "unified-memory",
+    "cross-session",
+    "ai",
+    "mcp",
+    "model-context-protocol",
+    "zero-knowledge",
+    "end-to-end-encryption",
+    "self-hostable",
+    "llm",
+    "claude",
+    "claude-code",
+    "codex",
+    "cursor",
+    "zero",
+    "openclaude"
+  ],
+  "engines": {
+    "node": ">=24.22.1",
+    "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "openrecall": "dist/openrecall.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "client",
+    "src",
+    "skills",
+    "docs/assets/brand",
+    ".claude-plugin",
+    "migrations",
+    "*.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "prepublishOnly": "bun run build",
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "type-check": "tsc --noEmit",
+    "check": "biome check",
+    "check:fix": "biome check --write",
+    "format": "biome format --write",
+    "lint": "biome lint"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./crypto": {
+      "types": "./dist/client/crypto.d.ts",
+      "default": "./dist/client/crypto.js"
+    },
+    "./secretscan": {
+      "types": "./dist/client/secretscan.d.ts",
+      "default": "./dist/client/secretscan.js"
+    }
+  },
+  "dependencies": {
+    "zod": "^4.4.3",
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}
