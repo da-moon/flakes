@@ -21,7 +21,7 @@
       ];
 
       # Version table: consumers select the latest OR any past version.
-      # New entries are appended by scripts/update-version.sh via jq — do
+      # New entries are appended by scripts/update-version.sh via jq; do
       # NOT hand-edit the version data in this file.
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
@@ -33,14 +33,11 @@
       let
         lib = nixpkgs.lib;
 
-        # Use Node 22 so runtime falls back to built-in node:sqlite
-        # instead of needing the optional better-sqlite3 native addon.
         pname = "context-mode";
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ pname ];
         };
-        nodejs = pkgs.nodejs_22;
         # Backport the fixed pnpm 10 release only when Nixpkgs still needs it.
         pnpm =
           if pkgs.lib.versionAtLeast pkgs.pnpm_10.version "10.34.5" then
@@ -64,6 +61,9 @@
           key: entry:
           let
             version = entry.version;
+            modernCli = lib.versionAtLeast version "2.0.0";
+            nodejs = if modernCli then pkgs.nodejs_24 else pkgs.nodejs_22;
+            cliFile = if modernCli then "cli.mjs" else "cli.bundle.mjs";
             lockfile = ./deps + "/${version}/pnpm-lock.yaml";
 
             tarball = pkgs.fetchurl {
@@ -115,9 +115,7 @@
 
             # pnpmConfigHook runs `pnpm install --offline --frozen-lockfile` with
             # these flags: production-only tree, flattened so NODE_PATH resolves.
-            # The published tarball already ships prebuilt bundles
-            # (cli.bundle.mjs / server.bundle.mjs / build/), so no build step
-            # (tsc/esbuild) is needed here — devDependencies are not installed.
+            # Published bundles need no compilation or development dependencies.
             pnpmInstallFlags = [
               "--prod"
               "--shamefully-hoist"
@@ -131,9 +129,10 @@
               mkdir -p $out/lib/${pname}
               mkdir -p $out/bin
               cp -r . $out/lib/${pname}/
+              test -f $out/lib/${pname}/${cliFile}
 
               makeWrapper ${nodejs}/bin/node $out/bin/.context-mode-real \
-                --add-flags "$out/lib/${pname}/cli.bundle.mjs" \
+                --add-flags "$out/lib/${pname}/${cliFile}" \
                 --set NODE_PATH "$out/lib/${pname}/node_modules" \
                 --set NODE_ENV "production" \
                 --prefix PATH : ${
@@ -149,6 +148,12 @@
               cat > $out/bin/context-mode <<'EOF'
               #!/usr/bin/env bash
               set -euo pipefail
+
+              ${lib.optionalString modernCli ''
+                if [ "$#" -eq 0 ]; then set -- server; fi
+                if [ "''${1:-}" = -V ]; then shift; set -- --version "$@"; fi
+                exec "__REAL_BIN__" "$@"
+              ''}
 
               case "''${1:-}" in
                 --version|-V)
@@ -178,6 +183,14 @@
               chmod +x $out/bin/context-mode
 
               runHook postInstall
+            '';
+
+            doInstallCheck = modernCli;
+            installCheckPhase = ''
+              runHook preInstallCheck
+              $out/bin/context-mode --version | grep -Fx '${version}'
+              $out/bin/context-mode --help > /dev/null
+              runHook postInstallCheck
             '';
 
           };
