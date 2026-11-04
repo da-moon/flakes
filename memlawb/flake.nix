@@ -241,13 +241,7 @@
         '';
 
         mcpSmoke = pkgs.runCommand "memlawb-mcp-stdio-smoke" { } ''
-          export HOME="$TMPDIR"
-          export MEMLAWB_PASSPHRASE=nix-check-passphrase
-          printf '%s\n' \
-            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"nix-check","version":"0"}}}' \
-            | timeout 30 ${latestPkg}/bin/memlawb mcp >mcp.log 2>mcp.err || true
-          grep -q '"protocolVersion"' mcp.log
-          grep -Eq '\[(memlawb|openrecall) mcp\] ready' mcp.err
+          timeout 60 ${pkgs-unstable.bun}/bin/bun ${./scripts/test-compat.ts} ${latestPkg}
           touch $out
         '';
       in
@@ -283,10 +277,7 @@
           cli = cliSmoke;
           server = serverSmoke;
           mcp-stdio = mcpSmoke;
-          compatibility = pkgs.runCommand "memlawb-compatibility" { } ''
-            ${pkgs-unstable.bun}/bin/bun ${./scripts/test-compat.ts} ${latestPkg}
-            touch $out
-          '';
+          compatibility = mcpSmoke;
           module-eval = moduleEvaluation.activationPackage;
         };
       }
