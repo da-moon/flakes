@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "2.4.1"
+    "version": "2.5.0"
   },
   "schemaVersion": 1,
   "structural": {
@@ -32,6 +32,7 @@
         "deprecations": [],
         "fields": [
           "base",
+          "globalSearch",
           "search",
           "searchSyncDebounceMs",
           "searchSyncSessionCap"
@@ -44,6 +45,12 @@
       "defaultPlanMode": {
         "deprecations": [],
         "fields": null
+      },
+      "environments": {
+        "deprecations": [],
+        "fields": [
+          "default"
+        ]
       },
       "experimental": {
         "deprecations": [],
@@ -141,20 +148,10 @@
       "secondaryModel": {
         "deprecations": [],
         "fields": [
-          "adaptiveThinking",
-          "capabilities",
           "defaultEffort",
           "defaultModel",
-          "displayName",
-          "force",
-          "maxContextSize",
-          "maxInputSize",
-          "maxOutputSize",
           "model",
-          "models",
-          "offEffort",
-          "reasoningKey",
-          "supportEfforts"
+          "models"
         ]
       },
       "services": {
@@ -216,6 +213,12 @@
         "fields": [
           "enabled"
         ]
+      },
+      "workspace": {
+        "deprecations": [],
+        "fields": [
+          "requireTrust"
+        ]
       }
     },
     "topLevel": [
@@ -226,6 +229,7 @@
       "defaultPlanMode",
       "defaultProvider",
       "disableFeedbackSurvey",
+      "environments",
       "experimental",
       "extraAgentDirs",
       "extraSkillDirs",
