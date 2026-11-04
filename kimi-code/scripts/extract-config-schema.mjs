@@ -69,7 +69,8 @@ function objectFields(block) {
 // Find `<name> = object({` / `strictObject({` and return its fields (sorted),
 // or null when the schema is not an inline object literal.
 function extractObjectSchemaFields(bin, schemaRef) {
-  const decl = new RegExp(`\\b${schemaRef}\\s*=\\s*(?:object|strictObject)(?:\\$\\d+)?\\(\\s*\\{`).exec(bin);
+  const escapedRef = schemaRef.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const decl = new RegExp(`(?<![\\w$])${escapedRef}\\s*=\\s*(?:object|strictObject)(?:\\$\\d+)?\\(\\s*\\{`).exec(bin);
   if (!decl) return null;
   const braceStart = bin.indexOf("{", decl.index + decl[0].length - 1);
   const block = balanced(bin, braceStart, "{", "}");
@@ -92,7 +93,7 @@ function extract(binaryPath, version) {
 
   // v2 config sections (config.toml), with deprecation tables.
   const sections = {};
-  const sectionRe = /(?<!function )registerConfigSection\(\s*("[^"]+"|\w+)\s*,\s*(\w+)(?:\s*,\s*\{)?/g;
+  const sectionRe = /(?<!function )registerConfigSection\(\s*("[^"]+"|[\w$]+)\s*,\s*([\w$]+)(?:\s*,\s*\{)?/g;
   for (const m of bin.matchAll(sectionRe)) {
     const [, sectionRef, schemaRef] = m;
     const name = resolveName(sectionRef);

@@ -64,3 +64,18 @@ test("rejects incomplete or unrecognized schema constructors", () => {
     assert.match(result.stderr, /extraction looks incomplete/);
   }
 });
+
+test("uses the registered suffixed schema and retains its deprecations", () => {
+  const source = fixture("object$1", "strictObject$1") + `
+LoopControlSchema = object$1({ maxRetriesPerStep: number() });
+LoopControlSchema$1 = object$1({ maxAttemptsPerStep: number() });
+registerConfigSection("loopControl", LoopControlSchema$1, {
+  deprecations: [{ key: "max_retries_per_step", replacement: "max_attempts_per_step" }]
+});`;
+  const result = extract(source);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(result.schema.structural.sections.loopControl, {
+    fields: ["maxAttemptsPerStep"],
+    deprecations: [{ key: "max_retries_per_step", replacement: "max_attempts_per_step" }],
+  });
+});
