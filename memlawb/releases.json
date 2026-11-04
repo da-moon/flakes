@@ -1,5 +1,5 @@
 {
-  "latest": "2753804",
+  "latest": "ebac262",
   "versions": {
     "0c9f82d": {
       "version": "0.1.0-unstable-2026-06-27",
@@ -20,6 +20,11 @@
       "version": "0.2.1-unstable-2026-11-04",
       "rev": "27538042499d4ce8a176ac7101a39a16ca99dc2a",
       "hash": "sha256-+4ksK1rf8hQnvbis8q85as4X9LeOZkqHczUh82cHVXg="
+    },
+    "ebac262": {
+      "version": "0.2.1-unstable-2026-11-04",
+      "rev": "ebac26246607894183dd0cb717cdb40ae58bc9a8",
+      "hash": "sha256-ATlcoKuXpcxxD0Zd8OLJxtk8CUSR5eAA3mU3ECXVAIY="
     }
   }
 }
