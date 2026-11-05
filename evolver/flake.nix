@@ -75,7 +75,12 @@
             '';
 
             pnpmDeps = pkgs.fetchPnpmDeps {
-              inherit pname version src pnpm;
+              inherit
+                pname
+                version
+                src
+                pnpm
+                ;
               fetcherVersion = 3;
               hash = entry.pnpmDepsHash;
             };
@@ -124,8 +129,12 @@
               mkdir -p $out/bin
               cp -r . $out/lib/${pname}/
 
+              cliFile=index.js
+              if [ -f "$out/lib/${pname}/bin/evolver.js" ]; then
+                cliFile=bin/evolver.js
+              fi
               makeWrapper ${nodejs}/bin/node $out/bin/.evolver-real \
-                --add-flags "$out/lib/${pname}/index.js" \
+                --add-flags "$out/lib/${pname}/$cliFile" \
                 --set NODE_PATH "$out/lib/${pname}/node_modules" \
                 --set NODE_ENV "production" \
                 --prefix PATH : ${
@@ -159,6 +168,16 @@
               runHook postInstall
             '';
 
+            doInstallCheck = true;
+            installCheckPhase = ''
+              runHook preInstallCheck
+              if [ -f "$out/lib/${pname}/bin/evolver.js" ]; then
+                HOME="$TMPDIR" $out/bin/evolver --help > help.txt
+                grep -F 'Usage: evolver <command> [options]' help.txt
+              fi
+              runHook postInstallCheck
+            '';
+
           };
 
         latestPkg = mk releases.latest releases.versions.${releases.latest};
@@ -167,7 +186,9 @@
         # lockfile.
         versionPackages =
           lib.mapAttrs' (key: entry: lib.nameValuePair "evolver_${sanitizeKey key}" (mk key entry))
-            (lib.filterAttrs (key: _: builtins.pathExists (./deps + "/${key}/pnpm-lock.yaml")) releases.versions);
+            (
+              lib.filterAttrs (key: _: builtins.pathExists (./deps + "/${key}/pnpm-lock.yaml")) releases.versions
+            );
       in
       {
         packages = {
