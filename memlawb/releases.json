@@ -1,5 +1,5 @@
 {
-  "latest": "4a0233e",
+  "latest": "335e1aa",
   "versions": {
     "0c9f82d": {
       "version": "0.1.0-unstable-2026-06-27",
@@ -30,6 +30,11 @@
       "version": "0.2.1-unstable-2026-11-05",
       "rev": "4a0233e0ce01fd759c121ab1f43a66c7bdd6e341",
       "hash": "sha256-r4rqhVW/qH3km87jVcAZ3oS+Nf1fK2oaXsiTHgAj/KI="
+    },
+    "335e1aa": {
+      "version": "0.2.1-unstable-2026-11-06",
+      "rev": "335e1aa7462d63439c2f9103ddab13faad47f151",
+      "hash": "sha256-wNAvMI+IlIpnHB9CwbJ8WySzIXxSEU/8CHLRXaKmz/I="
     }
   }
 }
