@@ -310,6 +310,21 @@
         ]
       },
       {
+        "contextWindow": 1048576,
+        "id": "deepseek/deepseek-v4.1-flash-ultrafast",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "DeepSeek V4.1 Flash Ultrafast",
+        "reasoningEfforts": [
+          "off",
+          "low",
+          "high",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 1000000,
         "id": "google/gemini-3.1-flash-lite",
         "inputModalities": [
@@ -1463,8 +1478,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 3449184,
-    "modelCount": 109,
+    "bundleBytes": 3452177,
+    "modelCount": 110,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1484,14 +1499,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 907884
+    "tokenCount": 908489
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-0fnF/1xbjjSeiX8IMxVA2tNRhzHVhoL0LJnlZkQ40r4=",
+    "entrypointHash": "sha256-x1s032SH3gNMRBm4kZQyMJyWZQXCC3ajYd6p24DNovw=",
     "name": "command-code",
-    "packageJsonHash": "sha256-gju9SJIpwVMpJBeeVn9iYdd8NcyUN+ppDPqym9euqLU=",
-    "version": "1.88.4"
+    "packageJsonHash": "sha256-6kUkuvlE1zdm7s9TMFhr3UJIml8xFH0s6eioZqhlTv8=",
+    "version": "1.88.5"
   },
   "schemaVersion": 1,
   "structural": {
