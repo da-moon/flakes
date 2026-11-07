@@ -1,10 +1,15 @@
 {
-  "latest": "8.0.0",
+  "latest": "9.0.0",
   "versions": {
     "8.0.0": {
       "version": "8.0.0",
       "rev": "8.0.0",
       "hash": "sha256-YU1mDinFNKLTr5qtnjQz61xz49XOFo7aqHv0MNBYtVg="
+    },
+    "9.0.0": {
+      "version": "9.0.0",
+      "rev": "9.0.0",
+      "hash": "sha256-7cvMRbdbvCiZ4oEeln1v1gxow59/qMQxsqrt6gkcmb4="
     }
   }
 }
