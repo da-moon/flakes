@@ -129,6 +129,11 @@
               substituteInPlace pyproject.toml \
                 --replace-fail 'dynamic = ["version"]' 'version = "${version}"'
               sed -i -e '/types-cachetools/d' -e '/types-python-dateutil/d' pyproject.toml
+            ''
+            + lib.optionalString (lib.versionAtLeast version "0.24.1") ''
+              # Keep the security floor while accepting nixpkgs' Cryptography 48.
+              substituteInPlace pyproject.toml \
+                --replace-fail 'cryptography>=46.0.7,<47' 'cryptography>=46.0.7,<49'
             '';
 
             # build-system.requires declares hatchling + uv-dynamic-versioning;
@@ -164,6 +169,7 @@
               py.beautifulsoup4
               py.cachetools
               py.click
+              py.cryptography
               py.fakeredis
               py.fastmcp
               py.httpx
