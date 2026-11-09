@@ -158,6 +158,30 @@ async function testAzureAuthentication() {
   assert.equal(typeof credential.getToken, "function");
 }
 
+async function testAwsAuthentication() {
+  const credentials = {
+    Version: 1,
+    AccessKeyId: "offline-access-key",
+    SecretAccessKey: "offline-secret-key",
+    SessionToken: "offline-session-token",
+  };
+  const command = path.join(temporary, "credentials.cjs");
+  fs.writeFileSync(command, `console.log(${JSON.stringify(JSON.stringify(credentials))});\n`);
+  const configFilepath = path.join(temporary, "aws-config");
+  const filepath = path.join(temporary, "aws-credentials");
+  fs.writeFileSync(configFilepath,
+    `[profile fixture]\ncredential_process = "${process.execPath}" "${command}"\n`);
+  fs.writeFileSync(filepath, "");
+  const providers = load("@aws-sdk/credential-providers");
+  const options = { profile: "fixture", configFilepath, filepath, ignoreCache: true };
+  for (const provider of [providers.fromIni(options), providers.fromNodeProviderChain(options)]) {
+    const actual = await provider();
+    assert.equal(actual.accessKeyId, credentials.AccessKeyId);
+    assert.equal(actual.secretAccessKey, credentials.SecretAccessKey);
+    assert.equal(actual.sessionToken, credentials.SessionToken);
+  }
+}
+
 (async () => {
   try {
     await testWatcher();
@@ -166,6 +190,7 @@ async function testAzureAuthentication() {
     testChartsAndTemplates();
     testSchemaCompatibility();
     await testAzureAuthentication();
+    await testAwsAuthentication();
     console.log("Lightdash dependency compatibility checks passed");
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });

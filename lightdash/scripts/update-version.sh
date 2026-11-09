@@ -138,7 +138,7 @@ generate_deps_lock() {
   if ! (
     cd "$extracted"
     nix shell nixpkgs#nodejs_24 -c \
-      npm install --package-lock-only --ignore-scripts --legacy-peer-deps \
+      npm install --package-lock-only --ignore-scripts --legacy-peer-deps --prefer-online \
       && nix shell nixpkgs#nodejs_24 -c npm audit --omit=dev
   ); then
     log_error "Dependency resolution or vulnerability audit failed"
