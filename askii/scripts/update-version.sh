@@ -81,9 +81,8 @@ has_version_entry() {
 }
 
 get_latest_release_tag() {
-  local effective_url
-  effective_url="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest")"
-  printf '%s\n' "${effective_url##*/}"
+  curl -fsSL "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" \
+    | jq -er '.tag_name | select(type == "string" and test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))'
 }
 
 tag_to_version() {

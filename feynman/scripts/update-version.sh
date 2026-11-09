@@ -65,15 +65,15 @@ has_version_entry() {
 }
 
 get_latest_release_tag() {
-  local effective_url tag
-  if ! effective_url="$(
-    curl --retry 5 --retry-all-errors -fsSL -o /dev/null -w '%{url_effective}' \
-      "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest"
+  local tag
+  if ! tag="$(
+    curl --retry 5 --retry-all-errors -fsSL \
+      "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" \
+      | jq -er '.tag_name | select(type == "string")'
   )"; then
     log_error "Failed to resolve the latest GitHub release"
     return 1
   fi
-  tag="${effective_url##*/}"
   if [[ "$tag" != v* || "$tag" = "latest" ]]; then
     log_error "GitHub returned an invalid latest release tag: ${tag}"
     return 1

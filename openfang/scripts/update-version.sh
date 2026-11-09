@@ -65,14 +65,9 @@ has_version_entry() {
 }
 
 get_latest_release_tag() {
-  local effective_url tag
-  effective_url="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest")"
-  # The redirect must land on /releases/tag/<tag>; otherwise there is no published release.
-  case "$effective_url" in
-    */releases/tag/*) ;;
-    *) log_error "Could not resolve a release tag (redirected to: ${effective_url})"; exit 1 ;;
-  esac
-  tag="${effective_url##*/}"
+  local tag
+  tag="$(curl -fsSL "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest" \
+    | jq -er '.tag_name | select(type == "string" and length > 0)')" || return 1
   case "$tag" in
     "${TAG_PREFIX}"*) ;;
     *) log_error "Resolved tag '${tag}' does not start with expected prefix '${TAG_PREFIX}'"; exit 1 ;;
