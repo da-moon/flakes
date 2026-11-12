@@ -1,5 +1,5 @@
 {
-  "latest": "0.24.2",
+  "latest": "0.24.3",
   "versions": {
     "0.23.0": {
       "version": "0.23.0",
@@ -20,6 +20,11 @@
       "version": "0.24.2",
       "url": "https://files.pythonhosted.org/packages/72/9a/8d093970c753099c59a3985faf971079fb8d6efe09b5456dd8ce35bec996/mcp_atlassian-0.24.2.tar.gz",
       "hash": "sha256-72kDeM8SDIkAvOU5sslQ/WOernLsHDqwoXQ/76Halcw="
+    },
+    "0.24.3": {
+      "version": "0.24.3",
+      "url": "https://files.pythonhosted.org/packages/02/88/6c4c6e06cb25ec1b975650a71f01398794d68542adf7e5d7fcd65d432d7a/mcp_atlassian-0.24.3.tar.gz",
+      "hash": "sha256-H/6X9NHpb0dwgyP+q4zmf2p0cb/5nvzerUhEw3atRGY="
     }
   }
 }
