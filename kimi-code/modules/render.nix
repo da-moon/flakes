@@ -88,7 +88,6 @@ let
     stripNulls (
       s.extraSettings
       // {
-        max_running_tasks = s.maxRunningTasks;
         keep_alive_on_exit = s.keepAliveOnExit;
         kill_grace_period_ms = s.killGracePeriodMs;
         bash_auto_background_on_timeout = s.bashAutoBackgroundOnTimeout;
