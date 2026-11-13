@@ -120,7 +120,7 @@ generate_deps_lock() {
         "@fastify/busboy": "3.2.3",
         "@mastra/schema-compat": "1.3.16",
         "axios": "1.20.0",
-        "basic-ftp": "6.2.3",
+        "basic-ftp": "6.2.6",
         "echarts": "6.1.0",
         "handlebars": "4.7.10",
         "moment": "2.31.0",

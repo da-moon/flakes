@@ -26,6 +26,14 @@ async function testWatcher() {
   }
 }
 
+function testFtpListing() {
+  const { parseList } = load("basic-ftp/dist/parseList");
+  const files = parseList("__proto__=x;type=file;size=10; fixture.txt\r\n");
+  assert.equal(files.length, 1);
+  assert.equal(files[0].name, "fixture.txt");
+  assert.equal(files[0].size, 10);
+}
+
 async function testDatabricksProtocol() {
   const thrift = load("thrift");
   const service = load("@databricks/sql/thrift/TCLIService");
@@ -185,6 +193,7 @@ async function testAwsAuthentication() {
 (async () => {
   try {
     await testWatcher();
+    testFtpListing();
     await testDatabricksProtocol();
     testSnowflakeConfig();
     testChartsAndTemplates();
