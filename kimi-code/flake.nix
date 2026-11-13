@@ -368,10 +368,7 @@
             ''
               export HOME="$TMPDIR"
               remarshal -i ${configJson} -if json -of toml -o "$TMPDIR/config.toml"
-              if grep -q 'max_running_tasks' "$TMPDIR/config.toml"; then
-                echo "removed task concurrency setting was rendered" >&2
-                exit 1
-              fi
+              grep -Eq '^max_running_tasks = 4$' "$TMPDIR/config.toml"
               remarshal -i ${tuiJson} -if json -of toml -o "$TMPDIR/tui.toml"
               ${latestPkg}/bin/kimi doctor config "$TMPDIR/config.toml" > config.out 2>&1 || { cat config.out; exit 1; }
               ${latestPkg}/bin/kimi doctor tui "$TMPDIR/tui.toml" > tui.out 2>&1 || { cat tui.out; exit 1; }
