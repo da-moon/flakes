@@ -33,6 +33,7 @@ let
       tasteLearning = nullable nonEmptyString "Model used by the background taste-learning agent.";
       tasteOnboarding = nullable nonEmptyString "Model used by the /learn-taste observer.";
       branchSummarization = nullable nonEmptyString "Model used to summarize an abandoned branch when you jump away from it.";
+      subagents = nullable nonEmptyString "Default model for subagents without an explicit model.";
     };
   };
 
@@ -95,7 +96,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.88.5";
+  schemaVersion = "1.89.0";
 
   globalConfigType = types.submodule {
     options = {

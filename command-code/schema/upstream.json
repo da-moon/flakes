@@ -26,6 +26,12 @@
         "label": "Planning"
       },
       {
+        "description": "Model for sub-agents that do not pin their own. Unset, they run on your current model.",
+        "hasFixedDefault": false,
+        "key": "subagents",
+        "label": "Sub-agent model"
+      },
+      {
         "description": "Learns your coding style from your sessions.",
         "hasFixedDefault": false,
         "key": "tasteLearning",
@@ -81,6 +87,22 @@
           "text"
         ],
         "label": "Claude Fable 5.1",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
+      },
+      {
+        "contextWindow": 1000000,
+        "id": "claude-fable-5-2",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Claude Fable 5.2",
         "reasoningEfforts": [
           "low",
           "medium",
@@ -423,6 +445,20 @@
         ]
       },
       {
+        "contextWindow": 1000000,
+        "id": "google/gemini-4-carbon",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Gemini 4 Carbon",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      {
         "contextWindow": 400000,
         "id": "gpt-5.3-codex",
         "inputModalities": [
@@ -671,6 +707,23 @@
           "text"
         ],
         "label": "LongCat 2.0"
+      },
+      {
+        "contextWindow": 1048576,
+        "id": "meta/muse-ember",
+        "inputModalities": [
+          "file",
+          "image",
+          "text"
+        ],
+        "label": "Muse Ember",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ]
       },
       {
         "contextWindow": 1048576,
@@ -1272,6 +1325,21 @@
         "label": "Inkling"
       },
       {
+        "contextWindow": 1048576,
+        "id": "thinkingmachines/inkling-2-small:free",
+        "inputModalities": [
+          "image",
+          "text"
+        ],
+        "label": "Inkling 2 Small",
+        "reasoningEfforts": [
+          "low",
+          "medium",
+          "high",
+          "max"
+        ]
+      },
+      {
         "contextWindow": 1000000,
         "id": "thinkingmachines/inkling-small",
         "inputModalities": [
@@ -1478,8 +1546,8 @@
   },
   "evidence": {
     "analysis": "static-ecmascript-syntax-tree",
-    "bundleBytes": 3452177,
-    "modelCount": 110,
+    "bundleBytes": 3478999,
+    "modelCount": 114,
     "pathLiteralCounts": {
       "config.json": 6,
       "mcp-tokens.json": 1,
@@ -1499,14 +1567,14 @@
       "settingsFilePaths",
       "updateUserConfig"
     ],
-    "tokenCount": 908489
+    "tokenCount": 915790
   },
   "package": {
     "entrypoint": "dist/cli.mjs",
-    "entrypointHash": "sha256-x1s032SH3gNMRBm4kZQyMJyWZQXCC3ajYd6p24DNovw=",
+    "entrypointHash": "sha256-c+FSu3mAOXXyF+1YViVjbjXLJdWZAB1GW6vRG+gSgf4=",
     "name": "command-code",
-    "packageJsonHash": "sha256-6kUkuvlE1zdm7s9TMFhr3UJIml8xFH0s6eioZqhlTv8=",
-    "version": "1.88.5"
+    "packageJsonHash": "sha256-Kp0deykcKutZq0y36N7PjRvfTHJk3o1gtP7hB/TP+N0=",
+    "version": "1.89.0"
   },
   "schemaVersion": 1,
   "structural": {
