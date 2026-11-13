@@ -2,7 +2,7 @@
   "catalogs": {},
   "package": {
     "name": "kimi-code",
-    "version": "2.6.0"
+    "version": "2.5.3"
   },
   "schemaVersion": 1,
   "structural": {
@@ -14,6 +14,7 @@
           "bashTaskTimeoutS",
           "keepAliveOnExit",
           "killGracePeriodMs",
+          "maxRunningTasks",
           "printBackgroundMode",
           "printMaxTurns",
           "printWaitCeilingS"
@@ -179,6 +180,7 @@
           "bashTaskTimeoutS",
           "keepAliveOnExit",
           "killGracePeriodMs",
+          "maxRunningTasks",
           "printBackgroundMode",
           "printMaxTurns",
           "printWaitCeilingS"
@@ -261,10 +263,6 @@
           "enabled",
           "notification_condition"
         ],
-        "transcript": [
-          "thinking",
-          "tool_call_density"
-        ],
         "upgrade": [
           "auto_install"
         ]
@@ -272,7 +270,6 @@
       "topLevel": [
         "auto_session_title",
         "cache_expiry_hint",
-        "copy_on_select",
         "disable_feedback_survey",
         "disable_paste_burst",
         "render_latex",
