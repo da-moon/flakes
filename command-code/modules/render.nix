@@ -34,6 +34,7 @@ let
       tasteLearning = value.tasteLearning;
       tasteOnboarding = value.tasteOnboarding;
       branchSummarization = value.branchSummarization;
+      subagents = value.subagents;
     });
 
   renderOauth =

@@ -97,6 +97,7 @@ let
       tasteLearning = null;
       tasteOnboarding = null;
       branchSummarization = null;
+      subagents = "worker/model";
     };
     autoInstallExtension = false;
   };
@@ -124,7 +125,10 @@ let
     assert !(evalValue schema.globalConfigType { peekRecapDiagram = "false"; }).success;
     assert (evalValue schema.globalConfigType { peekRecapDelayMinutes = 0; }).success;
     assert !(evalValue schema.globalConfigType { peekRecapDelayMinutes = -1; }).success;
-    assert rendered.featureModels == { titleGeneration = "title/model"; };
+    assert rendered.featureModels == {
+      titleGeneration = "title/model";
+      subagents = "worker/model";
+    };
     assert !(rendered ? installed);
     assert (evalValue schema.globalConfigType { provider = "command-code"; }).success;
     assert !(evalValue schema.globalConfigType { provider = "unknown"; }).success;
