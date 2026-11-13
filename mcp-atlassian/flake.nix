@@ -2,7 +2,7 @@
   description = "MCP server for Atlassian products (Jira & Confluence)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -40,6 +40,7 @@
         # py-key-value-aio's check inputs via a scope override so fastmcp
         # (and this package) build on all four systems.
         py = pkgs.python3Packages.overrideScope (final: prev: {
+          mcp = prev.mcp_1;
           py-key-value-aio = prev.py-key-value-aio.overridePythonAttrs (_: {
             doCheck = false;
             nativeCheckInputs = [ ];
@@ -130,10 +131,10 @@
                 --replace-fail 'dynamic = ["version"]' 'version = "${version}"'
               sed -i -e '/types-cachetools/d' -e '/types-python-dateutil/d' pyproject.toml
             ''
-            + lib.optionalString (lib.versionAtLeast version "0.24.1") ''
-              # Keep the security floor while accepting nixpkgs' Cryptography 48.
+            + lib.optionalString (lib.versionAtLeast version "0.24.1" && lib.versionOlder version "0.24.4") ''
+              # Retained releases also accept the patched Cryptography package.
               substituteInPlace pyproject.toml \
-                --replace-fail 'cryptography>=46.0.7,<47' 'cryptography>=46.0.7,<49'
+                --replace-fail 'cryptography>=46.0.7,<47' 'cryptography>=46.0.7'
             '';
 
             # build-system.requires declares hatchling + uv-dynamic-versioning;
@@ -144,20 +145,8 @@
               py."uv-dynamic-versioning"
             ];
 
-            # Several 0.23.0 bounds run ahead of nixpkgs-26.05 and are relaxed
-            # to the packaged versions (same approach as cloudcraft-mcp):
-            #   mcp>=1.27.0,<2.0.0  -> nixpkgs 1.26.0  (one minor behind)
-            #   fastmcp>=3.2.4,<4.0 -> nixpkgs 3.2.3  (one patch behind)
-            #   fakeredis<2.35.0    -> nixpkgs 2.36.2 (above the upper bound)
-            # The build, the `mcp_atlassian` import (pythonImportsCheck), and
-            # `mcp-atlassian --help` all pass with the relaxed versions; a live
-            # Atlassian round-trip is not exercised here. fastmcp is the layer
-            # mcp-atlassian talks to, and nixpkgs' fastmcp 3.2.3 was itself
-            # built against mcp 1.26, so the pair is internally consistent.
-            # Revisit once nixpkgs ships mcp >=1.27 / fastmcp >=3.2.4.
+            # Retain compatibility with the packaged Redis shim and converter.
             pythonRelaxDeps = [
-              "mcp"
-              "fastmcp"
               "fakeredis"
               "markdown-to-confluence"
             ];
