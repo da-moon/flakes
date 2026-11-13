@@ -2,7 +2,8 @@
   description = "MCP server for Atlassian products (Jira & Confluence)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    runtime-nixpkgs.url = "github:NixOS/nixpkgs/2074cc672349f14240fb7ea90d509e0b643e9dd4";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -10,6 +11,7 @@
     {
       self,
       nixpkgs,
+      runtime-nixpkgs,
       flake-utils,
     }:
     let
@@ -31,7 +33,8 @@
     flake-utils.lib.eachSystem systems (
       system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        # Callers can follow an older nixpkgs without lowering security floors.
+        pkgs = runtime-nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
         # fastmcp -> py-key-value-aio carries test-only KV-store backends
         # (duckdb -> arrow-cpp, ...) in its check inputs; arrow-cpp is marked
