@@ -16,7 +16,7 @@
     }:
     let
       # Version table: consumers select the latest OR any past version.
-      # New entries are appended by scripts/update-version.sh via jq — do
+      # New entries are appended by scripts/update-version.sh via jq. Do
       # NOT hand-edit the version data in this file.
       releases = builtins.fromJSON (builtins.readFile ./releases.json);
 
@@ -43,7 +43,15 @@
         # py-key-value-aio's check inputs via a scope override so fastmcp
         # (and this package) build on all four systems.
         py = pkgs.python3Packages.overrideScope (final: prev: {
-          mcp = prev.mcp_1;
+          mcp = prev.mcp_1.overridePythonAttrs (_: {
+            version = "1.29.1";
+            src = pkgs.fetchFromGitHub {
+              owner = "modelcontextprotocol";
+              repo = "python-sdk";
+              tag = "v1.29.1";
+              hash = "sha256-x5cm1QojKp7K1mKc9ejazzJzBhIkFBif6/A+hEryYKo=";
+            };
+          });
           py-key-value-aio = prev.py-key-value-aio.overridePythonAttrs (_: {
             doCheck = false;
             nativeCheckInputs = [ ];
