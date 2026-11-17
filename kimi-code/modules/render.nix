@@ -85,19 +85,22 @@ let
 
   toUpstreamBackground =
     s:
-    stripNulls (
-      s.extraSettings
-      // {
-        max_running_tasks = s.maxRunningTasks;
-        keep_alive_on_exit = s.keepAliveOnExit;
-        kill_grace_period_ms = s.killGracePeriodMs;
-        bash_auto_background_on_timeout = s.bashAutoBackgroundOnTimeout;
-        bash_task_timeout_s = s.bashTaskTimeoutS;
-        print_background_mode = s.printBackgroundMode;
-        print_wait_ceiling_s = s.printWaitCeilingS;
-        print_max_turns = s.printMaxTurns;
-      }
-    );
+    lib.warnIf (s.maxRunningTasks != null)
+      "Kimi Code 2.6.3 no longer supports background.maxRunningTasks; the concurrency limit is not enforced."
+      (
+        stripNulls (
+          s.extraSettings
+          // {
+            keep_alive_on_exit = s.keepAliveOnExit;
+            kill_grace_period_ms = s.killGracePeriodMs;
+            bash_auto_background_on_timeout = s.bashAutoBackgroundOnTimeout;
+            bash_task_timeout_s = s.bashTaskTimeoutS;
+            print_background_mode = s.printBackgroundMode;
+            print_wait_ceiling_s = s.printWaitCeilingS;
+            print_max_turns = s.printMaxTurns;
+          }
+        )
+      );
 
   toUpstreamSubagent =
     s:
