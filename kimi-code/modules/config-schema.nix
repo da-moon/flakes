@@ -232,7 +232,7 @@ let
       maxRunningTasks = mkOption {
         type = types.nullOr types.ints.positive;
         default = null;
-        description = "Maximum number of concurrently running background tasks.";
+        description = "Deprecated compatibility option. Kimi Code 2.6.3 no longer enforces this limit.";
       };
       keepAliveOnExit = boolOpt "Keep background tasks running when the CLI exits (default false).";
       killGracePeriodMs = intOpt "Grace period before killing background tasks (default 5000).";
@@ -531,7 +531,7 @@ in
   # against. flake.nix throws when it does not match the latest release, so
   # every version bump forces a human review of the schema (command-code
   # convention). scripts/update-version.sh refuses to bump until it matches.
-  schemaVersion = "2.5.3";
+  schemaVersion = "2.6.3";
 
   # Merge manifest for config.toml consumed by the jq merge engine
   # (modules/lib.nix). Meaning:
@@ -569,7 +569,6 @@ in
         "reserved_context_size"
       ];
       background = [
-        "max_running_tasks"
         "keep_alive_on_exit"
         "kill_grace_period_ms"
         "bash_auto_background_on_timeout"
