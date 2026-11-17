@@ -120,6 +120,9 @@ let
         reasoningEffort."deepseek/deepseek-v4-pro" = "unsupported";
       }).success;
     assert (evalValue schema.globalConfigType { language = "en"; }).success;
+    assert (evalValue schema.globalConfigType { theme = "auto"; }).success;
+    assert (evalValue schema.globalConfigType { theme = "vice"; }).success;
+    assert !(evalValue schema.globalConfigType { theme = "unsupported"; }).success;
     assert !(evalValue schema.globalConfigType { language = "unsupported"; }).success;
     assert (evalValue schema.globalConfigType { peekRecapDiagram = false; }).success;
     assert !(evalValue schema.globalConfigType { peekRecapDiagram = "false"; }).success;

@@ -5,7 +5,8 @@ const paths=["config.json","settings.json","settings.local.json","mcp.json","mcp
 const configShape={provider:null,model:null,reasoningEffort:null,theme:null,compactMode:null,telemetry:null,tasteLearning:null,featureModels:null,autoInstallExtension:null,forceOAuth:null,installed:null,firstMessageSent:null};
 a({provider:"command-code"});
 const permissionProbe=(settings)=>settings.permissions.autoApprove.create||settings.permissions.autoApprove.update||settings.permissions.autoApprove.delete;
-const themes=new Set(["dark","light"]);
+const themes=["dark","light"];
+function isCliTheme(value){return typeof value === "string" && themes.includes(value);}
 const transports=["stdio","http"];
 const HookEvent=(event=>(event.PreToolUse="PreToolUse",event.PostToolUse="PostToolUse",event.Stop="Stop",event.SessionStart="SessionStart",event))(HookEvent||{});
 const models={

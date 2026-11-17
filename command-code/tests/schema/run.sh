@@ -53,6 +53,15 @@ extract "$fixtures/package-0.42" deterministic
 cmp "$tmp/changed-entrypoint.json" "$tmp/deterministic.json"
 cmp "$tmp/changed-entrypoint.sha256" "$tmp/deterministic.sha256"
 
+cp -R "$fixtures/package-0.42" "$tmp/theme-package"
+perl -0pi -e 's/\["dark","light"\]/["dark","light","vice","auto"]/g' "$tmp/theme-package/dist/cli.mjs"
+extract "$tmp/theme-package" themes
+expect_status 20 node "$comparator" --baseline "$tmp/changed-entrypoint.json" --candidate "$tmp/themes.json"
+jq -e '.structural.globalConfig.fields.theme.enum == ["auto", "dark", "light", "vice"]' "$tmp/themes.json" >/dev/null
+printf '\nconst unrelated=["dark","light","vice","auto","decoy"];\n' >> "$tmp/theme-package/dist/cli.mjs"
+extract "$tmp/theme-package" decoy
+jq -e '.structural.globalConfig.fields.theme.enum == ["auto", "dark", "light", "vice"]' "$tmp/decoy.json" >/dev/null
+
 cp -R "$fixtures/package-0.42" "$tmp/structural-package"
 perl -0pi -e 's/a\(\{provider:"command-code"\}\);/a({provider:"command-code"});a({experimentalFlag:true});/' "$tmp/structural-package/dist/cli.mjs"
 extract "$tmp/structural-package" structural

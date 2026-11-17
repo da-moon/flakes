@@ -96,7 +96,7 @@ let
   };
 in
 rec {
-  schemaVersion = "1.89.2";
+  schemaVersion = "1.89.3";
 
   globalConfigType = types.submodule {
     options = {
@@ -113,8 +113,10 @@ rec {
         description = "Reasoning effort keyed by model identifier.";
       };
       theme = nullable (types.enum [
+        "auto"
         "dark"
         "light"
+        "vice"
       ]) "Terminal theme.";
       language = nullable (types.enum [
         "en"
